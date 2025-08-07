@@ -14,6 +14,8 @@ import { GoogleCode } from './googlecode.js';
 import { DefaultLight } from './default-light.js';
 import { DefaultDark } from './default.js';
 import { ShadesOfPurple } from './shades-of-purple.js';
+import { SalesforceDark } from './salesforce-dark.js';
+import { SalesforceLight } from './salesforce-light.js';
 import { XCode } from './xcode.js';
 import {
   Theme,
@@ -52,6 +54,8 @@ class ThemeManager {
       GitHubLight,
       GoogleCode,
       ShadesOfPurple,
+      SalesforceDark,
+      SalesforceLight,
       XCode,
       ANSI,
       ANSILight,
