@@ -9,9 +9,9 @@ The goal of this project is to replace the existing Gemini API integration withi
 The integration will be achieved through the following major steps:
 
 1.  **Implement JWT Authentication**: Create a dedicated service to handle authentication with a Salesforce org using `@salesforce/core` and fetch a JWT for API requests.
-2.  **Create a Gateway-Specific Content Generator**: Develop a new class that implements the existing `ContentGenerator` interface to handle communication with the Salesforce LLM Gateway API.
+2.  **Replace the Content Generator**: Replace the existing `ContentGenerator` with a new class that implements the same interface but is tailored to the Salesforce LLM Gateway API.
 3.  **Map Request/Response Formats**: Implement the logic to translate the CLI's internal data structures to the format required by the LLM Gateway API and vice-versa.
-4.  **Integrate the New Provider**: Update the CLI's configuration and factory functions to recognize and initialize the new Salesforce LLM Gateway provider.
+4.  **Update Configuration**: Modify the CLI's configuration and factory functions to remove the Gemini-specific provider options and default to the new Salesforce LLM Gateway provider.
 
 ---
 
@@ -58,7 +58,35 @@ This class will be the core of the new integration, acting as the bridge between
     *   **`countTokens`**:
         *   **Note**: The LLM Gateway API spec does not list a dedicated endpoint for counting tokens. The initial implementation should log a warning and return a `totalTokens` count of `0`. Further investigation will be needed to determine if client-side token counting is required.
 
-### Step 4: Request/Response Transformation Logic
+### Step 4: API and Header Configuration
+
+The `SalesforceLlmGatewayContentGenerator` must be configured to use the correct API endpoints and to send the required HTTP headers with each request.
+
+*   **API Base URLs**:
+    *   The base URL will be determined by a new `SF_API_ENV` environment variable, which can be one of `prod`, `dev`, `test`, `perf`, or `stage`.
+    *   The `SalesforceLlmGatewayContentGenerator` will map these values to the corresponding base URLs:
+        *   `prod`: `https://api.salesforce.com`
+        *   `dev`: `https://dev.api.salesforce.com`
+        *   `test`: `https://test.api.salesforce.com`
+        *   `perf`: `https://perf.api.salesforce.com`
+        *   `stage`: `https://stage.api.salesforce.com`
+    *   If `SF_API_ENV` is not set, it will default to `prod`.
+
+*   **Required Headers**:
+    *   The following headers must be included in all requests to the LLM Gateway:
+        *   `Authorization`: `Bearer <jwt>` (from `SalesforceAuthManager`)
+        *   `Content-Type`: `application/json`
+        *   `x-client-feature-id`: `EinsteinGptForDevelopers`
+        *   `x-llm-provider`: `InternalTextGeneration`
+        *   `x-sfdc-app-context`: `EinsteinGPT`
+        *   `x-sfdc-core-tenant-id`: This will be extracted from the `tid` claim of the JWT. If the claim is not present, the implementation will fall back to a `SF_LLMG_CORE_TENANT_ID` environment variable.
+        *   `x-salesforce-region`: This will be derived from the `SF_API_ENV` variable, following the same mapping used by the VS Code extension:
+            *   `prod` -> `EAST_REGION_1`
+            *   `stage` -> `EAST_REGION_2`
+            *   `dev`, `test`, `perf` -> `WEST_REGION`
+        *   `x-client-trace-id`: A unique identifier (e.g., a UUID) will be generated for each request.
+
+### Step 5: Request/Response Transformation Logic
 
 Inside `SalesforceLlmGatewayContentGenerator.ts`, create private helper methods to handle data format conversions.
 
@@ -74,25 +102,19 @@ Inside `SalesforceLlmGatewayContentGenerator.ts`, create private helper methods 
 
 The final step is to wire up the new provider within the existing `gemini-cli` framework.
 
-1.  **Update `AuthType` Enum**:
-    *   In `packages/core/src/core/contentGenerator.ts`, add a new authentication type:
-        ```typescript
-        export enum AuthType {
-          // ... existing types
-          SALESFORCE_LLM_GATEWAY = 'salesforce-llm-gateway',
-        }
-        ```
+1.  **Replace `createContentGenerator` Factory Logic**:
+    *   In the `createContentGenerator` function, remove all existing logic related to `AuthType`.
+    *   The function should now unconditionally:
+        1.  Instantiate the `SalesforceAuthManager`.
+        2.  Instantiate the `SalesforceLlmGatewayContentGenerator` and pass the auth manager to it.
+        3.  Return the new content generator instance.
 
-2.  **Update `createContentGenerator` Factory**:
-    *   In the `createContentGenerator` function within the same file, add a case to handle the new `AuthType`. This block will be responsible for:
-        1.  Instantiating the `SalesforceAuthManager`.
-        2.  Instantiating the `SalesforceLlmGatewayContentGenerator` and passing the auth manager to it.
-        3.  Returning the new content generator instance.
-
-3.  **Update CLI Configuration**:
-    *   Modify the configuration logic in `packages/cli/src/config/` to support the new auth type.
-    *   This includes adding a new option for the user to select `SALESFORCE_LLM_GATEWAY` as their provider.
-    *   When this provider is selected, the CLI should perform a check for the `SF_USERNAME` environment variable and provide a clear error message if it is not set.
+2.  **Update CLI Configuration**:
+    *   Modify the configuration logic in `packages/cli/src/config/` to remove any options related to choosing an LLM provider or authentication method.
+    *   The CLI should now perform a check for the `SF_USERNAME` environment variable on startup and provide a clear error message if it is not set.
+3.  **Cleanup**:
+    *   Remove the `AuthType` enum from `packages/core/src/core/contentGenerator.ts` as it is no longer needed.
+    *   Delete any files related to the old Gemini integration, such as `codeAssist.ts`, `google-auth-provider.ts`, and any other files that are no longer referenced.
 
 ---
 
