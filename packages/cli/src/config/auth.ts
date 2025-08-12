@@ -38,5 +38,12 @@ export const validateAuthMethod = (authMethod: string): string | null => {
     return null;
   }
 
+  if (authMethod === AuthType.USE_SF_LLMG) {
+    if (!process.env.SF_LLMG_USERNAME) {
+      return 'SF_LLMG_USERNAME environment variable not found. Set it to the username or alias of an authenticated Salesforce org.';
+    }
+    return null;
+  }
+
   return 'Invalid auth method selected.';
 };

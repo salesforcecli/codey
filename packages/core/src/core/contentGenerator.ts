@@ -14,6 +14,7 @@ import {
   GoogleGenAI,
 } from '@google/genai';
 import { createCodeAssistContentGenerator } from '../code_assist/codeAssist.js';
+import { GatewayContentGenerator } from '../gateway/contentGenerator.js';
 import { DEFAULT_GEMINI_MODEL } from '../config/models.js';
 import { Config } from '../config/config.js';
 import { getEffectiveModel } from './modelCheck.js';
@@ -45,6 +46,7 @@ export enum AuthType {
   USE_GEMINI = 'gemini-api-key',
   USE_VERTEX_AI = 'vertex-ai',
   CLOUD_SHELL = 'cloud-shell',
+  USE_SF_LLMG = 'sf-llmg',
 }
 
 export type ContentGeneratorConfig = {
@@ -76,7 +78,8 @@ export function createContentGeneratorConfig(
   // If we are using Google auth or we are in Cloud Shell, there is nothing else to validate for now
   if (
     authType === AuthType.LOGIN_WITH_GOOGLE ||
-    authType === AuthType.CLOUD_SHELL
+    authType === AuthType.CLOUD_SHELL ||
+    authType === AuthType.USE_SF_LLMG
   ) {
     return contentGeneratorConfig;
   }
@@ -127,6 +130,10 @@ export async function createContentGenerator(
       gcConfig,
       sessionId,
     );
+  }
+
+  if (config.authType === AuthType.USE_SF_LLMG) {
+    return new GatewayContentGenerator(httpOptions);
   }
 
   if (

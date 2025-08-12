@@ -31,5 +31,15 @@ export async function createCodeAssistContentGenerator(
     );
   }
 
+  if (authType === AuthType.USE_SF_LLMG) {
+    // For SF LLMG, we still reuse CodeAssistServer surface to keep the
+    // rest of the app unchanged. Internals are handled by a different
+    // content generator implementation created by createContentGenerator.
+    // This branch should not be reached because createContentGenerator
+    // short-circuits for USE_SF_LLMG earlier, but we keep it explicit
+    // for clarity and future refactors.
+    throw new Error('Internal setup for SF LLMG should be handled upstream.');
+  }
+
   throw new Error(`Unsupported authType: ${authType}`);
 }

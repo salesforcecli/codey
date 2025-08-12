@@ -77,6 +77,7 @@ export function AuthDialog({
       value: AuthType.USE_GEMINI,
     },
     { label: 'Vertex AI', value: AuthType.USE_VERTEX_AI },
+    { label: 'Salesforce LLM Gateway (JWT via org)', value: AuthType.USE_SF_LLMG },
   ];
 
   const initialAuthIndex = items.findIndex((item) => {
