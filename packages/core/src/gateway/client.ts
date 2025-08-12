@@ -110,6 +110,23 @@ export type Generations = {
   }>;
 };
 
+export type ChatGenerations = {
+  id: string;
+  generation_details?: {
+    generations: Array<{
+      content: string;
+      role: string;
+      tool_invocations?: Array<{
+        id: string;
+        function: {
+          name: string;
+          arguments: string;
+        };
+      }>;
+    }>;
+  };
+};
+
 type EndPoint =
   | '/generations'
   | '/generations/stream'
@@ -206,8 +223,11 @@ export class GatewayClient {
    */
   async generateChatCompletion(
     request: ChatGenerationRequest,
-  ): Promise<GatewayResponse> {
-    return this.makeRequest('/chat/generations', 'POST', request);
+  ): Promise<GatewayResponse<ChatGenerations>> {
+    return this.makeRequest<ChatGenerations>('/chat/generations', 'POST', {
+      ...request,
+      system_prompt_strategy: 'use_model_parameter',
+    });
   }
 
   /**
@@ -215,8 +235,15 @@ export class GatewayClient {
    */
   async generateChatCompletionStream(
     request: ChatGenerationRequest,
-  ): Promise<AsyncGenerator<unknown>> {
-    return this.makeStreamRequest('/chat/generations/stream', 'POST', request);
+  ): Promise<AsyncGenerator<ChatGenerations>> {
+    return this.makeStreamRequest<ChatGenerations>(
+      '/chat/generations/stream',
+      'POST',
+      {
+        ...request,
+        system_prompt_strategy: 'use_model_parameter',
+      },
+    );
   }
 
   /**
@@ -254,7 +281,7 @@ export class GatewayClient {
     await this.maybeRequestJWT();
     const url = `${this.baseUrl}${endpoint}`;
     const headers = this.getHeaders();
-
+    // console.log('makeRequest body:', body);
     const response = await request(url, {
       method,
       headers,
@@ -264,6 +291,7 @@ export class GatewayClient {
     const responseData = (await response.body.json()) as T;
 
     if (response.statusCode >= 400) {
+      console.log('makeRequest error:', response.body.text());
       throw new Error(
         `Gateway API Error: ${response.statusCode} - ${(responseData as { message?: string })?.message || 'Request failed'}`,
       );
@@ -293,15 +321,14 @@ export class GatewayClient {
       headers,
       body: body ? JSON.stringify(body) : undefined,
     });
-
+    // console.log('makeStreamRequest body:', body);
     if (response.statusCode >= 400) {
-      // Handle error responses - we need to read the body first
+      console.log('makeStreamRequest error:', response.body.text());
       const errorData = await response.body.json();
       const errorMessage =
         (errorData as { message?: string })?.message || 'Request failed';
-
       throw new Error(
-        `Gateway API Error: ${response.statusCode} - ${errorMessage}`,
+        `Gateway API Error: ${response.statusCode} - ${errorMessage}: ${JSON.stringify(errorData)}`,
       );
     }
 

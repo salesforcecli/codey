@@ -14,18 +14,87 @@ import {
   Content,
   Part,
   Candidate,
-  GenerateContentResponseUsageMetadata,
   ContentListUnion,
   ContentUnion,
-  FinishReason,
 } from '@google/genai';
-import { GatewayClient, Generations } from './client.js';
+import { GatewayClient, ChatGenerations, GatewayResponse } from './client.js';
 import { ContentGenerator } from '../core/contentGenerator.js';
 import { Claude37Sonnet } from './models.js';
 
-export interface HttpOptions {
-  headers?: Record<string, string>;
-}
+const isString = (content: ContentUnion): content is string =>
+  typeof content === 'string';
+
+const isPart = (content: ContentUnion): content is Part =>
+  typeof content === 'object' &&
+  content !== null &&
+  ('text' in content || 'inlineData' in content || 'fileData' in content);
+
+const isContent = (content: ContentUnion): content is Content =>
+  typeof content === 'object' && content !== null && 'parts' in content;
+
+/**
+ * Maps Gateway parameter names to the expected tool parameter names
+ */
+const mapToolParameters = (
+  toolName: string,
+  args: Record<string, unknown>,
+): Record<string, unknown> => {
+  const mappedArgs = { ...args };
+
+  switch (toolName) {
+    case 'read_file':
+      if ('file_path' in mappedArgs) {
+        mappedArgs.absolute_path = mappedArgs.file_path;
+        delete mappedArgs.file_path;
+      }
+      break;
+    default:
+      // No parameter mapping needed for other tools
+      break;
+  }
+
+  return mappedArgs;
+};
+
+const convertGenerationToCandidate = (
+  generation: NonNullable<
+    ChatGenerations['generation_details']
+  >['generations'][number],
+): Candidate => {
+  const parts: Part[] = [];
+
+  // Add text content if present
+  if (generation.content) {
+    parts.push({ text: generation.content });
+  }
+
+  // Add tool calls if present
+  if (generation.tool_invocations && generation.tool_invocations.length > 0) {
+    for (const toolInvocation of generation.tool_invocations) {
+      const rawArgs = JSON.parse(toolInvocation.function.arguments);
+      const mappedArgs = mapToolParameters(
+        toolInvocation.function.name,
+        rawArgs,
+      );
+
+      parts.push({
+        functionCall: {
+          name: toolInvocation.function.name,
+          args: mappedArgs,
+        },
+      });
+    }
+  }
+
+  return {
+    content: {
+      parts,
+      role: 'model',
+    },
+    index: 0,
+    safetyRatings: [], // Gateway doesn't provide safety ratings in the same format
+  };
+};
 
 /**
  * ContentGenerator implementation that uses Salesforce LLM Gateway
@@ -35,7 +104,7 @@ export class GatewayContentGenerator implements ContentGenerator {
   // Default to Claude37Sonnet model for now - this could be made configurable
   model = Claude37Sonnet;
 
-  constructor(_httpOptions: HttpOptions) {
+  constructor() {
     this.client = new GatewayClient({
       model: this.model,
     });
@@ -43,24 +112,24 @@ export class GatewayContentGenerator implements ContentGenerator {
 
   async generateContent(
     request: GenerateContentParameters,
-    userPromptId: string,
+    _userPromptId: string,
   ): Promise<GenerateContentResponse> {
     const gatewayRequest = this.prepareGatewayRequest(request);
-    const response = await this.client.generateCompletion(gatewayRequest);
+    const response = await this.client.generateChatCompletion(gatewayRequest);
 
     // Convert Gateway response back to Gemini format
-    return this.convertGatewayResponseToGemini(response, userPromptId);
+    return this.convertGatewayResponseToGemini(response);
   }
 
   async generateContentStream(
     request: GenerateContentParameters,
-    userPromptId: string,
+    _userPromptId: string,
   ): Promise<AsyncGenerator<GenerateContentResponse>> {
     const gatewayRequest = this.prepareGatewayRequest(request);
     const streamGenerator =
-      await this.client.generateCompletionStream(gatewayRequest);
+      await this.client.generateChatCompletionStream(gatewayRequest);
 
-    return this.convertStreamGeneratorToGemini(streamGenerator, userPromptId);
+    return this.convertStreamGeneratorToGemini(streamGenerator);
   }
 
   async countTokens(
@@ -166,86 +235,108 @@ export class GatewayContentGenerator implements ContentGenerator {
   }
 
   private prepareGatewayRequest(request: GenerateContentParameters) {
-    const promptContents: Content[] = [];
+    const messages: Array<{
+      role: 'system' | 'user' | 'assistant' | 'tool';
+      content: string;
+    }> = [];
+
+    // Add system instruction if present
     if (request.config?.systemInstruction) {
-      // Assuming systemInstruction is a Content object as per our usage
-      promptContents.push(request.config.systemInstruction as Content);
+      messages.push({
+        role: 'system',
+        content: this.convertContentToText(request.config.systemInstruction),
+      });
     }
-    promptContents.push(...this.toContentsArray(request.contents));
 
-    let prompt = this.convertContentsToPrompt(promptContents);
+    // Convert contents to messages, preserving roles correctly
+    const userContents = this.toContentsArray(request.contents);
+    for (const content of userContents) {
+      let messageContent = this.convertContentToText(content);
 
-    // When JSON output is requested, add instructions to the prompt
-    if (
-      request.config?.responseMimeType === 'application/json' &&
-      request.config.responseSchema
-    ) {
-      const schema = JSON.stringify(request.config.responseSchema, null, 2);
-      const jsonInstruction = `\n\nPlease respond with a valid JSON object that conforms to the following schema. Do not include any other explanatory text or markdown formatting such as \`\`\`json.\n\nSCHEMA:\n${schema}`;
-      prompt += jsonInstruction;
+      const role = content.role === 'model' ? 'assistant' : 'user';
+
+      // When JSON output is requested, add instructions to the last user message only
+      if (
+        request.config?.responseMimeType === 'application/json' &&
+        request.config.responseSchema &&
+        content === userContents[userContents.length - 1] &&
+        role === 'user' // Only add to user messages
+      ) {
+        const schema = JSON.stringify(request.config.responseSchema, null, 2);
+        const jsonInstruction = `
+
+Please respond with a valid JSON object that conforms to the following schema. Do not include any other explanatory text or markdown formatting such as \`\`\`json.
+
+SCHEMA:
+${schema}
+
+`;
+        messageContent += jsonInstruction;
+      }
+
+      messages.push({
+        role,
+        content: messageContent,
+      });
     }
 
     const gatewayRequest = {
-      prompt,
       model: this.model.model,
-      max_tokens: request.config?.maxOutputTokens || this.model.maxOutputTokens,
-      temperature: request.config?.temperature || 0.7,
-      stop_sequences: request.config?.stopSequences,
+      messages,
+      generation_settings: {
+        max_tokens:
+          request.config?.maxOutputTokens || this.model.maxOutputTokens,
+        temperature: request.config?.temperature || 0.7,
+        stop_sequences: request.config?.stopSequences,
+      },
     };
+
     return gatewayRequest;
   }
 
   /**
    * Convert a single Content to text string
    */
-  private convertContentToText(content: Content): string {
-    return (
-      content.parts
-        ?.map((part) => {
-          if ('text' in part && part.text) {
-            return part.text;
-          }
-          return '';
-        })
-        .join(' ') || ''
-    );
+  private convertContentToText(content: ContentUnion): string {
+    if (isString(content)) {
+      return content;
+    }
+
+    if (isPart(content)) {
+      return content.text || '';
+    }
+
+    if (isContent(content)) {
+      return (
+        content.parts
+          ?.map((part) => this.convertContentToText(part))
+          .join(' ') || ''
+      );
+    }
+
+    if (Array.isArray(content)) {
+      return content.map((c) => this.convertContentToText(c)).join('\n');
+    }
+
+    return JSON.stringify(content);
   }
 
   /**
    * Convert Gateway response to Gemini GenerateContentResponse format
    */
   private convertGatewayResponseToGemini(
-    gatewayResponse: Record<string, unknown>,
-    _userPromptId: string,
+    chatResponse: GatewayResponse<ChatGenerations>,
   ): GenerateContentResponse {
-    const generations =
-      ((gatewayResponse.data as Record<string, unknown>)
-        ?.generations as unknown[]) || [];
-
-    const candidates: Candidate[] = generations.map((gen: unknown) => {
-      const generation = gen as Record<string, unknown>;
-      return {
-        content: {
-          parts: [{ text: (generation.text as string) || '' }] as Part[],
-          role: 'model',
-        },
-        finishReason: 'STOP' as FinishReason, // Gateway doesn't provide finish reasons, so assume STOP
-        index: 0,
-        safetyRatings: [], // Gateway doesn't provide safety ratings in the same format
-      };
-    });
-
-    const usageMetadata: GenerateContentResponseUsageMetadata = {
-      promptTokenCount: 0, // Gateway doesn't provide token counts in response
+    const generations = chatResponse.data.generation_details?.generations;
+    const candidates = generations?.map(convertGenerationToCandidate);
+    const response = new GenerateContentResponse();
+    response.candidates = candidates;
+    response.usageMetadata = {
+      promptTokenCount: 0,
       candidatesTokenCount: 0,
       totalTokenCount: 0,
     };
-
-    const response = new GenerateContentResponse();
-    response.candidates = candidates;
-    response.usageMetadata = usageMetadata;
     response.modelVersion = this.model.model;
-
     return response;
   }
 
@@ -253,34 +344,33 @@ export class GatewayContentGenerator implements ContentGenerator {
    * Convert streaming Gateway generator to Gemini format
    */
   private async *convertStreamGeneratorToGemini(
-    streamGenerator: AsyncGenerator<Generations>,
-    _userPromptId: string,
+    streamGenerator: AsyncGenerator<ChatGenerations>,
   ): AsyncGenerator<GenerateContentResponse> {
     for await (const data of streamGenerator) {
-      const generation = data.generations[0];
+      const generations = data.generation_details?.generations;
 
-      if (generation.text && generation.text.trim()) {
-        // Convert each streaming chunk to Gemini format
-        const candidate: Candidate = {
-          content: {
-            parts: [{ text: generation.text }] as Part[],
-            role: 'model',
-          },
-          index: 0,
-          safetyRatings: [],
-        };
-
-        const response = new GenerateContentResponse();
-        response.candidates = [candidate];
-        response.usageMetadata = {
-          promptTokenCount: 0,
-          candidatesTokenCount: 0,
-          totalTokenCount: 0,
-        };
-        response.modelVersion = this.model.model;
-
-        yield response;
+      const response = new GenerateContentResponse();
+      response.candidates = [];
+      response.usageMetadata = {
+        promptTokenCount: 0,
+        candidatesTokenCount: 0,
+        totalTokenCount: 0,
+      };
+      response.modelVersion = this.model.model;
+      for (const generation of generations || []) {
+        // Include generation if it has content OR tool invocations
+        if (
+          (generation?.content && generation.content.trim()) ||
+          (generation?.tool_invocations &&
+            generation.tool_invocations.length > 0)
+        ) {
+          // Convert each streaming chunk to Gemini format
+          const candidate = convertGenerationToCandidate(generation);
+          response.candidates.push(candidate);
+        }
       }
+
+      yield response;
     }
   }
 }

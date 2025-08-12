@@ -133,7 +133,7 @@ export async function createContentGenerator(
   }
 
   if (config.authType === AuthType.USE_SF_LLMG) {
-    return new GatewayContentGenerator(httpOptions);
+    return new GatewayContentGenerator();
   }
 
   if (
