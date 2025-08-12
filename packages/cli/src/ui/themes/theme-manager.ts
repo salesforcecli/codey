@@ -36,7 +36,7 @@ export interface ThemeDisplay {
   isCustom?: boolean;
 }
 
-export const DEFAULT_THEME: Theme = DefaultDark;
+export const DEFAULT_THEME: Theme = SalesforceDark;
 
 class ThemeManager {
   private readonly availableThemes: Theme[];
