@@ -16,8 +16,15 @@ import {
   Candidate,
   ContentListUnion,
   ContentUnion,
+  ToolListUnion,
 } from '@google/genai';
-import { GatewayClient, ChatGenerations, GatewayResponse } from './client.js';
+import {
+  GatewayClient,
+  ChatGenerations,
+  GatewayResponse,
+  ChatCompletionTool,
+  ChatGenerationRequest,
+} from './client.js';
 import { ContentGenerator } from '../core/contentGenerator.js';
 import { Claude37Sonnet } from './models.js';
 
@@ -48,8 +55,14 @@ const mapToolParameters = (
         delete mappedArgs.file_path;
       }
       break;
+    case 'edit_file':
+      // Handle edit_file parameter mapping if needed
+      break;
+    case 'shell_command':
+      // Handle shell parameter mapping if needed
+      break;
+    // Add more tool-specific mappings as needed
     default:
-      // No parameter mapping needed for other tools
       break;
   }
 
@@ -71,18 +84,30 @@ const convertGenerationToCandidate = (
   // Add tool calls if present
   if (generation.tool_invocations && generation.tool_invocations.length > 0) {
     for (const toolInvocation of generation.tool_invocations) {
-      const rawArgs = JSON.parse(toolInvocation.function.arguments);
-      const mappedArgs = mapToolParameters(
-        toolInvocation.function.name,
-        rawArgs,
-      );
+      try {
+        const rawArgs = JSON.parse(toolInvocation.function.arguments);
+        const mappedArgs = mapToolParameters(
+          toolInvocation.function.name,
+          rawArgs,
+        );
 
-      parts.push({
-        functionCall: {
-          name: toolInvocation.function.name,
-          args: mappedArgs,
-        },
-      });
+        parts.push({
+          functionCall: {
+            name: toolInvocation.function.name,
+            args: mappedArgs,
+            id: toolInvocation.id, // Preserve tool call ID
+          },
+        });
+      } catch (error) {
+        console.error(
+          `Failed to parse tool arguments for ${toolInvocation.function.name}:`,
+          error,
+        );
+        // Add error handling - maybe add as text part explaining the error
+        parts.push({
+          text: `Error: Failed to parse tool call ${toolInvocation.function.name}`,
+        });
+      }
     }
   }
 
@@ -304,6 +329,12 @@ FINAL WARNING: Any non-JSON content will cause system failure. Respond with JSON
       });
     }
 
+    const tools = this.convertGeminiToolsToGateway(request.config?.tools ?? []);
+    const toolConfig = {
+      mode: 'auto', // Default to auto mode
+      // parallel_calls: true, // Enable parallel tool calls
+    } satisfies ChatGenerationRequest['tool_config'];
+
     const gatewayRequest = {
       model: this.model.model,
       messages,
@@ -313,9 +344,97 @@ FINAL WARNING: Any non-JSON content will cause system failure. Respond with JSON
         temperature: request.config?.temperature ?? 0.7,
         stop_sequences: request.config?.stopSequences,
       },
+      tools,
+      tool_config: toolConfig,
     };
 
     return gatewayRequest;
+  }
+
+  private convertGeminiToolsToGateway(
+    tools: ToolListUnion,
+  ): ChatCompletionTool[] {
+    const gatewayTools: ChatCompletionTool[] = [];
+
+    for (const tool of tools) {
+      // Support both Tool and CallableTool types
+      // Tool: has functionDeclarations (array)
+      // CallableTool: has 'function' property (single function)
+      if (
+        'functionDeclarations' in tool &&
+        Array.isArray(tool.functionDeclarations)
+      ) {
+        for (const funcDecl of tool.functionDeclarations) {
+          // Normalize the parameter schema to fix type case issues and other inconsistencies
+          const normalizedSchema = this.normalizeParameterSchema(
+            funcDecl.parametersJsonSchema as Record<string, unknown>,
+          );
+
+          gatewayTools.push({
+            type: 'function',
+            function: {
+              name: funcDecl.name || '',
+              description: funcDecl.description || '',
+              parameters: normalizedSchema,
+            },
+          });
+        }
+      } else if ('function' in tool && tool.function) {
+        console.log('CallableTool type - skipping for now', tool);
+        // CallableTool type - skip for now
+        // gatewayTools.push({
+        //   type: 'function',
+        //   function: {
+        //     name: tool.function.name || '',
+        //     description: tool.function.description || '',
+        //     parameters: tool.function.parametersJsonSchema as Record<string, unknown>,
+        //   },
+        // });
+      }
+    }
+
+    return gatewayTools;
+  }
+
+  /**
+   * Normalizes parameter schema to ensure Gateway API compatibility.
+   * Fixes common issues like uppercase type specifications and other schema inconsistencies.
+   */
+  private normalizeParameterSchema(
+    schema: Record<string, unknown>,
+  ): Record<string, unknown> {
+    if (!schema) return schema;
+
+    // Deep clone to avoid mutating the original schema
+    const normalized = JSON.parse(JSON.stringify(schema));
+
+    // Recursively normalize type properties and other schema issues
+    const normalizeTypes = (obj: unknown): unknown => {
+      if (Array.isArray(obj)) {
+        return obj.map(normalizeTypes);
+      }
+
+      if (obj && typeof obj === 'object') {
+        const result: Record<string, unknown> = {};
+
+        for (const [key, value] of Object.entries(obj)) {
+          if (key === 'type' && typeof value === 'string') {
+            // Normalize type to lowercase (e.g., 'OBJECT' -> 'object', 'STRING' -> 'string')
+            result[key] = value.toLowerCase();
+          } else if (typeof value === 'object' && value !== null) {
+            result[key] = normalizeTypes(value);
+          } else {
+            result[key] = value;
+          }
+        }
+
+        return result;
+      }
+
+      return obj;
+    };
+
+    return normalizeTypes(normalized) as Record<string, unknown>;
   }
 
   /**
