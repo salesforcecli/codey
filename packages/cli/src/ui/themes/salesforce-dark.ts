@@ -5,6 +5,7 @@
  */
 
 import { type ColorsTheme, Theme } from './theme.js';
+import { darkSemanticColors } from './semantic-tokens.js';
 
 const salesforceDarkColors: ColorsTheme = {
   type: 'dark',
@@ -119,4 +120,5 @@ export const SalesforceDark: Theme = new Theme(
     },
   },
   salesforceDarkColors,
+  darkSemanticColors,
 );
