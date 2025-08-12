@@ -50,6 +50,20 @@ export const Claude37Sonnet = {
   permittedParameters: ['command_source', 'guided_json'], // it can get successful responses but seemingly not makes a difference
 };
 
+export const Claude4Sonnet = {
+  description: 'Claude 4 Sonnet',
+  displayId: 'Claude 4 Sonnet',
+  model: 'llmgateway__BedrockAnthropicClaude4Sonnet',
+  isInsideTrustBoundary: true,
+  supportsStreaming: true,
+  supportsMcp: true,
+  supportsPromptCache: false,
+  supportsImages: false,
+  maxInputTokens: 8192, // https://git.soma.salesforce.com/pages/tech-enablement/einstein/docs/gateway/models-and-providers/#comparison-table
+  maxOutputTokens: 8192,
+  permittedParameters: ['command_source', 'guided_json'], // it can get successful responses but seemingly not makes a difference
+};
+
 export const GPT4oMini = {
   description: 'ChatGPT 4o Mini',
   displayId: 'GPT-4o Mini',

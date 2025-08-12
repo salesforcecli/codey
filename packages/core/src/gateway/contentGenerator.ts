@@ -242,9 +242,22 @@ export class GatewayContentGenerator implements ContentGenerator {
 
     // Add system instruction if present
     if (request.config?.systemInstruction) {
+      let systemContent = this.convertContentToText(
+        request.config.systemInstruction,
+      );
+
+      // If JSON response is requested, add JSON enforcement to system instruction
+      if (request.config?.responseMimeType === 'application/json') {
+        systemContent = `JSON_MODE: You are operating in strict JSON response mode. You MUST respond with ONLY a valid JSON object. No explanations, no markdown, no text outside the JSON object.
+
+${systemContent}
+
+MANDATORY JSON FORMAT: Your response must be a single JSON object that starts with { and ends with }. Any other format will cause system failure.`;
+      }
+
       messages.push({
         role: 'system',
-        content: this.convertContentToText(request.config.systemInstruction),
+        content: systemContent,
       });
     }
 
@@ -255,7 +268,7 @@ export class GatewayContentGenerator implements ContentGenerator {
 
       const role = content.role === 'model' ? 'assistant' : 'user';
 
-      // When JSON output is requested, add instructions to the last user message only
+      // When JSON output is requested, add instructions to enforce JSON response
       if (
         request.config?.responseMimeType === 'application/json' &&
         request.config.responseSchema &&
@@ -265,11 +278,22 @@ export class GatewayContentGenerator implements ContentGenerator {
         const schema = JSON.stringify(request.config.responseSchema, null, 2);
         const jsonInstruction = `
 
-Please respond with a valid JSON object that conforms to the following schema. Do not include any other explanatory text or markdown formatting such as \`\`\`json.
+⚠️ JSON_ONLY_MODE: CRITICAL OVERRIDE ⚠️
 
-SCHEMA:
+You are in JSON-ONLY response mode. Your response MUST be valid JSON only.
+
+❌ NO conversational text
+❌ NO explanations
+❌ NO markdown
+❌ NO code blocks
+❌ NO "I understand..." or similar phrases
+
+✅ ONLY: Raw JSON object starting with { and ending with }
+
+REQUIRED SCHEMA:
 ${schema}
 
+FINAL WARNING: Any non-JSON content will cause system failure. Respond with JSON immediately.
 `;
         messageContent += jsonInstruction;
       }
@@ -285,8 +309,8 @@ ${schema}
       messages,
       generation_settings: {
         max_tokens:
-          request.config?.maxOutputTokens || this.model.maxOutputTokens,
-        temperature: request.config?.temperature || 0.7,
+          request.config?.maxOutputTokens ?? this.model.maxOutputTokens,
+        temperature: request.config?.temperature ?? 0.7,
         stop_sequences: request.config?.stopSequences,
       },
     };
@@ -327,8 +351,29 @@ ${schema}
   private convertGatewayResponseToGemini(
     chatResponse: GatewayResponse<ChatGenerations>,
   ): GenerateContentResponse {
+    // Debug logging for Gateway response with tools
     const generations = chatResponse.data.generation_details?.generations;
-    const candidates = generations?.map(convertGenerationToCandidate);
+    const hasToolInvocations = generations?.some(
+      (g) => g.tool_invocations && g.tool_invocations.length > 0,
+    );
+
+    if (hasToolInvocations) {
+      console.log('=== GATEWAY RESPONSE WITH TOOLS ===');
+      console.log('Full response:', JSON.stringify(chatResponse.data, null, 2));
+      console.log(
+        'Tool invocations found:',
+        generations?.map((g) => g.tool_invocations),
+      );
+    }
+
+    const candidates = generations?.map(convertGenerationToCandidate) || [];
+
+    // Debug the converted candidates
+    if (hasToolInvocations) {
+      console.log('Converted candidates:', JSON.stringify(candidates, null, 2));
+      console.log('=================================');
+    }
+
     const response = new GenerateContentResponse();
     response.candidates = candidates;
     response.usageMetadata = {

@@ -61,7 +61,7 @@ type GenerationSettings = {
   seed?: number;
 };
 
-type ChatGenerationRequest = {
+export type ChatGenerationRequest = {
   model: string;
   messages: ChatMessageRequest[];
   generation_settings?: GenerationSettings;
@@ -73,9 +73,17 @@ type ChatGenerationRequest = {
   turn_id?: string;
   system_prompt_strategy?: string;
   tools?: ChatCompletionTool[];
+  tool_config?: {
+    mode: 'auto' | 'none' | 'tool' | 'any';
+    allowed_tools?: Array<{
+      type: string;
+      name: string;
+    }>;
+    parallel_calls?: boolean;
+  };
 };
 
-type ChatCompletionTool = {
+export type ChatCompletionTool = {
   type: string;
   function?: {
     name: string;
@@ -281,7 +289,6 @@ export class GatewayClient {
     await this.maybeRequestJWT();
     const url = `${this.baseUrl}${endpoint}`;
     const headers = this.getHeaders();
-    // console.log('makeRequest body:', body);
     const response = await request(url, {
       method,
       headers,
@@ -291,7 +298,6 @@ export class GatewayClient {
     const responseData = (await response.body.json()) as T;
 
     if (response.statusCode >= 400) {
-      console.log('makeRequest error:', response.body.text());
       throw new Error(
         `Gateway API Error: ${response.statusCode} - ${(responseData as { message?: string })?.message || 'Request failed'}`,
       );
@@ -321,9 +327,7 @@ export class GatewayClient {
       headers,
       body: body ? JSON.stringify(body) : undefined,
     });
-    // console.log('makeStreamRequest body:', body);
     if (response.statusCode >= 400) {
-      console.log('makeStreamRequest error:', response.body.text());
       const errorData = await response.body.json();
       const errorMessage =
         (errorData as { message?: string })?.message || 'Request failed';
