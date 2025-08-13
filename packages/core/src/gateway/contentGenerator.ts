@@ -331,8 +331,8 @@ FINAL WARNING: Any non-JSON content will cause system failure. Respond with JSON
 
     const tools = this.convertGeminiToolsToGateway(request.config?.tools ?? []);
     const toolConfig = {
-      mode: 'auto', // Default to auto mode
-      // parallel_calls: true, // Enable parallel tool calls
+      mode: 'auto',
+      parallel_calls: true,
     } satisfies ChatGenerationRequest['tool_config'];
 
     const gatewayRequest = {
@@ -344,8 +344,7 @@ FINAL WARNING: Any non-JSON content will cause system failure. Respond with JSON
         temperature: request.config?.temperature ?? 0.7,
         stop_sequences: request.config?.stopSequences,
       },
-      tools,
-      tool_config: toolConfig,
+      ...(tools.length > 0 ? { tools, tool_config: toolConfig } : {}),
     };
 
     return gatewayRequest;
