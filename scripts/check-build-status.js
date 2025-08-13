@@ -50,7 +50,7 @@ function findSourceFiles(dir, allFiles = []) {
   return allFiles;
 }
 
-console.log('Checking build status...');
+// console.log('Checking build status...');
 
 // Clean up old warnings file before check
 try {
@@ -132,7 +132,7 @@ if (newerSourceFileFound) {
     // Proceed without writing, app won't show warnings
   }
 } else {
-  console.log('Build is up-to-date.');
+  // console.log('Build is up-to-date.');
   // Ensure no stale warning file exists if build is ok
   try {
     if (fs.existsSync(warningsFilePath)) {
