@@ -569,6 +569,9 @@ export const useGeminiStream = (
             handleErrorEvent(event.value, userMessageTimestamp);
             break;
           case ServerGeminiEventType.ChatCompressed:
+            if (process.env.CODEY_IGNORE_CHAT_COMPRESSION) {
+              break;
+            }
             handleChatCompressionEvent(event.value);
             break;
           case ServerGeminiEventType.ToolCallConfirmation:

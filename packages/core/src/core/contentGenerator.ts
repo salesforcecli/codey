@@ -137,7 +137,7 @@ export async function createContentGenerator(
   }
 
   if (config.authType === AuthType.USE_SF_LLMG) {
-    return new GatewayContentGenerator();
+    return new LoggingContentGenerator(new GatewayContentGenerator(), gcConfig);
   }
 
   if (

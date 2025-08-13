@@ -476,6 +476,13 @@ FINAL WARNING: Any non-JSON content will cause system failure. Respond with JSON
     const generations = chatResponse.data.generation_details?.generations;
     const candidates = generations?.map(convertGenerationToCandidate) || [];
     const usage = chatResponse.data.generation_details?.parameters?.usage;
+    if (usage) {
+      this.usage = {
+        inputTokens: usage.inputTokens ?? this.usage.inputTokens,
+        outputTokens: usage.outputTokens ?? this.usage.outputTokens,
+        totalTokens: usage.totalTokens ?? this.usage.totalTokens,
+      };
+    }
 
     const response = new GenerateContentResponse();
     response.candidates = candidates;
@@ -496,17 +503,13 @@ FINAL WARNING: Any non-JSON content will cause system failure. Respond with JSON
   ): AsyncGenerator<GenerateContentResponse> {
     for await (const data of streamGenerator) {
       const generations = data.generation_details?.generations;
+      const usage = data.generation_details?.parameters?.usage;
 
-      if (data.generation_details?.parameters?.usage) {
+      if (usage) {
         this.usage = {
-          inputTokens:
-            data.generation_details.parameters.usage.inputTokens ??
-            this.usage.inputTokens,
-          outputTokens:
-            data.generation_details.parameters.usage.outputTokens ??
-            this.usage.outputTokens,
-          totalTokens:
-            data.generation_details.parameters.usage.totalTokens ?? 0,
+          inputTokens: usage.inputTokens ?? this.usage.inputTokens,
+          outputTokens: usage.outputTokens ?? this.usage.outputTokens,
+          totalTokens: usage.totalTokens ?? this.usage.totalTokens,
         };
       }
 
