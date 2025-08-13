@@ -132,6 +132,15 @@ export type ChatGenerations = {
         };
       }>;
     }>;
+    parameters?: {
+      usage?: {
+        cacheReadInputTokens?: number;
+        cacheWriteInputTokens?: number;
+        inputTokens?: number;
+        outputTokens?: number;
+        totalTokens?: number;
+      };
+    };
   };
 };
 
@@ -288,7 +297,7 @@ export class GatewayClient {
   ): Promise<GatewayResponse<T>> {
     await this.maybeRequestJWT();
     const url = `${this.baseUrl}${endpoint}`;
-    const headers = this.getHeaders();
+    const headers = this.getHeaders('request');
     const response = await request(url, {
       method,
       headers,
@@ -299,7 +308,7 @@ export class GatewayClient {
 
     if (response.statusCode >= 400) {
       throw new Error(
-        `Gateway API Error: ${response.statusCode} - ${(responseData as { message?: string })?.message || 'Request failed'}`,
+        `Gateway API Error: ${response.statusCode} - ${(responseData as { message?: string })?.message || 'Request failed'}.`,
       );
     }
 
@@ -320,7 +329,7 @@ export class GatewayClient {
   ): Promise<AsyncGenerator<T>> {
     await this.maybeRequestJWT();
     const url = `${this.baseUrl}${endpoint}`;
-    const headers = this.getHeaders();
+    const headers = this.getHeaders('stream');
 
     const response = await request(url, {
       method,
@@ -372,7 +381,7 @@ export class GatewayClient {
   /**
    * Get the required headers for LLMG API requests
    */
-  private getHeaders(): Record<string, string> {
+  private getHeaders(type: 'request' | 'stream'): Record<string, string> {
     if (!this.jwt) {
       throw new Error('JWT not found');
     }
@@ -384,7 +393,8 @@ export class GatewayClient {
       'x-sfdc-core-tenant-id': this.jwt.tnk(),
       'x-salesforce-region': this.regionHeader,
       'x-client-trace-id': randomBytes(8).toString('hex'),
-      ...(this.model.customHeaders || {}),
+      ...(type === 'request' ? this.model.customRequestHeaders || {} : {}),
+      ...(type === 'stream' ? this.model.customStreamHeaders || {} : {}),
     };
 
     return headers;

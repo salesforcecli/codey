@@ -16,7 +16,8 @@ export type GatewayModel = {
   maxInputTokens: number;
   maxOutputTokens: number;
   permittedParameters: string[];
-  customHeaders?: Record<string, string>;
+  customRequestHeaders?: Record<string, string>;
+  customStreamHeaders?: Record<string, string>;
 };
 
 export const QWEN = {
@@ -31,7 +32,7 @@ export const QWEN = {
   maxInputTokens: 32768,
   maxOutputTokens: 2048,
   permittedParameters: ['command_source', 'guided_json', 'user_prompt'],
-  customHeaders: {
+  customStreamHeaders: {
     'x-llm-provider': 'InternalTextGeneration',
   },
 };

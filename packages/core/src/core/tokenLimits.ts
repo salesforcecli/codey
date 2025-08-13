@@ -26,6 +26,8 @@ export function tokenLimit(model: Model): TokenCount {
       return 1_048_576;
     case 'gemini-2.0-flash-preview-image-generation':
       return 32_000;
+    case 'Claude 4 Sonnet (Salesforce)':
+      return 8192;
     default:
       return DEFAULT_TOKEN_LIMIT;
   }

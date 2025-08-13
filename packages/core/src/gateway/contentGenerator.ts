@@ -26,7 +26,7 @@ import {
   ChatGenerationRequest,
 } from './client.js';
 import { ContentGenerator } from '../core/contentGenerator.js';
-import { Claude37Sonnet } from './models.js';
+import { Claude4Sonnet } from './models.js';
 
 const isString = (content: ContentUnion): content is string =>
   typeof content === 'string';
@@ -126,8 +126,17 @@ const convertGenerationToCandidate = (
  */
 export class GatewayContentGenerator implements ContentGenerator {
   private client: GatewayClient;
-  // Default to Claude37Sonnet model for now - this could be made configurable
-  model = Claude37Sonnet;
+  private usage: {
+    inputTokens: number;
+    outputTokens: number;
+    totalTokens: number;
+  } = {
+    inputTokens: 0,
+    outputTokens: 0,
+    totalTokens: 0,
+  };
+  // Default to Claude4Sonnet model for now - this could be made configurable
+  model = Claude4Sonnet;
 
   constructor() {
     this.client = new GatewayClient({
@@ -158,15 +167,10 @@ export class GatewayContentGenerator implements ContentGenerator {
   }
 
   async countTokens(
-    request: CountTokensParameters,
+    _request: CountTokensParameters,
   ): Promise<CountTokensResponse> {
-    // Gateway doesn't have a direct token counting endpoint
-    // Provide an estimation based on rough character count
-    const prompt = this.convertContentsToPrompt(request.contents);
-    const estimatedTokens = Math.ceil(prompt.length / 4); // Rough estimation: 1 token ≈ 4 characters
-
     return {
-      totalTokens: estimatedTokens,
+      totalTokens: this.usage.totalTokens,
     };
   }
 
@@ -469,35 +473,16 @@ FINAL WARNING: Any non-JSON content will cause system failure. Respond with JSON
   private convertGatewayResponseToGemini(
     chatResponse: GatewayResponse<ChatGenerations>,
   ): GenerateContentResponse {
-    // Debug logging for Gateway response with tools
     const generations = chatResponse.data.generation_details?.generations;
-    const hasToolInvocations = generations?.some(
-      (g) => g.tool_invocations && g.tool_invocations.length > 0,
-    );
-
-    if (hasToolInvocations) {
-      console.log('=== GATEWAY RESPONSE WITH TOOLS ===');
-      console.log('Full response:', JSON.stringify(chatResponse.data, null, 2));
-      console.log(
-        'Tool invocations found:',
-        generations?.map((g) => g.tool_invocations),
-      );
-    }
-
     const candidates = generations?.map(convertGenerationToCandidate) || [];
-
-    // Debug the converted candidates
-    if (hasToolInvocations) {
-      console.log('Converted candidates:', JSON.stringify(candidates, null, 2));
-      console.log('=================================');
-    }
+    const usage = chatResponse.data.generation_details?.parameters?.usage;
 
     const response = new GenerateContentResponse();
     response.candidates = candidates;
     response.usageMetadata = {
-      promptTokenCount: 0,
-      candidatesTokenCount: 0,
-      totalTokenCount: 0,
+      promptTokenCount: usage?.inputTokens ?? this.usage.inputTokens,
+      candidatesTokenCount: usage?.outputTokens ?? this.usage.outputTokens,
+      totalTokenCount: usage?.totalTokens ?? this.usage.totalTokens,
     };
     response.modelVersion = this.model.model;
     return response;
@@ -512,12 +497,25 @@ FINAL WARNING: Any non-JSON content will cause system failure. Respond with JSON
     for await (const data of streamGenerator) {
       const generations = data.generation_details?.generations;
 
+      if (data.generation_details?.parameters?.usage) {
+        this.usage = {
+          inputTokens:
+            data.generation_details.parameters.usage.inputTokens ??
+            this.usage.inputTokens,
+          outputTokens:
+            data.generation_details.parameters.usage.outputTokens ??
+            this.usage.outputTokens,
+          totalTokens:
+            data.generation_details.parameters.usage.totalTokens ?? 0,
+        };
+      }
+
       const response = new GenerateContentResponse();
       response.candidates = [];
       response.usageMetadata = {
-        promptTokenCount: 0,
-        candidatesTokenCount: 0,
-        totalTokenCount: 0,
+        promptTokenCount: this.usage.inputTokens,
+        candidatesTokenCount: this.usage.outputTokens,
+        totalTokenCount: this.usage.totalTokens,
       };
       response.modelVersion = this.model.model;
       for (const generation of generations || []) {
