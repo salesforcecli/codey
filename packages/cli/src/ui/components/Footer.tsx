@@ -121,7 +121,8 @@ export const Footer: React.FC<FooterProps> = ({
       <Box alignItems="center" paddingTop={isNarrow ? 1 : 0}>
         <Text color={theme.text.accent}>
           {isNarrow ? '' : ' '}
-          {model}{' '}
+          {/* {model}{' '} */}
+          {'Salesforce LLM Gateway '}
           <ContextUsageDisplay
             promptTokenCount={promptTokenCount}
             model={model}
