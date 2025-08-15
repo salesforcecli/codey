@@ -6,23 +6,27 @@
 
 import { type ColorsTheme, Theme } from './theme.js';
 import { darkSemanticColors } from './semantic-tokens.js';
+import { SalesforceColorPalette } from './salesforce-color-palette.js';
 
 const salesforceDarkColors: ColorsTheme = {
   type: 'dark',
-  Background: '#0e1118',
-  Foreground: '#c9c9c9',
-  LightBlue: '#57a3fd',
-  AccentBlue: '#1b96ff',
-  AccentPurple: '#9343ff',
-  AccentCyan: '#08abed',
-  AccentGreen: '#41b658',
-  AccentYellow: '#f5b800',
-  AccentRed: '#ff5555',
-  DiffAdded: '#11431d',
-  DiffRemoved: '#6e1818',
-  Comment: '#706e6b',
-  Gray: '#514f4d',
-  GradientColors: ['#1b96ff', '#08abed'],
+  Background: SalesforceColorPalette.neutral10,
+  Foreground: SalesforceColorPalette.neutral95,
+  LightBlue: SalesforceColorPalette.cloudBlue80,
+  AccentBlue: SalesforceColorPalette.cloudBlue60,
+  AccentPurple: SalesforceColorPalette.cloudBlue60,
+  AccentCyan: SalesforceColorPalette.teal80,
+  AccentGreen: SalesforceColorPalette.green65,
+  AccentYellow: SalesforceColorPalette.orange70,
+  AccentRed: SalesforceColorPalette.red60,
+  DiffAdded: SalesforceColorPalette.green30,
+  DiffRemoved: SalesforceColorPalette.red20,
+  Comment: SalesforceColorPalette.neutral80,
+  Gray: SalesforceColorPalette.neutral60,
+  GradientColors: [
+    SalesforceColorPalette.cloudBlue60,
+    SalesforceColorPalette.blue50,
+  ],
 };
 
 export const SalesforceDark: Theme = new Theme(

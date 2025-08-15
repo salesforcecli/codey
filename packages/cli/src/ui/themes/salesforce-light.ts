@@ -6,23 +6,27 @@
 
 import { type ColorsTheme, Theme } from './theme.js';
 import { lightSemanticColors } from './semantic-tokens.js';
+import { SalesforceColorPalette } from './salesforce-color-palette.js';
 
 const salesforceLightColors: ColorsTheme = {
   type: 'light',
   Background: '#ffffff',
-  Foreground: '#080707',
-  LightBlue: '#57a3fd',
-  AccentBlue: '#0b5cab',
-  AccentPurple: '#9343ff',
-  AccentCyan: '#08abed',
-  AccentGreen: '#2e844a',
-  AccentYellow: '#f5b800',
-  AccentRed: '#ba0517',
-  DiffAdded: '#d8fadd',
-  DiffRemoved: '#feebee',
-  Comment: '#706e6b',
-  Gray: '#514f4d',
-  GradientColors: ['#0b5cab', '#08abed'],
+  Foreground: SalesforceColorPalette.neutral10,
+  LightBlue: SalesforceColorPalette.cloudBlue80,
+  AccentBlue: SalesforceColorPalette.blue50,
+  AccentPurple: SalesforceColorPalette.cloudBlue60,
+  AccentCyan: SalesforceColorPalette.teal60,
+  AccentGreen: SalesforceColorPalette.green65,
+  AccentYellow: SalesforceColorPalette.orange70,
+  AccentRed: SalesforceColorPalette.red60,
+  DiffAdded: SalesforceColorPalette.green90,
+  DiffRemoved: SalesforceColorPalette.red95,
+  Comment: SalesforceColorPalette.neutral80,
+  Gray: SalesforceColorPalette.neutral30,
+  GradientColors: [
+    SalesforceColorPalette.blue50,
+    SalesforceColorPalette.cloudBlue60,
+  ],
 };
 
 export const SalesforceLight: Theme = new Theme(
