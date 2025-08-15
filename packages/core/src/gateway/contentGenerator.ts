@@ -240,26 +240,6 @@ export class GatewayContentGenerator implements ContentGenerator {
   }
 
   /**
-   * Convert Gemini Contents array to a single prompt string
-   */
-  private convertContentsToPrompt(contents: ContentListUnion): string {
-    const contentArray = this.toContentsArray(contents);
-    return contentArray
-      .map((content) =>
-        content.parts
-          ?.map((part) => {
-            if ('text' in part && part.text) {
-              return part.text;
-            }
-            // Handle other part types if needed (images, etc.)
-            return '';
-          })
-          .join(' '),
-      )
-      .join('\n');
-  }
-
-  /**
    * Convert ContentListUnion to Content array (similar to converter.ts)
    */
   private toContentsArray(contents: ContentListUnion): Content[] {
