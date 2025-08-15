@@ -24,7 +24,7 @@ const salesforceLightColors: ColorsTheme = {
   Comment: SalesforceColorPalette.neutral80,
   Gray: SalesforceColorPalette.neutral30,
   GradientColors: [
-    SalesforceColorPalette.blue50,
+    SalesforceColorPalette.cloudBlue60,
     SalesforceColorPalette.cloudBlue60,
   ],
 };

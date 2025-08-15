@@ -25,7 +25,7 @@ const salesforceDarkColors: ColorsTheme = {
   Gray: SalesforceColorPalette.neutral60,
   GradientColors: [
     SalesforceColorPalette.cloudBlue60,
-    SalesforceColorPalette.blue50,
+    SalesforceColorPalette.cloudBlue60,
   ],
 };
 

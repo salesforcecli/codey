@@ -126,7 +126,7 @@ export const Footer: React.FC<FooterProps> = ({
         paddingX={isNarrow ? 0 : 1}
         paddingTop={isNarrow ? 1 : 0}
       >
-        <Text color={theme.text.secondary}>{orgUsername}</Text>
+        <Text color={theme.text.secondary}>☁️  {orgUsername}</Text>
         {/* {isTrustedFolder === false ? (
           <Text color={theme.status.warning}>untrusted</Text>
         ) : process.env.SANDBOX && process.env.SANDBOX !== 'sandbox-exec' ? (
