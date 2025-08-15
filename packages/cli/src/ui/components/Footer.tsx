@@ -9,7 +9,8 @@ import { Box, Text } from 'ink';
 import { theme } from '../semantic-colors.js';
 import { shortenPath, tildeifyPath } from '@google/gemini-cli-core';
 import { ConsoleSummaryDisplay } from './ConsoleSummaryDisplay.js';
-import process from 'node:process';
+import fs from 'node:fs';
+// import process from 'node:process';
 import path from 'node:path';
 import Gradient from 'ink-gradient';
 import { MemoryUsageDisplay } from './MemoryUsageDisplay.js';
@@ -18,6 +19,27 @@ import { DebugProfiler } from './DebugProfiler.js';
 
 import { useTerminalSize } from '../hooks/useTerminalSize.js';
 import { isNarrowWidth } from '../utils/isNarrowWidth.js';
+
+/**
+ * Reads the .sf/config.json file in the current working directory.
+ * Returns the parsed JSON object, or null if the file does not exist or is invalid.
+ */
+const readSfConfigJson = (): { 'target-org'?: string } | null => {
+  try {
+    // Use process.cwd() to get the current working directory
+    const configPath = path.join(process.cwd(), '.sf', 'config.json');
+    // Dynamically require fs to avoid import at the top
+    if (!fs.existsSync(configPath)) {
+      return null;
+    }
+    const fileContent = fs.readFileSync(configPath, 'utf8');
+    return JSON.parse(fileContent);
+  } catch {
+    // Could log error if needed
+    return null;
+  }
+};
+
 
 interface FooterProps {
   model: string;
@@ -48,7 +70,7 @@ export const Footer: React.FC<FooterProps> = ({
   promptTokenCount,
   nightly,
   vimMode,
-  isTrustedFolder,
+  // isTrustedFolder,
 }) => {
   const { columns: terminalWidth } = useTerminalSize();
 
@@ -59,6 +81,9 @@ export const Footer: React.FC<FooterProps> = ({
   const displayPath = isNarrow
     ? path.basename(tildeifyPath(targetDir))
     : shortenPath(tildeifyPath(targetDir), pathLength);
+
+  const sfConfig = readSfConfigJson();
+  const orgUsername = sfConfig?.['target-org'] ?? 'Unknown';
 
   return (
     <Box
@@ -101,7 +126,8 @@ export const Footer: React.FC<FooterProps> = ({
         paddingX={isNarrow ? 0 : 1}
         paddingTop={isNarrow ? 1 : 0}
       >
-        {isTrustedFolder === false ? (
+        <Text color={theme.text.secondary}>{orgUsername}</Text>
+        {/* {isTrustedFolder === false ? (
           <Text color={theme.status.warning}>untrusted</Text>
         ) : process.env.SANDBOX && process.env.SANDBOX !== 'sandbox-exec' ? (
           <Text color="green">
@@ -118,7 +144,7 @@ export const Footer: React.FC<FooterProps> = ({
           <Text color={theme.status.error}>
             no sandbox <Text color={theme.text.secondary}>(see /docs)</Text>
           </Text>
-        )}
+        )} */}
       </Box>
 
       {/* Right Section: Gemini Label and Console Summary */}
