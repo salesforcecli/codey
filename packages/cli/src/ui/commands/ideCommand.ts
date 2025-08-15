@@ -7,6 +7,7 @@
 import {
   Config,
   DetectedIde,
+  GEMINI_CLI_COMPANION_EXTENSION_NAME,
   IDEConnectionStatus,
   getIdeInfo,
   getIdeInstaller,
@@ -115,7 +116,7 @@ async function getIdeStatusMessageWithFiles(ideClient: IdeClient): Promise<{
 }
 
 export const ideCommand = (config: Config | null): SlashCommand | null => {
-  if (!config || !config.getIdeModeFeature()) {
+  if (!config) {
     return null;
   }
   const ideClient = config.getIdeClient();
@@ -170,7 +171,7 @@ export const ideCommand = (config: Config | null): SlashCommand | null => {
         context.ui.addItem(
           {
             type: 'error',
-            text: `No installer is available for ${ideClient.getDetectedIdeDisplayName()}. Please install the IDE companion manually from its marketplace.`,
+            text: `No installer is available for ${ideClient.getDetectedIdeDisplayName()}. Please install the '${GEMINI_CLI_COMPANION_EXTENSION_NAME}' extension manually from the marketplace.`,
           },
           Date.now(),
         );
@@ -236,8 +237,8 @@ export const ideCommand = (config: Config | null): SlashCommand | null => {
     },
   };
 
-  const ideModeEnabled = config.getIdeMode();
-  if (ideModeEnabled) {
+  const connectionStatus = ideClient.getConnectionStatus().status;
+  if (connectionStatus === IDEConnectionStatus.Connected) {
     ideSlashCommand.subCommands = [
       disableCommand,
       statusCommand,
