@@ -27,6 +27,7 @@ import {
 } from './client.js';
 import { ContentGenerator } from '../core/contentGenerator.js';
 import { Claude4Sonnet } from './models.js';
+import { FunctionCallAccumulator } from './functionCallAccumulator.js';
 
 const isString = (content: ContentUnion): content is string =>
   typeof content === 'string';
@@ -72,83 +73,13 @@ const mapToolParameters = (
   return mappedArgs;
 };
 
-/**
- * Extracts complete function call JSON objects from content using proper JSON parsing.
- * This is more robust than regex for handling complex nested objects and escaped content.
- */
-const extractFunctionCallsFromContent = (content: string): string[] => {
-  const functionCalls: string[] = [];
-  let searchIndex = 0;
-
-  while (true) {
-    // Find the next occurrence of a function call start
-    const startIndex = content.indexOf('{"functionCall":', searchIndex);
-    if (startIndex === -1) break;
-
-    // Try to find the complete JSON object by counting braces
-    let braceCount = 0;
-    let inString = false;
-    let escaped = false;
-    let endIndex = startIndex;
-
-    for (let i = startIndex; i < content.length; i++) {
-      const char = content[i];
-
-      if (!inString) {
-        if (char === '{') {
-          braceCount++;
-        } else if (char === '}') {
-          braceCount--;
-          if (braceCount === 0) {
-            endIndex = i + 1;
-            break;
-          }
-        } else if (char === '"') {
-          inString = true;
-        }
-      } else {
-        if (escaped) {
-          escaped = false;
-        } else if (char === '\\') {
-          escaped = true;
-        } else if (char === '"') {
-          inString = false;
-        }
-      }
-    }
-
-    // If we found a complete JSON object, extract it
-    if (braceCount === 0 && endIndex > startIndex) {
-      const jsonStr = content.substring(startIndex, endIndex);
-      try {
-        // Validate it's proper JSON and contains a functionCall
-        const parsed = JSON.parse(jsonStr);
-        if (parsed.functionCall) {
-          functionCalls.push(jsonStr);
-        }
-      } catch (_error) {
-        // If it's not valid JSON, skip it
-        console.warn(
-          '[Gateway] Found function call pattern but invalid JSON:',
-          jsonStr.substring(0, 100) + '...',
-        );
-      }
-      searchIndex = endIndex;
-    } else {
-      // Move past this occurrence and continue searching
-      searchIndex = startIndex + 1;
-    }
-  }
-
-  return functionCalls;
-};
-
 const convertGenerationToCandidate = (
   generation: NonNullable<
     ChatGenerations['generation_details']
   >['generations'][number],
 ): Candidate => {
   const parts: Part[] = [];
+
   // Add tool calls if present
   if (generation.tool_invocations && generation.tool_invocations.length > 0) {
     for (const toolInvocation of generation.tool_invocations) {
@@ -178,56 +109,41 @@ const convertGenerationToCandidate = (
       }
     }
   } else if (generation.content) {
-    // Check if the content contains function calls in JSON format
-    // Use a more robust approach to extract complete JSON objects
-    const content = generation.content || '';
+    // Use the accumulator to parse function calls from content
+    const accumulator = new FunctionCallAccumulator();
+    const feedResult = accumulator.feed(generation.content);
+    const flushResult = accumulator.flush();
 
-    const functionCallMatches = extractFunctionCallsFromContent(content);
+    // Combine text from both feed and flush results
+    const combinedText = (feedResult.text + flushResult.text).trim();
 
-    if (functionCallMatches && functionCallMatches.length > 0) {
-      // Track successfully parsed function calls to remove from content
-      const successfullyParsedCalls: string[] = [];
+    // Add any parsed function calls from feed
+    for (const call of feedResult.calls) {
+      const mappedArgs = mapToolParameters(call.name, call.args || {});
+      parts.push({
+        functionCall: {
+          name: call.name,
+          args: mappedArgs,
+          id: call.id,
+        },
+      });
+    }
 
-      // Parse each function call from the content
-      for (const functionCallJson of functionCallMatches) {
-        try {
-          const parsed = JSON.parse(functionCallJson);
-          if (parsed.functionCall && parsed.functionCall.name) {
-            parts.push({
-              functionCall: {
-                name: parsed.functionCall.name,
-                args: parsed.functionCall.args || {},
-                id: parsed.functionCall.id,
-              },
-            });
-            // Track this as successfully parsed so we can remove it from content
-            successfullyParsedCalls.push(functionCallJson);
-          }
-        } catch (error) {
-          console.error(
-            '[Gateway] Failed to parse function call from content:',
-            error,
-          );
-          // Fall back to treating as text if parsing fails
-          parts.push({ text: functionCallJson });
-        }
-      }
+    // Add any parsed function calls from flush
+    for (const call of flushResult.calls) {
+      const mappedArgs = mapToolParameters(call.name, call.args || {});
+      parts.push({
+        functionCall: {
+          name: call.name,
+          args: mappedArgs,
+          id: call.id,
+        },
+      });
+    }
 
-      // Remove successfully parsed function calls from content and check for remaining text
-      let remainingContent = generation.content!;
-      for (const parsedCall of successfullyParsedCalls) {
-        remainingContent = remainingContent.replace(parsedCall, '');
-      }
-
-      // Only add remaining text content if there's meaningful text left after removing function calls
-      const trimmedRemainingContent = remainingContent.trim();
-      if (trimmedRemainingContent) {
-        parts.push({ text: trimmedRemainingContent });
-      }
-    } else {
-      // Only add text content if there are no tool invocations and no function calls in content
-      // This prevents duplicate function call representation (text + function call parts)
-      parts.push({ text: generation.content! });
+    // Add combined text content if there's any
+    if (combinedText) {
+      parts.push({ text: combinedText });
     }
   }
 
@@ -520,73 +436,6 @@ FINAL WARNING: Any non-JSON content will cause system failure. Respond with JSON
   }
 
   /**
-   * Determines if content looks like regular text vs a function call fragment.
-   * This is used in streaming to avoid displaying partial function call JSON.
-   */
-  private isRegularTextContent(
-    content: string,
-    accumulatedContent: string,
-  ): boolean {
-    // If accumulated content suggests we're building a function call, be extra cautious
-    const suspiciousAccumulated =
-      accumulatedContent.includes('{"') ||
-      accumulatedContent.includes('functionCall') ||
-      accumulatedContent.includes('"args"') ||
-      accumulatedContent.includes('"name"');
-
-    // Function call fragments to detect
-    const functionCallIndicators = [
-      '{"',
-      'functionCall',
-      '"args":',
-      '"name":',
-      'file_path',
-      'content":',
-      'tooluse_',
-      ',"id":"',
-      '"function":',
-      'write_file',
-      'read_file',
-      'edit_file',
-      'shell_command',
-      '},"id"',
-    ];
-
-    // Check if current content contains function call indicators
-    const hasFunctionCallIndicators = functionCallIndicators.some((indicator) =>
-      content.includes(indicator),
-    );
-
-    // If we're in the middle of building a function call, don't show any content
-    if (suspiciousAccumulated && hasFunctionCallIndicators) {
-      return false;
-    }
-
-    // If current content has function call patterns, don't show it
-    if (hasFunctionCallIndicators) {
-      return false;
-    }
-
-    // Additional check: if content looks like JSON property patterns
-    const jsonPropertyPatterns = [
-      /^[^"]*"[^"]+"\s*:\s*/, // matches things like `path": ` or `"content": `
-      /^[^}]*},"/, // matches ending of one object and start of another
-      /^[^{]*{"[^"]*"\s*:\s*/, // matches start of JSON object
-    ];
-
-    const looksLikeJsonFragment = jsonPropertyPatterns.some((pattern) =>
-      pattern.test(content.trim()),
-    );
-
-    if (looksLikeJsonFragment) {
-      return false;
-    }
-
-    // If we get here, it's probably safe to display
-    return true;
-  }
-
-  /**
    * Normalizes parameter schema to ensure Gateway API compatibility.
    * Fixes common issues like uppercase type specifications and other schema inconsistencies.
    */
@@ -688,9 +537,8 @@ FINAL WARNING: Any non-JSON content will cause system failure. Respond with JSON
   private async *convertStreamGeneratorToGemini(
     streamGenerator: AsyncGenerator<ChatGenerations>,
   ): AsyncGenerator<GenerateContentResponse> {
-    let accumulatedContent = '';
+    const accumulator = new FunctionCallAccumulator();
     let lastGenerationId = '';
-    let inFunctionCall = false; // Track if we're currently accumulating a function call
 
     for await (const data of streamGenerator) {
       const generations = data.generation_details?.generations;
@@ -712,6 +560,7 @@ FINAL WARNING: Any non-JSON content will cause system failure. Respond with JSON
         totalTokenCount: this.usage.totalTokens,
       };
       response.modelVersion = this.model.model;
+
       for (const generation of generations || []) {
         // If this generation has tool invocations, handle them directly
         if (
@@ -721,90 +570,52 @@ FINAL WARNING: Any non-JSON content will cause system failure. Respond with JSON
           const candidate = convertGenerationToCandidate(generation);
           response.candidates.push(candidate);
         }
-        // Otherwise, accumulate content to detect complete function calls
+        // Otherwise, use accumulator to process content
         else if (generation?.content) {
-          // Reset accumulation if we're starting a new generation sequence
+          // Reset accumulator if we're starting a new generation sequence
           if (data.id && data.id !== lastGenerationId) {
-            accumulatedContent = '';
+            accumulator.reset();
             lastGenerationId = data.id;
-            inFunctionCall = false;
           }
 
-          // Check if this chunk starts a function call
-          if (
-            !inFunctionCall &&
-            generation.content.includes('{"functionCall":')
-          ) {
-            inFunctionCall = true;
-            accumulatedContent = generation.content;
-            // Don't yield anything when we start a function call
-            continue;
-          }
-          // If we're already in a function call, keep accumulating
-          else if (inFunctionCall) {
-            accumulatedContent += generation.content;
+          const result = accumulator.feed(generation.content);
 
-            // Check if we have complete function calls in the accumulated content
-            const functionCallMatches =
-              extractFunctionCallsFromContent(accumulatedContent);
+          // Add any complete function calls found
+          for (const call of result.calls) {
+            const mappedArgs = mapToolParameters(call.name, call.args || {});
+            const functionCallPart: Part = {
+              functionCall: {
+                name: call.name,
+                args: mappedArgs,
+                id: call.id,
+              },
+            };
 
-            if (functionCallMatches && functionCallMatches.length > 0) {
-              // We found complete function calls, process them
-              const syntheticGeneration = {
-                content: functionCallMatches.join(''),
-                role: generation.role,
-                tool_invocations: undefined,
-              };
+            const candidate: Candidate = {
+              content: {
+                parts: [functionCallPart],
+                role: 'model',
+              },
+              index: 0,
+              safetyRatings: [],
+            };
 
-              const candidate =
-                convertGenerationToCandidate(syntheticGeneration);
-              response.candidates.push(candidate);
-
-              // Remove processed function calls and reset state
-              let remainingContent = accumulatedContent;
-              for (const match of functionCallMatches) {
-                remainingContent = remainingContent.replace(match, '');
-              }
-
-              // If there's remaining content, check if it contains more function calls
-              if (remainingContent.trim()) {
-                if (remainingContent.includes('{"functionCall":')) {
-                  // More function calls coming, keep accumulating
-                  accumulatedContent = remainingContent;
-                } else {
-                  // No more function calls, reset state
-                  accumulatedContent = '';
-                  inFunctionCall = false;
-
-                  // If remaining content is legitimate text, show it
-                  if (this.isRegularTextContent(remainingContent, '')) {
-                    const textGeneration = {
-                      content: remainingContent,
-                      role: generation.role,
-                      tool_invocations: undefined,
-                    };
-                    const textCandidate =
-                      convertGenerationToCandidate(textGeneration);
-                    response.candidates.push(textCandidate);
-                  }
-                }
-              } else {
-                // No remaining content, reset state
-                accumulatedContent = '';
-                inFunctionCall = false;
-              }
-            }
-            // Still accumulating function call, don't yield anything
-          }
-          // Not in a function call and doesn't start one - treat as regular content
-          else if (this.isRegularTextContent(generation.content, '')) {
-            const candidate = convertGenerationToCandidate(generation);
             response.candidates.push(candidate);
           }
-          // Content looks suspicious but we're not in a function call - start accumulating
-          else {
-            inFunctionCall = true;
-            accumulatedContent = generation.content;
+
+          // Add any text content that's ready to be displayed
+          if (result.text.trim()) {
+            const textPart: Part = { text: result.text };
+            const candidate: Candidate = {
+              content: {
+                parts: [textPart],
+                role: 'model',
+              },
+              index: 0,
+              safetyRatings: [],
+            };
+
+            response.candidates.push(candidate);
           }
         }
       }
@@ -812,55 +623,58 @@ FINAL WARNING: Any non-JSON content will cause system failure. Respond with JSON
       yield response;
     }
 
-    // Handle any remaining accumulated content at the end
-    if (accumulatedContent.trim()) {
-      if (inFunctionCall) {
-        // Try to extract any complete function calls from remaining content
-        const functionCallMatches =
-          extractFunctionCallsFromContent(accumulatedContent);
-        if (functionCallMatches && functionCallMatches.length > 0) {
-          const syntheticGeneration = {
-            content: functionCallMatches.join(''),
-            role: 'assistant' as const,
-            tool_invocations: undefined,
-          };
+    // Handle any remaining content at the end
+    const flushResult = accumulator.flush();
 
-          const candidate = convertGenerationToCandidate(syntheticGeneration);
-          const finalResponse = new GenerateContentResponse();
-          finalResponse.candidates = [candidate];
-          finalResponse.usageMetadata = {
-            promptTokenCount: this.usage.inputTokens,
-            candidatesTokenCount: this.usage.outputTokens,
-            totalTokenCount: this.usage.totalTokens,
-          };
-          finalResponse.modelVersion = this.model.model;
-          yield finalResponse;
-        } else {
-          // Incomplete function call at end - log warning but don't display
-          console.warn(
-            '[Gateway] Stream ended with incomplete function call:',
-            accumulatedContent.substring(0, 100) + '...',
-          );
-        }
-      } else {
-        // Regular content at end
-        const syntheticGeneration = {
-          content: accumulatedContent,
-          role: 'assistant' as const,
-          tool_invocations: undefined,
+    if (flushResult.calls.length > 0 || flushResult.text.trim()) {
+      const finalResponse = new GenerateContentResponse();
+      finalResponse.candidates = [];
+      finalResponse.usageMetadata = {
+        promptTokenCount: this.usage.inputTokens,
+        candidatesTokenCount: this.usage.outputTokens,
+        totalTokenCount: this.usage.totalTokens,
+      };
+      finalResponse.modelVersion = this.model.model;
+
+      // Add any final function calls
+      for (const call of flushResult.calls) {
+        const mappedArgs = mapToolParameters(call.name, call.args || {});
+        const functionCallPart: Part = {
+          functionCall: {
+            name: call.name,
+            args: mappedArgs,
+            id: call.id,
+          },
         };
 
-        const candidate = convertGenerationToCandidate(syntheticGeneration);
-        const finalResponse = new GenerateContentResponse();
-        finalResponse.candidates = [candidate];
-        finalResponse.usageMetadata = {
-          promptTokenCount: this.usage.inputTokens,
-          candidatesTokenCount: this.usage.outputTokens,
-          totalTokenCount: this.usage.totalTokens,
+        const candidate: Candidate = {
+          content: {
+            parts: [functionCallPart],
+            role: 'model',
+          },
+          index: 0,
+          safetyRatings: [],
         };
-        finalResponse.modelVersion = this.model.model;
-        yield finalResponse;
+
+        finalResponse.candidates.push(candidate);
       }
+
+      // Add any final text content
+      if (flushResult.text.trim()) {
+        const textPart: Part = { text: flushResult.text };
+        const candidate: Candidate = {
+          content: {
+            parts: [textPart],
+            role: 'model',
+          },
+          index: 0,
+          safetyRatings: [],
+        };
+
+        finalResponse.candidates.push(candidate);
+      }
+
+      yield finalResponse;
     }
   }
 }
