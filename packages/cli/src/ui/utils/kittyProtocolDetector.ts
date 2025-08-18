@@ -75,7 +75,8 @@ export async function detectAndEnableKittyProtocol(): Promise<boolean> {
     process.stdout.write('\x1b[?u'); // Query progressive enhancement
     process.stdout.write('\x1b[c'); // Query device attributes
 
-    // Timeout after 50ms
+    // Timeout after configurable ms (default 50ms)
+    const timeoutMs = Number(process.env.CODEY_KITTY_PROTOCOL_TIMEOUT_MS) || 50;
     setTimeout(() => {
       if (!checkFinished) {
         process.stdin.removeListener('data', handleData);
@@ -85,7 +86,7 @@ export async function detectAndEnableKittyProtocol(): Promise<boolean> {
         detectionComplete = true;
         resolve(false);
       }
-    }, 50);
+    }, timeoutMs);
   });
 }
 
