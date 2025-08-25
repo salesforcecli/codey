@@ -1,0 +1,36 @@
+{
+  "name": "@google/gemini-cli-server",
+  "version": "0.1.21",
+  "description": "Gemini CLI Server",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/google-gemini/gemini-cli.git"
+  },
+  "type": "module",
+  "main": "dist/src/index.js",
+  "scripts": {
+    "build": "node ../../scripts/build_package.js",
+    "start": "node dist/src/index.js",
+    "dev": "npm run build && npm run start",
+    "test:e2e:session": "node scripts/test-session-e2e.js",
+    "lint": "eslint . --ext .ts,.tsx",
+    "format": "prettier --write .",
+    "test": "vitest run",
+    "test:ci": "vitest run --coverage",
+    "typecheck": "tsc --noEmit"
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@google/gemini-cli-core": "file:../core",
+    "@google/gemini-cli": "file:../cli"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "vitest": "^3.1.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
