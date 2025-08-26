@@ -1,11 +1,9 @@
 {
-  "installCommand": "npm ci --ignore-scripts",
-  "buildCommand": "npm run -w @google/gemini-cli-core build && npm run -w @google/gemini-cli build && cd packages/codey-hosted && npm run build",
+  "installCommand": "NODE_ENV=development npm ci --ignore-scripts",
+  "buildCommand": "cd packages/core && npx -y -p typescript@5 tsc --build && cd ../cli && npx -y -p typescript@5 tsc --build && cd ../codey-hosted && npm run build",
   "outputDirectory": "packages/codey-hosted/.next",
   "framework": "nextjs",
-  "env": {
-    "NODE_ENV": "production"
-  },
+  "env": {},
   "headers": [
     {
       "source": "/api/(.*)",
