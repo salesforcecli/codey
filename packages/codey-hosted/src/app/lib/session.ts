@@ -14,8 +14,33 @@ const sessions = new Map<
   {
     config: Config;
     client: GeminiClient;
+    createdAt: number;
+    lastUsed: number;
   }
 >();
+
+// Simple cleanup mechanism for POC - runs every 30 minutes
+if (typeof window === 'undefined') {
+  // Server-side only
+  const CLEANUP_INTERVAL = 30 * 60 * 1000; // 30 minutes
+  const SESSION_TIMEOUT = 2 * 60 * 60 * 1000; // 2 hours
+
+  setInterval(() => {
+    const now = Date.now();
+    let cleanedCount = 0;
+
+    for (const [id, session] of sessions.entries()) {
+      if (now - session.lastUsed > SESSION_TIMEOUT) {
+        sessions.delete(id);
+        cleanedCount++;
+      }
+    }
+
+    if (cleanedCount > 0) {
+      console.log(`Cleaned up ${cleanedCount} inactive sessions`);
+    }
+  }, CLEANUP_INTERVAL);
+}
 
 export function hasSession(sessionId: SessionId): boolean {
   return sessions.has(sessionId);
@@ -30,6 +55,9 @@ export async function sendMessageToSession(
     throw new Error('Session not found');
   }
 
+  // Update last used timestamp
+  session.lastUsed = Date.now();
+
   const response = await sendMessage(session.client, session.config, message);
   return response;
 }
@@ -42,6 +70,14 @@ export async function createSession(workspaceRoot: string, model?: string) {
     AuthType.USE_SF_LLMG,
     { model },
   );
-  sessions.set(id, { client, config });
+
+  const now = Date.now();
+  sessions.set(id, {
+    client,
+    config,
+    createdAt: now,
+    lastUsed: now,
+  });
+
   return { id };
 }
