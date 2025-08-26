@@ -249,4 +249,16 @@ export default tseslint.config(
       ],
     },
   },
+  // extra settings for server package scripts
+  {
+    files: ['packages/server/scripts/**/*.js'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+        process: 'readonly',
+        console: 'readonly',
+        fetch: 'readonly', // Node.js 18+ global fetch
+      },
+    },
+  },
 );

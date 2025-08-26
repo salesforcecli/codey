@@ -11,6 +11,10 @@
   "bin": {
     "gemini": "dist/index.js"
   },
+  "exports": {
+    ".": "./dist/index.js",
+    "./headless-chat": "./dist/src/headless-chat.js"
+  },
   "scripts": {
     "build": "node ../../scripts/build_package.js",
     "start": "node dist/index.js",
