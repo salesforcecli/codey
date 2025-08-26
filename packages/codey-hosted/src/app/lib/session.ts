@@ -67,7 +67,7 @@ export async function createSession(workspaceRoot: string, model?: string) {
   const { client, config } = await initClient(
     workspaceRoot,
     id,
-    AuthType.USE_SF_LLMG,
+    AuthType.USE_GEMINI,
     { model },
   );
 
