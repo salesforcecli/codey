@@ -1,14 +1,15 @@
-import type { NextConfig } from 'next';
-import path from 'path';
+/**
+ * @license
+ * Copyright 2025 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
-const nextConfig: NextConfig = {
+const path = require('path');
+
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   // Fix workspace root detection for monorepo
   outputFileTracingRoot: path.join(__dirname, '../../'),
-
-  // Turbopack configuration for monorepo
-  turbopack: {
-    root: path.join(__dirname, '../../'),
-  },
 
   // Optional: Exclude problematic directories from file tracing
   outputFileTracingExcludes: {
@@ -31,7 +32,7 @@ const nextConfig: NextConfig = {
     'sonic-boom',
   ],
 
-  // Webpack configuration to handle warnings (fallback for non-turbopack builds)
+  // Webpack configuration to handle warnings
   webpack: (config, { isServer }) => {
     if (isServer) {
       // Handle missing optional dependencies
@@ -70,4 +71,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+module.exports = nextConfig;

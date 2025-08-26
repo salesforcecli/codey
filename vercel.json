@@ -1,13 +1,8 @@
 {
-  "buildCommand": "npm run build",
+  "installCommand": "npm ci --ignore-scripts",
+  "buildCommand": "npm run -w @google/gemini-cli-core build && npm run -w @google/gemini-cli build && cd packages/codey-hosted && npm run build",
   "outputDirectory": "packages/codey-hosted/.next",
   "framework": "nextjs",
-  "installCommand": "npm install",
-  "functions": {
-    "packages/codey-hosted/src/app/api/**/*.ts": {
-      "maxDuration": 30
-    }
-  },
   "env": {
     "NODE_ENV": "production"
   },
@@ -15,10 +10,7 @@
     {
       "source": "/api/(.*)",
       "headers": [
-        {
-          "key": "Access-Control-Allow-Origin",
-          "value": "*"
-        },
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
         {
           "key": "Access-Control-Allow-Methods",
           "value": "GET, POST, PUT, DELETE, OPTIONS"
