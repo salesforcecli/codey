@@ -1,9 +1,10 @@
 {
   "buildCommand": "npm run build",
-  "outputDirectory": ".next",
+  "outputDirectory": "packages/codey-hosted/.next",
   "framework": "nextjs",
+  "installCommand": "npm install",
   "functions": {
-    "src/app/api/**/*.ts": {
+    "packages/codey-hosted/src/app/api/**/*.ts": {
       "maxDuration": 30
     }
   },
