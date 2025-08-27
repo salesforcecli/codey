@@ -4,6 +4,9 @@
   "outputDirectory": "packages/codey-hosted/.next",
   "framework": "nextjs",
   "env": {},
+  "git": {
+    "deploymentEnabled": false
+  },
   "headers": [
     {
       "source": "/api/(.*)",
