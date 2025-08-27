@@ -10,7 +10,6 @@ import { CliArgs, loadCliConfig } from './config/config.js';
 import {
   AuthType,
   Config,
-  createContentGeneratorConfig,
   executeToolCall,
   GeminiClient,
   GeminiEventType,
@@ -62,9 +61,8 @@ export async function initClient(
   );
 
   await config.initialize();
-  const client = new GeminiClient(config);
-  const contentGenCfg = createContentGeneratorConfig(config, auth);
-  await client.initialize(contentGenCfg);
+  await config.refreshAuth(auth);
+  const client = config.getGeminiClient();
 
   return { config, client };
 }
