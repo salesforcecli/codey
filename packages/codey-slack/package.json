@@ -12,7 +12,8 @@
     "build": "tsc"
   },
   "dependencies": {
-    "@slack/bolt": "^4"
+    "@slack/bolt": "^4",
+    "slackify-markdown": "^4.5.0"
   },
   "devDependencies": {
     "tsx": "^4.20.3",

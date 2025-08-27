@@ -57,6 +57,7 @@ async function main(): Promise<void> {
 
   // Minimal hosted integration for POC
   const { HostedClient, HostedError } = await import('./hosted-client');
+  const { formatSlackMessage } = await import('./markdown-converter');
   const hostedBaseUrl = requireEnv('CODEY_HOSTED_BASE_URL');
   const hostedToken = requireEnv('CODEY_HOSTED_TOKEN');
   const hosted = new HostedClient(hostedBaseUrl, hostedToken);
@@ -117,7 +118,12 @@ async function main(): Promise<void> {
           name: 'hourglass_flowing_sand',
         });
 
-        await say({ thread_ts: threadTs, text: result.response });
+        const formattedMessage = formatSlackMessage(result.response);
+        if (typeof formattedMessage === 'string') {
+          await say({ thread_ts: threadTs, text: formattedMessage });
+        } else {
+          await say({ thread_ts: threadTs, ...formattedMessage });
+        }
       } catch (err) {
         if (err instanceof HostedError && err.status === 404) {
           // Recreate session and retry once
@@ -136,7 +142,12 @@ async function main(): Promise<void> {
             name: 'hourglass_flowing_sand',
           });
 
-          await say({ thread_ts: threadTs, text: result.response });
+          const formattedMessage = formatSlackMessage(result.response);
+          if (typeof formattedMessage === 'string') {
+            await say({ thread_ts: threadTs, text: formattedMessage });
+          } else {
+            await say({ thread_ts: threadTs, ...formattedMessage });
+          }
           return;
         }
         if (err instanceof HostedError && err.status === 401) {
