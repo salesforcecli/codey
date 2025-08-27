@@ -8,7 +8,8 @@
     "node": ">=20.0.0"
   },
   "scripts": {
-    "dev": "tsx --env-file=.env src/index.ts"
+    "dev": "tsx --env-file=.env src/index.ts",
+    "build": "tsc"
   },
   "dependencies": {
     "@slack/bolt": "^4"
