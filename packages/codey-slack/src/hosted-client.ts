@@ -76,6 +76,31 @@ export class HostedClient {
     return data as { sessionId: string; response: string; timestamp: string };
   }
 
+  async sendThreadHistoryMessage(
+    sessionId: string,
+    workspaceRoot: string,
+    message: string,
+  ): Promise<void> {
+    const url = `${this.baseUrl}/api/sessions/${encodeURIComponent(
+      sessionId,
+    )}/messages`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: this.headers(),
+      body: JSON.stringify({ workspaceRoot, message }),
+    });
+
+    if (!res.ok) {
+      const data = await this.safeJson(res);
+      throw new HostedError(
+        `Failed to send thread history message (status ${res.status})`,
+        res.status,
+        data,
+      );
+    }
+    // Intentionally ignore the response - we don't want to surface it to Slack
+  }
+
   private async safeJson(res: Response): Promise<unknown> {
     try {
       return await res.json();

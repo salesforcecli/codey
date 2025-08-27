@@ -6,9 +6,18 @@
 
 export type ConversationKey = string;
 
+export interface ThreadMessage {
+  text: string;
+  timestamp: string;
+  userId: string; // Will be obfuscated before sending to API
+}
+
 export interface ConversationMapping {
   sessionId: string;
   workspaceRoot: string;
+  threadMessages: ThreadMessage[];
+  lastCodeyResponseTs?: string; // Track when Codey last responded
+  isInitialized: boolean; // Track if we've sent the initial instructions
 }
 
 const store = new Map<ConversationKey, ConversationMapping>();
@@ -18,7 +27,9 @@ export function getKey(
   channelId: string,
   threadTs?: string,
 ): ConversationKey {
-  return `${teamId}:${channelId}:${threadTs ?? ''}`;
+  // Always use threadTs if available, otherwise use channel as thread
+  const thread = threadTs || channelId;
+  return `${teamId}:${channelId}:${thread}`;
 }
 
 export function get(key: ConversationKey): ConversationMapping | undefined {
@@ -31,4 +42,28 @@ export function set(key: ConversationKey, value: ConversationMapping): void {
 
 export function remove(key: ConversationKey): void {
   store.delete(key);
+}
+
+export function addMessage(key: ConversationKey, message: ThreadMessage): void {
+  const mapping = store.get(key);
+  if (mapping) {
+    mapping.threadMessages.push(message);
+  }
+}
+
+export function updateLastCodeyResponse(
+  key: ConversationKey,
+  timestamp: string,
+): void {
+  const mapping = store.get(key);
+  if (mapping) {
+    mapping.lastCodeyResponseTs = timestamp;
+  }
+}
+
+export function markInitialized(key: ConversationKey): void {
+  const mapping = store.get(key);
+  if (mapping) {
+    mapping.isInitialized = true;
+  }
 }

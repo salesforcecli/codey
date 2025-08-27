@@ -77,21 +77,47 @@ async function main(): Promise<void> {
   // Default workspace root required for POC
   const defaultWorkspaceRoot = requireEnv('CODEY_DEFAULT_WORKSPACE_ROOT');
 
-  // Single session per Slack workspace (team)
-  const teamSessions = new Map<string, { sessionId: string }>();
+  // Import session store and thread history utilities
+  const sessionStore = await import('./session-store');
+  const threadHistory = await import('./thread-history');
 
-  async function ensureTeamSession(teamId: string): Promise<string> {
-    const existing = teamSessions.get(teamId);
-    if (existing) return existing.sessionId;
+  async function ensureThreadSession(
+    teamId: string,
+    channelId: string,
+    threadTs?: string,
+  ): Promise<{
+    sessionId: string;
+    conversationKey: string;
+    isNewSession: boolean;
+  }> {
+    const conversationKey = sessionStore.getKey(teamId, channelId, threadTs);
+    const existing = sessionStore.get(conversationKey);
+
+    if (existing) {
+      return {
+        sessionId: existing.sessionId,
+        conversationKey,
+        isNewSession: false,
+      };
+    }
+
+    // Create new session for this thread
     const { sessionId } = await hosted.createSession(defaultWorkspaceRoot);
-    teamSessions.set(teamId, { sessionId });
-    return sessionId;
+    sessionStore.set(conversationKey, {
+      sessionId,
+      workspaceRoot: defaultWorkspaceRoot,
+      threadMessages: [],
+      isInitialized: false,
+    });
+
+    return { sessionId, conversationKey, isNewSession: true };
   }
 
-  // Mentions: use single session per team, reply in thread
+  // Mentions: use thread-aware sessions, reply in thread
   app.event('app_mention', async ({ event, say, client, context, logger }) => {
     const channel = (event as unknown as { channel: string }).channel;
     const timestamp = (event as unknown as { ts: string }).ts;
+    const userId = (event as unknown as { user: string }).user;
     let loadingMsgTs: string | undefined;
     let phraseCycler: PhraseCycler | undefined;
 
@@ -137,7 +163,66 @@ async function main(): Promise<void> {
       });
       phraseCycler.start();
 
-      const sessionId = await ensureTeamSession(teamId);
+      const { sessionId, conversationKey, isNewSession } =
+        await ensureThreadSession(teamId, channel, threadTs);
+
+      // Handle thread history initialization and updates
+      const mapping = sessionStore.get(conversationKey);
+      if (!mapping) {
+        throw new Error('Session mapping not found after creation');
+      }
+
+      // If this is a new session, send initial instructions
+      if (isNewSession || !mapping.isInitialized) {
+        const initialInstructions = threadHistory.getInitialInstructions();
+        await hosted.sendThreadHistoryMessage(
+          sessionId,
+          defaultWorkspaceRoot,
+          initialInstructions,
+        );
+        sessionStore.markInitialized(conversationKey);
+      }
+
+      // Fetch and send thread history update
+      if (threadTs) {
+        const slackMessages = await threadHistory.fetchSlackThreadHistory(
+          // @ts-expect-error for now
+          client,
+          channel,
+          threadTs,
+          mapping.lastCodeyResponseTs,
+        );
+
+        // Convert Slack messages to our format and add to store
+        for (const slackMsg of slackMessages) {
+          const threadMessage = {
+            text: slackMsg.text,
+            timestamp: slackMsg.ts,
+            userId: slackMsg.user,
+          };
+          sessionStore.addMessage(conversationKey, threadMessage);
+        }
+
+        // Send thread history update if we have new messages
+        if (slackMessages.length > 0) {
+          const updatedMapping = sessionStore.get(conversationKey)!;
+          const historyUpdate = threadHistory.formatThreadHistoryForAPI(
+            updatedMapping.threadMessages,
+          );
+          await hosted.sendThreadHistoryMessage(
+            sessionId,
+            defaultWorkspaceRoot,
+            historyUpdate,
+          );
+        }
+      }
+
+      // Add the current user message to our store
+      sessionStore.addMessage(conversationKey, {
+        text: message,
+        timestamp,
+        userId,
+      });
 
       try {
         const result = await hosted.sendMessage(
@@ -161,11 +246,23 @@ async function main(): Promise<void> {
           ts: loadingMsgTs!,
           ...updatePayload,
         });
+
+        // Track when Codey responded for future thread history filtering
+        if (loadingMsgTs) {
+          sessionStore.updateLastCodeyResponse(conversationKey, loadingMsgTs);
+        }
       } catch (err) {
         if (err instanceof HostedError && err.status === 404) {
           // Recreate session and retry once
           const recreated = await hosted.createSession(defaultWorkspaceRoot);
-          teamSessions.set(teamId, { sessionId: recreated.sessionId });
+          sessionStore.set(conversationKey, {
+            sessionId: recreated.sessionId,
+            workspaceRoot: defaultWorkspaceRoot,
+            threadMessages: mapping.threadMessages, // Preserve existing messages
+            lastCodeyResponseTs: mapping.lastCodeyResponseTs,
+            isInitialized: mapping.isInitialized,
+          });
+
           const result = await hosted.sendMessage(
             recreated.sessionId,
             defaultWorkspaceRoot,
@@ -187,6 +284,11 @@ async function main(): Promise<void> {
             ts: loadingMsgTs!,
             ...updatePayload,
           });
+
+          // Track when Codey responded for future thread history filtering
+          if (loadingMsgTs) {
+            sessionStore.updateLastCodeyResponse(conversationKey, loadingMsgTs);
+          }
           return;
         }
         if (err instanceof HostedError && err.status === 401) {
