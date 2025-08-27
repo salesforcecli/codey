@@ -42,7 +42,7 @@ export function formatThreadHistoryForAPI(messages: ThreadMessage[]): string {
 export function getInitialInstructions(): string {
   return `You are a Slack Coding Agent. Please honor all other system instructions. Periodically you will be sent thread history in this format:
 
-THREAD HISTORY UPDATE: [ "example message 1", "example message 2"]
+THREAD HISTORY UPDATE: ["[2024-06-01T12:00:00.000Z] User123: Hello, can you help me?", "[2024-06-01T12:01:00.000Z] User456: Sure, what do you need?"]
 
 When you receive new thread history updates, store that in your memory and use it to provide answers that make sense in the context of the thread.`;
 }
