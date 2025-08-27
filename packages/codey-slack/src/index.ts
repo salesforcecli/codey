@@ -4,6 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { WITTY_LOADING_PHRASES } from './witty-phrases';
+import { PhraseCycler } from './phrase-cycler';
+
 function requireEnv(name: string): string {
   const value = process.env[name];
   if (!value) {
@@ -12,7 +15,16 @@ function requireEnv(name: string): string {
   return value;
 }
 
-//
+const loadingEmoji = 'loading';
+const errorEmoji = 'x';
+
+function getRandomLoadingPhrase(): string {
+  return `:${loadingEmoji}: ${
+    WITTY_LOADING_PHRASES[
+      Math.floor(Math.random() * WITTY_LOADING_PHRASES.length)
+    ]
+  }`;
+}
 
 async function main(): Promise<void> {
   console.log('🚀 Starting codey-slack app...');
@@ -78,6 +90,11 @@ async function main(): Promise<void> {
 
   // Mentions: use single session per team, reply in thread
   app.event('app_mention', async ({ event, say, client, context, logger }) => {
+    const channel = (event as unknown as { channel: string }).channel;
+    const timestamp = (event as unknown as { ts: string }).ts;
+    let loadingMsgTs: string | undefined;
+    let phraseCycler: PhraseCycler | undefined;
+
     try {
       const teamId: string =
         (context as unknown as { teamId?: string }).teamId ?? 'default';
@@ -93,14 +110,32 @@ async function main(): Promise<void> {
         return;
       }
 
-      // Add reaction to show we're processing
-      const channel = (event as unknown as { channel: string }).channel;
-      const timestamp = (event as unknown as { ts: string }).ts;
-      await client.reactions.add({
-        channel,
-        timestamp,
-        name: 'hourglass_flowing_sand',
+      // Send initial loading message
+      const loadingMsg = await say({
+        thread_ts: threadTs,
+        text: getRandomLoadingPhrase(),
       });
+      loadingMsgTs = (loadingMsg as { ts?: string }).ts;
+
+      // Start cycling through loading phrases every 10 seconds
+      phraseCycler = new PhraseCycler({
+        intervalMs: 10000, // 10 seconds
+        onPhraseChange: async (phrase: string) => {
+          if (loadingMsgTs) {
+            try {
+              await client.chat.update({
+                channel,
+                ts: loadingMsgTs,
+                text: `:${loadingEmoji}: ${phrase}`,
+              });
+            } catch (err) {
+              // Log but don't fail the request if we can't update the loading message
+              logger?.warn?.({ err }, 'Failed to update loading phrase');
+            }
+          }
+        },
+      });
+      phraseCycler.start();
 
       const sessionId = await ensureTeamSession(teamId);
 
@@ -111,19 +146,21 @@ async function main(): Promise<void> {
           message,
         );
 
-        // Remove processing reaction and add success reaction
-        await client.reactions.remove({
-          channel,
-          timestamp,
-          name: 'hourglass_flowing_sand',
-        });
+        // Stop the phrase cycling since we have the response
+        phraseCycler?.stop();
 
+        // Update the loading message with the actual response
         const formattedMessage = formatSlackMessage(result.response);
-        if (typeof formattedMessage === 'string') {
-          await say({ thread_ts: threadTs, text: formattedMessage });
-        } else {
-          await say({ thread_ts: threadTs, ...formattedMessage });
-        }
+        const updatePayload =
+          typeof formattedMessage === 'string'
+            ? { text: formattedMessage }
+            : formattedMessage;
+
+        await client.chat.update({
+          channel,
+          ts: loadingMsgTs!,
+          ...updatePayload,
+        });
       } catch (err) {
         if (err instanceof HostedError && err.status === 404) {
           // Recreate session and retry once
@@ -135,36 +172,37 @@ async function main(): Promise<void> {
             message,
           );
 
-          // Remove processing reaction and add success reaction
-          await client.reactions.remove({
-            channel,
-            timestamp,
-            name: 'hourglass_flowing_sand',
-          });
+          // Stop the phrase cycling since we have the response
+          phraseCycler?.stop();
 
+          // Update the loading message with the actual response
           const formattedMessage = formatSlackMessage(result.response);
-          if (typeof formattedMessage === 'string') {
-            await say({ thread_ts: threadTs, text: formattedMessage });
-          } else {
-            await say({ thread_ts: threadTs, ...formattedMessage });
-          }
+          const updatePayload =
+            typeof formattedMessage === 'string'
+              ? { text: formattedMessage }
+              : formattedMessage;
+
+          await client.chat.update({
+            channel,
+            ts: loadingMsgTs!,
+            ...updatePayload,
+          });
           return;
         }
         if (err instanceof HostedError && err.status === 401) {
-          // Remove processing reaction and add error reaction
-          await client.reactions.remove({
-            channel,
-            timestamp,
-            name: 'hourglass_flowing_sand',
-          });
+          // Stop the phrase cycling since we have an error
+          phraseCycler?.stop();
+
           await client.reactions.add({
             channel,
             timestamp,
             name: 'x',
           });
 
-          await say({
-            thread_ts: threadTs,
+          // Update the loading message with error
+          await client.chat.update({
+            channel,
+            ts: loadingMsgTs!,
             text: 'Hosted configuration/token appears invalid (401).',
           });
           return;
@@ -175,25 +213,31 @@ async function main(): Promise<void> {
       console.error('❌ Failed to handle app_mention:', err);
       logger?.error?.({ err }, 'Failed to handle app_mention');
 
-      // Remove processing reaction and add error reaction
+      // Stop the phrase cycling since we have an error
+      phraseCycler?.stop();
+
+      // Add error reaction and update message
       try {
-        const channel = (event as unknown as { channel: string }).channel;
-        const timestamp = (event as unknown as { ts: string }).ts;
-        await client.reactions.remove({
-          channel,
-          timestamp,
-          name: 'hourglass_flowing_sand',
-        });
         await client.reactions.add({
           channel,
           timestamp,
-          name: 'x',
+          name: errorEmoji,
         });
-      } catch {
-        // Ignore reaction errors in error handler
-      }
 
-      await say('Request failed; please try again.');
+        // Update the loading message with error if we have the timestamp
+        if (loadingMsgTs) {
+          await client.chat.update({
+            channel,
+            ts: loadingMsgTs,
+            text: 'Request failed; please try again.',
+          });
+        } else {
+          await say('Request failed; please try again.');
+        }
+      } catch {
+        // If updating fails, fall back to posting a new message
+        await say('Request failed; please try again.');
+      }
     }
   });
 
