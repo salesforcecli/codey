@@ -8,6 +8,16 @@ const path = require('path');
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Enable Turbopack configuration (moved from experimental.turbo)
+  turbopack: {
+    resolveAlias: {
+      // Turbopack-specific alias resolution for problematic modules
+      'pino-pretty': 'pino-pretty',
+      pino: 'pino',
+    },
+    resolveExtensions: ['.mdx', '.tsx', '.ts', '.jsx', '.js', '.mjs', '.json'],
+  },
+
   // Fix workspace root detection for monorepo
   outputFileTracingRoot: path.join(__dirname, '../../'),
 
