@@ -84,7 +84,7 @@ export async function sendMessage(
 
   let finalResponseText = '';
   let turnCount = 0;
-  const maxTurns = 10; // Prevent infinite loops
+  const maxTurns = 50; // Prevent infinite loops
   const events: ServerGeminiStreamEvent[] = [];
   while (true) {
     turnCount++;
