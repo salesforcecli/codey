@@ -20,7 +20,7 @@ class CreateDevopsWorkItemInvocation extends BaseToolInvocation<
   ToolResult
 > {
   getDescription(): string {
-    return 'Creates a Work Item in DevOps Center.';
+    return 'Creates a Work Item (WI)in DevOps Center.';
   }
 
   async execute(): Promise<ToolResult> {

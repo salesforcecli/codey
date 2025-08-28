@@ -13,38 +13,18 @@ export interface SlackMessage {
   type: string;
 }
 
-export function obfuscateUserId(userId: string): string {
-  // Create a simple hash-like obfuscation that's consistent per user
-  // but doesn't reveal the actual user ID
-  let hash = 0;
-  for (let i = 0; i < userId.length; i++) {
-    const char = userId.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash = hash & hash; // Convert to 32bit integer
-  }
-  return `User${Math.abs(hash) % 1000}`;
-}
+// Removed obfuscation; we now display the Slack-provided user ID directly.
 
-export function formatThreadHistoryForAPI(messages: ThreadMessage[]): string {
-  if (messages.length === 0) {
-    return 'THREAD HISTORY UPDATE: []';
-  }
-
-  const formattedMessages = messages.map((msg) => {
-    const obfuscatedUser = obfuscateUserId(msg.userId);
+export function formatThreadContext(
+  messages: ThreadMessage[],
+  maxMessages: number = 50,
+): string {
+  const recent = maxMessages > 0 ? messages.slice(-maxMessages) : messages;
+  const formatted = recent.map((msg) => {
     const timestamp = new Date(parseFloat(msg.timestamp) * 1000).toISOString();
-    return `[${timestamp}] ${obfuscatedUser}: ${msg.text}`;
+    return `[${timestamp}] ${msg.userId}: ${msg.text}`;
   });
-
-  return `INSTRUCTIONS: Update your memory with the new thread history. Do NOT respond to the thread history updates, ONLY use them to inform future responses. RESPONSE FORMAT: One word acknowledgement of the thread history update. THREAD HISTORY UPDATE: ${JSON.stringify(formattedMessages)}.`;
-}
-
-export function getInitialInstructions(): string {
-  return `You are a Slack Coding Agent. Please honor all other system instructions. Periodically you will be sent thread history in this format:
-
-THREAD HISTORY UPDATE: ["[2024-06-01T12:00:00.000Z] User123: Hello, can you help me?", "[2024-06-01T12:01:00.000Z] User456: Sure, what do you need?"]
-
-When you receive new thread history updates, store that in your memory and use it to provide answers that make sense in the context of the thread. Do not respond to the thread history updates, only use them to inform your responses.`;
+  return `Slack thread context (most recent ${formatted.length} message(s)):\n${formatted.join('\n')}`;
 }
 
 export async function fetchSlackThreadHistory(

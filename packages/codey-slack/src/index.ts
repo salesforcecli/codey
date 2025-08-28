@@ -107,7 +107,6 @@ async function main(): Promise<void> {
       sessionId,
       workspaceRoot: defaultWorkspaceRoot,
       threadMessages: [],
-      isInitialized: false,
     });
 
     return { sessionId, conversationKey, isNewSession: true };
@@ -124,6 +123,9 @@ async function main(): Promise<void> {
     try {
       const teamId: string =
         (context as unknown as { teamId?: string }).teamId ?? 'default';
+      const botUserId: string | undefined = (
+        context as unknown as { botUserId?: string }
+      ).botUserId;
       const threadTs: string | undefined =
         (event as unknown as { thread_ts?: string; ts?: string }).thread_ts ??
         (event as unknown as { ts?: string }).ts;
@@ -163,27 +165,19 @@ async function main(): Promise<void> {
       });
       phraseCycler.start();
 
-      const { sessionId, conversationKey, isNewSession } =
-        await ensureThreadSession(teamId, channel, threadTs);
+      const { sessionId, conversationKey } = await ensureThreadSession(
+        teamId,
+        channel,
+        threadTs,
+      );
 
-      // Handle thread history initialization and updates
+      // Handle thread history updates
       const mapping = sessionStore.get(conversationKey);
       if (!mapping) {
         throw new Error('Session mapping not found after creation');
       }
 
-      // If this is a new session, send initial instructions
-      if (isNewSession || !mapping.isInitialized) {
-        const initialInstructions = threadHistory.getInitialInstructions();
-        await hosted.sendThreadHistoryMessage(
-          sessionId,
-          defaultWorkspaceRoot,
-          initialInstructions,
-        );
-        sessionStore.markInitialized(conversationKey);
-      }
-
-      // Fetch and send thread history update
+      // Fetch thread deltas and add to store
       if (threadTs) {
         const slackMessages = await threadHistory.fetchSlackThreadHistory(
           // @ts-expect-error for now
@@ -202,33 +196,21 @@ async function main(): Promise<void> {
           };
           sessionStore.addMessage(conversationKey, threadMessage);
         }
-
-        // Send thread history update if we have new messages
-        if (slackMessages.length > 0) {
-          const updatedMapping = sessionStore.get(conversationKey)!;
-          const historyUpdate = threadHistory.formatThreadHistoryForAPI(
-            updatedMapping.threadMessages,
-          );
-          await hosted.sendThreadHistoryMessage(
-            sessionId,
-            defaultWorkspaceRoot,
-            historyUpdate,
-          );
-        }
       }
 
-      // Add the current user message to our store
-      sessionStore.addMessage(conversationKey, {
-        text: message,
-        timestamp,
-        userId,
-      });
-
       try {
+        // Build thread context from stored messages (recent window)
+        const updatedMapping = sessionStore.get(conversationKey)!;
+        const context = threadHistory.formatThreadContext(
+          updatedMapping.threadMessages,
+          50,
+        );
+
+        const composedMessage = `Reply to the user's message (user id: ${userId}): ${message}.\n\n<context>\n${context}\n</context>`;
         const result = await hosted.sendMessage(
           sessionId,
           defaultWorkspaceRoot,
-          message,
+          composedMessage,
         );
 
         // Stop the phrase cycling since we have the response
@@ -247,6 +229,13 @@ async function main(): Promise<void> {
           ...updatePayload,
         });
 
+        // Add Codey's response to thread store explicitly (same ts as loading message)
+        sessionStore.addMessage(conversationKey, {
+          text: result.response,
+          timestamp: loadingMsgTs!,
+          userId: botUserId || 'codey-bot',
+        });
+
         // Track when Codey responded for future thread history filtering
         if (loadingMsgTs) {
           sessionStore.updateLastCodeyResponse(conversationKey, loadingMsgTs);
@@ -260,13 +249,18 @@ async function main(): Promise<void> {
             workspaceRoot: defaultWorkspaceRoot,
             threadMessages: mapping.threadMessages, // Preserve existing messages
             lastCodeyResponseTs: mapping.lastCodeyResponseTs,
-            isInitialized: mapping.isInitialized,
           });
 
+          const updatedMapping2 = sessionStore.get(conversationKey)!;
+          const context2 = threadHistory.formatThreadContext(
+            updatedMapping2.threadMessages,
+            50,
+          );
+          const composedMessage2 = `${context2}\n\n${message}`;
           const result = await hosted.sendMessage(
             recreated.sessionId,
             defaultWorkspaceRoot,
-            message,
+            composedMessage2,
           );
 
           // Stop the phrase cycling since we have the response
@@ -283,6 +277,13 @@ async function main(): Promise<void> {
             channel,
             ts: loadingMsgTs!,
             ...updatePayload,
+          });
+
+          // Add Codey's response to thread store explicitly (same ts as loading message)
+          sessionStore.addMessage(conversationKey, {
+            text: result.response,
+            timestamp: loadingMsgTs!,
+            userId: botUserId || 'codey-bot',
           });
 
           // Track when Codey responded for future thread history filtering

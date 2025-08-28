@@ -17,7 +17,6 @@ export interface ConversationMapping {
   workspaceRoot: string;
   threadMessages: ThreadMessage[];
   lastCodeyResponseTs?: string; // Track when Codey last responded
-  isInitialized: boolean; // Track if we've sent the initial instructions
 }
 
 const store = new Map<ConversationKey, ConversationMapping>();
@@ -61,9 +60,4 @@ export function updateLastCodeyResponse(
   }
 }
 
-export function markInitialized(key: ConversationKey): void {
-  const mapping = store.get(key);
-  if (mapping) {
-    mapping.isInitialized = true;
-  }
-}
+// Removed: markInitialized and isInitialized as initial instructions are no longer used

@@ -13,6 +13,7 @@ import {
   executeToolCall,
   GeminiClient,
   GeminiEventType,
+  ServerGeminiStreamEvent,
   ToolCallRequestInfo,
   ToolErrorType,
 } from '@google/gemini-cli-core';
@@ -84,7 +85,7 @@ export async function sendMessage(
   let finalResponseText = '';
   let turnCount = 0;
   const maxTurns = 10; // Prevent infinite loops
-
+  const events: ServerGeminiStreamEvent[] = [];
   while (true) {
     turnCount++;
     if (turnCount > maxTurns) {
@@ -93,7 +94,6 @@ export async function sendMessage(
 
     const functionCalls: FunctionCall[] = [];
     let responseText = '';
-
     const responseStream = client.sendMessageStream(
       currentMessages[0]?.parts || [],
       abortController.signal,
@@ -101,6 +101,7 @@ export async function sendMessage(
     );
 
     for await (const event of responseStream) {
+      events.push(event);
       if (abortController.signal.aborted) {
         throw new Error('Operation cancelled');
       }
@@ -175,6 +176,7 @@ export async function sendMessage(
 
   return {
     response: finalResponseText,
+    events,
     turnCount,
   };
 }

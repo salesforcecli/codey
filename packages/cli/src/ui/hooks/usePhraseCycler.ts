@@ -14,10 +14,10 @@ export const WITTY_LOADING_PHRASES = [
 
   // bear puns
   'Gathering some bear necessities...',
-  'Bear with us, magic is happening...',
-  "Bear with us, we're blazing a trail...",
-  "Bear with us, we're coding...",
-  "Bear with us, we're almost there...",
+  'Bear with me, magic is happening...',
+  "Bear with me, I'm blazing a trail...",
+  "Bear with me, I'm coding...",
+  "Bear with me, I'm almost there...",
   'Bear-y excited to help!',
   'Bear-y busy processing...',
   'Fetching some bear-y cool data...',
@@ -25,7 +25,7 @@ export const WITTY_LOADING_PHRASES = [
   "I'm just getting my bearings...",
 
   // paw puns
-  "Paws for a moment, we're on it...",
+  "Paws for a moment, I'm on it...",
   'Your request is in good paws...',
 
   // trailblazing
@@ -36,8 +36,8 @@ export const WITTY_LOADING_PHRASES = [
   // Misc
   'Hugging the server for a response...',
   'Crafting something special...',
-  "Just a moment, we're coding...",
-  "Hold tight, we're coding...",
+  "Just a moment, I'm coding...",
+  "Hold tight, I'm coding...",
   'Codey is working his magic...',
   'Almost there, thanks for waiting...',
   'Codey is making it happen...',
