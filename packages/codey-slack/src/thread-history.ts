@@ -36,7 +36,7 @@ export function formatThreadHistoryForAPI(messages: ThreadMessage[]): string {
     return `[${timestamp}] ${obfuscatedUser}: ${msg.text}`;
   });
 
-  return `THREAD HISTORY UPDATE: ${JSON.stringify(formattedMessages)}`;
+  return `INSTRUCTIONS: Update your memory with the new thread history. Do NOT respond to the thread history updates, ONLY use them to inform future responses. RESPONSE FORMAT: One word acknowledgement of the thread history update. THREAD HISTORY UPDATE: ${JSON.stringify(formattedMessages)}.`;
 }
 
 export function getInitialInstructions(): string {
@@ -44,7 +44,7 @@ export function getInitialInstructions(): string {
 
 THREAD HISTORY UPDATE: ["[2024-06-01T12:00:00.000Z] User123: Hello, can you help me?", "[2024-06-01T12:01:00.000Z] User456: Sure, what do you need?"]
 
-When you receive new thread history updates, store that in your memory and use it to provide answers that make sense in the context of the thread.`;
+When you receive new thread history updates, store that in your memory and use it to provide answers that make sense in the context of the thread. Do not respond to the thread history updates, only use them to inform your responses.`;
 }
 
 export async function fetchSlackThreadHistory(

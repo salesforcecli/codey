@@ -28,6 +28,8 @@ import {
   GEMINI_CONFIG_DIR as GEMINI_DIR,
 } from '../tools/memoryTool.js';
 import { WebSearchTool } from '../tools/web-search.js';
+import { GetScaleCenterStatusTool } from '../tools/scaleCenterStatus.js';
+import { CreateDevopsWorkItemTool } from '../tools/createDevopsWorkItem.js';
 import { GeminiClient } from '../core/client.js';
 import { FileDiscoveryService } from '../services/fileDiscoveryService.js';
 import { GitService } from '../services/gitService.js';
@@ -760,6 +762,8 @@ export class Config {
     registerCoreTool(ShellTool, this);
     registerCoreTool(MemoryTool);
     registerCoreTool(WebSearchTool, this);
+    registerCoreTool(GetScaleCenterStatusTool);
+    registerCoreTool(CreateDevopsWorkItemTool);
 
     await registry.discoverAllTools();
     return registry;
