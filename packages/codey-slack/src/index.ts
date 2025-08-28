@@ -17,6 +17,8 @@ function requireEnv(name: string): string {
 
 const loadingEmoji = 'loading';
 const errorEmoji = 'x';
+const completedEmoji = 'large_green_circle';
+const runningEmoji = 'large_blue_circle';
 
 function getRandomLoadingPhrase(): string {
   return `:${loadingEmoji}: ${
@@ -146,20 +148,38 @@ async function main(): Promise<void> {
       loadingMsgTs = (loadingMsg as { ts?: string }).ts;
 
       // Start cycling through loading phrases every 10 seconds
+      let currentLoadingPhrase = getRandomLoadingPhrase().replace(
+        `:${loadingEmoji}: `,
+        '',
+      );
+      let lastBuiltText: string | undefined;
       phraseCycler = new PhraseCycler({
         intervalMs: 10000, // 10 seconds
         onPhraseChange: async (phrase: string) => {
-          if (loadingMsgTs) {
-            try {
+          currentLoadingPhrase = phrase;
+          // We don't overwrite content; the streaming loop will include the
+          // current loading phrase at the bottom on its next update. For
+          // responsiveness, do a light-weight refresh here as well if we have
+          // started streaming.
+          try {
+            if (loadingMsgTs && lastBuiltText) {
+              const loadingLine = `\n\n:${loadingEmoji}: ${currentLoadingPhrase}`;
+              const base = lastBuiltText ?? '';
+              const formattedMessage = formatSlackMessage(
+                `${base}${loadingLine}`,
+              );
+              const updatePayload =
+                typeof formattedMessage === 'string'
+                  ? { text: formattedMessage }
+                  : formattedMessage;
               await client.chat.update({
                 channel,
                 ts: loadingMsgTs,
-                text: `:${loadingEmoji}: ${phrase}`,
+                ...updatePayload,
               });
-            } catch (err) {
-              // Log but don't fail the request if we can't update the loading message
-              logger?.warn?.({ err }, 'Failed to update loading phrase');
             }
+          } catch (err) {
+            logger?.warn?.({ err }, 'Failed to update loading phrase');
           }
         },
       });
@@ -217,36 +237,117 @@ CONVERSATION CONTEXT (for background only - do NOT respond to questions or reque
 ${context}
 
 Please respond only to the current request above, not to any previous questions or requests that may appear in the conversation context.`;
-        const result = await hosted.sendMessage(
+
+        // Stream result and progressively update Slack message
+        let accumulated = '';
+        let lastUpdate = 0;
+        const minUpdateIntervalMs = 300; // basic debounce
+        const toolStatusLines: string[] = [];
+        let lastBuiltText = '';
+
+        for await (const event of hosted.sendMessageStream(
           sessionId,
           defaultWorkspaceRoot,
           composedMessage,
-        );
+        )) {
+          const now = Date.now();
+          // Normalize event type
+          const e = event as
+            | { type: 'content'; delta: string }
+            | {
+                type: 'tool_start';
+                name: string;
+                args?: Record<string, unknown>;
+              }
+            | { type: 'tool_result'; name: string; ok: boolean; error?: string }
+            | { type: 'done'; finalText: string; turnCount: number }
+            | { type: 'error'; message: string };
 
-        // Stop the phrase cycling since we have the response
+          if (e.type === 'content') {
+            accumulated += e.delta;
+          } else if (e.type === 'tool_start') {
+            const argsPreview = e.args
+              ? ` ${JSON.stringify(e.args).slice(0, 120)}...`
+              : '';
+            toolStatusLines.push(`:${runningEmoji}: ${e.name}${argsPreview}`);
+          } else if (e.type === 'tool_result') {
+            const idx = toolStatusLines.findIndex((l) =>
+              l.includes(`:${runningEmoji}: ${e.name}`),
+            );
+            const status = e.ok
+              ? `:${completedEmoji}:`
+              : `:${errorEmoji}:${e.error ? `: ${e.error}` : ''}`;
+            const line = `${status} ${e.name}`;
+            if (idx >= 0) {
+              toolStatusLines[idx] = line;
+            } else {
+              toolStatusLines.push(line);
+            }
+          } else if (e.type === 'error') {
+            accumulated += `\n\nError: ${e.message}`;
+          } else if (e.type === 'done') {
+            accumulated = e.finalText; // ensure final text is authoritative
+          }
+
+          // throttle updates; always update on done/error
+          const shouldForce = e.type === 'done' || e.type === 'error';
+          if (shouldForce || now - lastUpdate > minUpdateIntervalMs) {
+            lastUpdate = now;
+            const statusBlock = toolStatusLines.length
+              ? `\n\n_Tools:_\n${toolStatusLines.join('\n')}`
+              : '';
+            const loadingLine = phraseCycler?.isRunning()
+              ? `\n\n:${loadingEmoji}: ${currentLoadingPhrase}`
+              : '';
+            const text = `${accumulated}${statusBlock}`.trim();
+            lastBuiltText = text; // store without loading line
+
+            const formattedMessage = formatSlackMessage(
+              `${text}${loadingLine}`,
+            );
+            const updatePayload =
+              typeof formattedMessage === 'string'
+                ? { text: formattedMessage }
+                : formattedMessage;
+
+            await client.chat.update({
+              channel,
+              ts: loadingMsgTs!,
+              ...updatePayload,
+            });
+          }
+
+          if (e.type === 'done') {
+            break;
+          }
+        }
+
+        // Stop and remove the loading cycler indicator by replacing with final content only
         phraseCycler?.stop();
+        try {
+          if (loadingMsgTs) {
+            const formattedMessage = formatSlackMessage(lastBuiltText);
+            const updatePayload =
+              typeof formattedMessage === 'string'
+                ? { text: formattedMessage }
+                : formattedMessage;
+            await client.chat.update({
+              channel,
+              ts: loadingMsgTs,
+              ...updatePayload,
+            });
+          }
+        } catch (err) {
+          logger?.warn?.({ err }, 'Failed to remove loading line');
+        }
 
-        // Update the loading message with the actual response
-        const formattedMessage = formatSlackMessage(result.response);
-        const updatePayload =
-          typeof formattedMessage === 'string'
-            ? { text: formattedMessage }
-            : formattedMessage;
-
-        await client.chat.update({
-          channel,
-          ts: loadingMsgTs!,
-          ...updatePayload,
-        });
-
-        // Add Codey's response to thread store explicitly (same ts as loading message)
+        // Record final response to thread store
         sessionStore.addMessage(conversationKey, {
-          text: result.response,
+          text: accumulated,
           timestamp: loadingMsgTs!,
           userId: botUserId || 'codey-bot',
         });
 
-        // Track when Codey responded for future thread history filtering
         if (loadingMsgTs) {
           sessionStore.updateLastCodeyResponse(conversationKey, loadingMsgTs);
         }

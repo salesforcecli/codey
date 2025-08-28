@@ -76,6 +76,53 @@ export class HostedClient {
     return data as { sessionId: string; response: string; timestamp: string };
   }
 
+  async *sendMessageStream(
+    sessionId: string,
+    workspaceRoot: string,
+    message: string,
+  ): AsyncGenerator<unknown, void, unknown> {
+    const url = `${this.baseUrl}/api/sessions/${encodeURIComponent(
+      sessionId,
+    )}/messages?stream=1`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { ...this.headers(), Accept: 'application/x-ndjson' },
+      body: JSON.stringify({ workspaceRoot, message }),
+    });
+
+    if (!res.ok || !res.body) {
+      const data = await this.safeJson(res);
+      throw new HostedError(
+        `Failed to stream message (status ${res.status})`,
+        res.status,
+        data,
+      );
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+      buffer += decoder.decode(value, { stream: true });
+      let newlineIndex;
+      while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
+        const line = buffer.slice(0, newlineIndex).trim();
+        buffer = buffer.slice(newlineIndex + 1);
+        if (!line) continue;
+        try {
+          yield JSON.parse(line);
+        } catch {
+          // ignore malformed lines in POC
+        }
+      }
+    }
+  }
+
   async sendThreadHistoryMessage(
     sessionId: string,
     workspaceRoot: string,

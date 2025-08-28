@@ -5,7 +5,11 @@
  */
 
 import { AuthType, Config, GeminiClient } from '@google/gemini-cli-core';
-import { initClient, sendMessage } from '@google/gemini-cli/headless-chat';
+import {
+  initClient,
+  sendMessage,
+  sendMessageStreaming,
+} from '@google/gemini-cli/headless-chat';
 
 // In-memory session store for POC
 type SessionId = string;
@@ -60,6 +64,35 @@ export async function sendMessageToSession(
 
   const response = await sendMessage(session.client, session.config, message);
   return response;
+}
+
+export async function sendMessageToSessionStreaming(
+  sessionId: SessionId,
+  message: string,
+  onEvent: (event: unknown) => void,
+) {
+  const session = sessions.get(sessionId);
+  if (!session) {
+    throw new Error('Session not found');
+  }
+
+  session.lastUsed = Date.now();
+
+  // // Dynamic import to avoid build-time type coupling for POC
+  // const mod = await import('@google/gemini-cli/headless-chat');
+  // const sendMessageStreaming = mod.sendMessageStreaming as (
+  //   client: GeminiClient,
+  //   config: Config,
+  //   message: string,
+  //   onEvent: (event: unknown) => void,
+  // ) => Promise<{ response: string; turnCount: number }>;
+
+  return await sendMessageStreaming(
+    session.client,
+    session.config,
+    message,
+    onEvent,
+  );
 }
 
 export async function createSession(workspaceRoot: string, model?: string) {

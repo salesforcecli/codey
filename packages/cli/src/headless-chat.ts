@@ -19,6 +19,18 @@ import {
 } from '@google/gemini-cli-core';
 import { Content, FunctionCall, Part } from '@google/genai';
 
+export type StreamEvent =
+  | { type: 'content'; delta: string }
+  | { type: 'tool_start'; name: string; args?: Record<string, unknown> }
+  | {
+      type: 'tool_result';
+      name: string;
+      ok: boolean;
+      error?: string;
+    }
+  | { type: 'done'; finalText: string; turnCount: number }
+  | { type: 'error'; message: string };
+
 export async function initClient(
   workspaceRoot: string,
   sessionId: string,
@@ -179,4 +191,142 @@ export async function sendMessage(
     events,
     turnCount,
   };
+}
+
+export async function sendMessageStreaming(
+  client: GeminiClient,
+  config: Config,
+  message: string,
+  onEvent: (event: StreamEvent) => void,
+) {
+  const toolRegistry = await config.getToolRegistry();
+  const promptId = Math.random().toString(16).slice(2);
+  const abortController = new AbortController();
+
+  let currentMessages: Content[] = [
+    { role: 'user', parts: [{ text: message }] },
+  ];
+
+  let finalResponseText = '';
+  let turnCount = 0;
+  const maxTurns = 50;
+
+  try {
+    while (true) {
+      turnCount++;
+      if (turnCount > maxTurns) {
+        throw new Error('Maximum turns exceeded');
+      }
+
+      const functionCalls: FunctionCall[] = [];
+      let responseText = '';
+      const responseStream = client.sendMessageStream(
+        currentMessages[0]?.parts || [],
+        abortController.signal,
+        promptId,
+      );
+
+      for await (const event of responseStream) {
+        if (abortController.signal.aborted) {
+          throw new Error('Operation cancelled');
+        }
+
+        if (event.type === GeminiEventType.Content) {
+          responseText += event.value;
+          onEvent({ type: 'content', delta: event.value });
+        } else if (event.type === GeminiEventType.ToolCallRequest) {
+          const toolCallRequest = event.value;
+          const fc: FunctionCall = {
+            name: toolCallRequest.name,
+            args: toolCallRequest.args,
+            id: toolCallRequest.callId,
+          };
+          functionCalls.push(fc);
+        }
+        // Thoughts are intentionally not emitted
+      }
+
+      finalResponseText += responseText;
+
+      if (functionCalls.length > 0) {
+        const toolResponseParts: Part[] = [];
+
+        for (const fc of functionCalls) {
+          const callId = fc.id ?? `${fc.name}-${Date.now()}`;
+          const requestInfo: ToolCallRequestInfo = {
+            callId,
+            name: fc.name as string,
+            args: (fc.args ?? {}) as Record<string, unknown>,
+            isClientInitiated: false,
+            prompt_id: promptId,
+          };
+
+          onEvent({
+            type: 'tool_start',
+            name: requestInfo.name,
+            args: requestInfo.args,
+          });
+          try {
+            const toolResponse = await executeToolCall(
+              config,
+              requestInfo,
+              toolRegistry,
+              abortController.signal,
+            );
+
+            if (toolResponse.error) {
+              if (
+                toolResponse.errorType === ToolErrorType.UNHANDLED_EXCEPTION
+              ) {
+                onEvent({
+                  type: 'tool_result',
+                  name: requestInfo.name,
+                  ok: false,
+                  error: toolResponse.error.message,
+                });
+                throw new Error(
+                  `Tool execution failed: ${toolResponse.error.message}`,
+                );
+              }
+            }
+
+            if (toolResponse.responseParts) {
+              const parts = Array.isArray(toolResponse.responseParts)
+                ? toolResponse.responseParts
+                : [toolResponse.responseParts];
+              for (const part of parts) {
+                if (typeof part === 'string') {
+                  toolResponseParts.push({ text: part });
+                } else if (part) {
+                  toolResponseParts.push(part);
+                }
+              }
+            }
+
+            onEvent({ type: 'tool_result', name: requestInfo.name, ok: true });
+          } catch (err: unknown) {
+            const e = err as Error;
+            onEvent({
+              type: 'tool_result',
+              name: requestInfo.name,
+              ok: false,
+              error: e?.message || String(e),
+            });
+            throw err;
+          }
+        }
+
+        currentMessages = [{ role: 'user', parts: toolResponseParts }];
+      } else {
+        break;
+      }
+    }
+
+    onEvent({ type: 'done', finalText: finalResponseText, turnCount });
+    return { response: finalResponseText, turnCount };
+  } catch (err: unknown) {
+    const e = err as Error;
+    onEvent({ type: 'error', message: e?.message || String(e) });
+    throw err;
+  }
 }
