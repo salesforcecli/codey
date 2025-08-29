@@ -30,6 +30,7 @@ import {
 import { WebSearchTool } from '../tools/web-search.js';
 import { GetScaleCenterStatusTool } from '../tools/scaleCenterStatus.js';
 import { CreateDevopsWorkItemTool } from '../tools/createDevopsWorkItem.js';
+import { RunApexGuruTool } from '../tools/runApexGuru.js';
 import { GeminiClient } from '../core/client.js';
 import { FileDiscoveryService } from '../services/fileDiscoveryService.js';
 import { GitService } from '../services/gitService.js';
@@ -764,6 +765,7 @@ export class Config {
     registerCoreTool(WebSearchTool, this);
     registerCoreTool(GetScaleCenterStatusTool);
     registerCoreTool(CreateDevopsWorkItemTool);
+    registerCoreTool(RunApexGuruTool);
 
     await registry.discoverAllTools();
     return registry;
