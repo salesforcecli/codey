@@ -15,6 +15,120 @@ process.on('SIGINT', () => {
   process.exit(0);
 });
 
+// Types and interfaces
+interface SlackContext {
+  teamId: string;
+  botUserId?: string;
+}
+
+interface SlackEvent {
+  channel: string;
+  ts: string;
+  user: string;
+  thread_ts?: string;
+  text?: string;
+}
+
+interface MessageStreamState {
+  accumulated: string;
+  lastUpdate: number;
+  toolStatusLines: string[];
+  toolCallMap: Map<string, string>;
+  lastBuiltText: string;
+}
+
+interface SlackClient {
+  chat: {
+    update: (params: {
+      channel: string;
+      ts: string;
+      text?: string;
+      blocks?: unknown[];
+    }) => Promise<unknown>;
+  };
+  reactions: {
+    add: (params: {
+      channel: string;
+      timestamp: string;
+      name: string;
+    }) => Promise<unknown>;
+  };
+  conversations: {
+    replies: (args: {
+      channel: string;
+      ts: string;
+      inclusive: boolean;
+    }) => Promise<{
+      ok: boolean;
+      messages?: Array<{ text: string; ts: string; user: string }>;
+    }>;
+  };
+}
+
+interface HostedClient {
+  createSession: (workspaceRoot: string) => Promise<{ sessionId: string }>;
+  sendMessage: (
+    sessionId: string,
+    workspaceRoot: string,
+    message: string,
+  ) => Promise<{ response: string }>;
+  sendMessageStream: (
+    sessionId: string,
+    workspaceRoot: string,
+    message: string,
+  ) => AsyncIterable<ServerGeminiStreamEvent>;
+}
+
+interface SessionStore {
+  getKey: (teamId: string, channelId: string, threadTs?: string) => string;
+  get: (key: string) => SessionMapping | undefined;
+  set: (key: string, mapping: SessionMapping) => void;
+  addMessage: (key: string, message: ThreadMessage) => void;
+  updateLastCodeyResponse: (key: string, timestamp: string) => void;
+}
+
+interface SessionMapping {
+  sessionId: string;
+  workspaceRoot: string;
+  threadMessages: ThreadMessage[];
+  lastCodeyResponseTs?: string;
+}
+
+interface ThreadMessage {
+  text: string;
+  timestamp: string;
+  userId: string;
+}
+
+interface ThreadHistory {
+  fetchSlackThreadHistory: (
+    client: SlackClient,
+    channel: string,
+    threadTs: string,
+    lastCodeyResponseTs?: string,
+  ) => Promise<Array<{ text: string; ts: string; user: string }>>;
+  formatThreadContext: (messages: ThreadMessage[], limit: number) => string;
+}
+
+interface FormatSlackMessage {
+  (text: string): string | { text?: string; blocks?: unknown[] };
+}
+
+// Constants
+const EMOJIS = {
+  loading: 'loading',
+  error: 'x',
+  completed: 'large_green_circle',
+  running: 'large_blue_circle',
+} as const;
+
+const CONFIG = {
+  minUpdateIntervalMs: 300,
+  phraseCycleIntervalMs: 10000,
+  threadContextLimit: 50,
+} as const;
+
+// Utility functions
 function requireEnv(name: string): string {
   const value = process.env[name];
   if (!value) {
@@ -23,17 +137,652 @@ function requireEnv(name: string): string {
   return value;
 }
 
-const loadingEmoji = 'loading';
-const errorEmoji = 'x';
-const completedEmoji = 'large_green_circle';
-const runningEmoji = 'large_blue_circle';
-
 function getRandomLoadingPhrase(): string {
-  return `:${loadingEmoji}: ${
+  return `:${EMOJIS.loading}: ${
     WITTY_LOADING_PHRASES[
       Math.floor(Math.random() * WITTY_LOADING_PHRASES.length)
     ]
   }`;
+}
+
+// Session management functions
+class SessionManager {
+  constructor(
+    private hosted: HostedClient,
+    private sessionStore: SessionStore,
+    private defaultWorkspaceRoot: string,
+  ) {}
+
+  async ensureThreadSession(
+    teamId: string,
+    channelId: string,
+    threadTs?: string,
+  ): Promise<{
+    sessionId: string;
+    conversationKey: string;
+    isNewSession: boolean;
+  }> {
+    const conversationKey = this.sessionStore.getKey(
+      teamId,
+      channelId,
+      threadTs,
+    );
+    const existing = this.sessionStore.get(conversationKey);
+
+    if (existing) {
+      return {
+        sessionId: existing.sessionId,
+        conversationKey,
+        isNewSession: false,
+      };
+    }
+
+    // Create new session for this thread
+    const { sessionId } = await this.hosted.createSession(
+      this.defaultWorkspaceRoot,
+    );
+    this.sessionStore.set(conversationKey, {
+      sessionId,
+      workspaceRoot: this.defaultWorkspaceRoot,
+      threadMessages: [],
+    });
+
+    return { sessionId, conversationKey, isNewSession: true };
+  }
+
+  async recreateSession(
+    conversationKey: string,
+    existingMapping: SessionMapping,
+  ): Promise<string> {
+    const recreated = await this.hosted.createSession(
+      this.defaultWorkspaceRoot,
+    );
+    this.sessionStore.set(conversationKey, {
+      sessionId: recreated.sessionId,
+      workspaceRoot: this.defaultWorkspaceRoot,
+      threadMessages: existingMapping.threadMessages,
+      lastCodeyResponseTs: existingMapping.lastCodeyResponseTs,
+    });
+    return recreated.sessionId;
+  }
+}
+
+// Message streaming and update functions
+class MessageStreamer {
+  client: SlackClient | null;
+
+  constructor(
+    client: SlackClient | null,
+    private formatSlackMessage: FormatSlackMessage,
+  ) {
+    this.client = client;
+  }
+
+  async updateSlackMessage(
+    channel: string,
+    messageTs: string,
+    text: string,
+    loadingPhrase?: string,
+  ): Promise<void> {
+    if (!this.client) {
+      throw new Error('Slack client not initialized');
+    }
+
+    const displayText = loadingPhrase
+      ? `${text}\n\n:${EMOJIS.loading}: ${loadingPhrase}`
+      : text;
+    const formattedMessage = this.formatSlackMessage(displayText);
+    const updatePayload =
+      typeof formattedMessage === 'string'
+        ? { text: formattedMessage }
+        : formattedMessage;
+
+    await this.client.chat.update({
+      channel,
+      ts: messageTs,
+      ...updatePayload,
+    });
+  }
+
+  processStreamEvent(
+    event: ServerGeminiStreamEvent,
+    state: MessageStreamState,
+  ): boolean {
+    const rawType = (event as { type?: string })?.type;
+    const isStreamCompleted = rawType === 'stream_completed';
+
+    if (event.type === GeminiEventType.Content) {
+      state.accumulated += event.value;
+    } else if (event.type === GeminiEventType.ToolCallRequest) {
+      const argsPreview = event.value.args
+        ? ` ${JSON.stringify(event.value.args).slice(0, 120)}...`
+        : '';
+      state.toolCallMap.set(event.value.callId, event.value.name);
+      state.toolStatusLines.push(
+        `:${EMOJIS.running}: ${event.value.name}${argsPreview}`,
+      );
+    } else if (event.type === GeminiEventType.ToolCallResponse) {
+      const toolName =
+        state.toolCallMap.get(event.value.callId) || event.value.callId;
+      const idx = state.toolStatusLines.findIndex((l) =>
+        l.includes(`:${EMOJIS.running}: ${toolName}`),
+      );
+      const status = !event.value.error
+        ? `:${EMOJIS.completed}:`
+        : `:${EMOJIS.error}: ${event.value.error?.message ?? ''}`;
+      const line = `${status} ${toolName}`;
+      if (idx >= 0) {
+        state.toolStatusLines[idx] = line;
+      } else {
+        state.toolStatusLines.push(line);
+      }
+    } else if (event.type === GeminiEventType.Error) {
+      state.accumulated += `\n\nError: ${event.value.error.message}`;
+    } else if (event.type === GeminiEventType.Finished) {
+      state.accumulated += '\n\n';
+    }
+
+    return isStreamCompleted;
+  }
+
+  shouldUpdateMessage(
+    now: number,
+    lastUpdate: number,
+    event: ServerGeminiStreamEvent,
+    isStreamCompleted: boolean,
+  ): boolean {
+    const shouldForce =
+      isStreamCompleted ||
+      event.type === GeminiEventType.Error ||
+      event.type === GeminiEventType.ToolCallResponse;
+
+    return shouldForce || now - lastUpdate > CONFIG.minUpdateIntervalMs;
+  }
+
+  buildDisplayText(state: MessageStreamState): string {
+    const statusBlock = state.toolStatusLines.length
+      ? `\n\n_Tools:_\n${state.toolStatusLines.join('\n')}`
+      : '';
+    return `${state.accumulated}${statusBlock}`.trim();
+  }
+}
+
+// Error handling functions
+class ErrorHandler {
+  client: SlackClient | null;
+
+  constructor(
+    client: SlackClient | null,
+    private formatSlackMessage: FormatSlackMessage,
+  ) {
+    this.client = client;
+  }
+
+  async handleHostedError(
+    error: { status: number },
+    channel: string,
+    timestamp: string,
+    loadingMsgTs: string | undefined,
+    lastBuiltText: string,
+  ): Promise<void> {
+    if (!this.client) {
+      throw new Error('Slack client not initialized');
+    }
+
+    if (error.status === 401) {
+      await this.client.reactions.add({
+        channel,
+        timestamp,
+        name: EMOJIS.error,
+      });
+
+      const errorMessage =
+        '\n\n❌ **Error:** Hosted configuration/token appears invalid (401).';
+      const finalText = `${lastBuiltText}${errorMessage}`;
+      await this.updateMessageWithError(channel, loadingMsgTs!, finalText);
+    }
+  }
+
+  async handleGeneralError(
+    channel: string,
+    timestamp: string,
+    loadingMsgTs: string | undefined,
+    lastBuiltText: string,
+    say: (message: string) => Promise<unknown>,
+  ): Promise<void> {
+    if (!this.client) {
+      throw new Error('Slack client not initialized');
+    }
+
+    await this.client.reactions.add({
+      channel,
+      timestamp,
+      name: EMOJIS.error,
+    });
+
+    if (loadingMsgTs) {
+      const errorMessage =
+        '\n\n❌ **Error:** Request failed; please try again.';
+      const finalText = `${lastBuiltText || ''}${errorMessage}`;
+      await this.updateMessageWithError(channel, loadingMsgTs, finalText);
+    } else {
+      await say('Request failed; please try again.');
+    }
+  }
+
+  private async updateMessageWithError(
+    channel: string,
+    messageTs: string,
+    text: string,
+  ): Promise<void> {
+    if (!this.client) {
+      throw new Error('Slack client not initialized');
+    }
+
+    const formattedMessage = this.formatSlackMessage(text);
+    const updatePayload =
+      typeof formattedMessage === 'string'
+        ? { text: formattedMessage }
+        : formattedMessage;
+
+    await this.client.chat.update({
+      channel,
+      ts: messageTs,
+      ...updatePayload,
+    });
+  }
+}
+
+// Message composition functions
+function createComposedMessage(
+  message: string,
+  userId: string,
+  context: string,
+): string {
+  return `You are responding to a new user request in a Slack conversation. Please focus ONLY on the current request below and use the provided context only as background information to understand the conversation history.
+
+CURRENT REQUEST (this is what you need to respond to):
+${message}
+
+REQUEST MADE BY: ${userId}
+
+CONVERSATION CONTEXT (for background only - do NOT respond to questions or requests in this context):
+${context}
+
+Please respond only to the current request above, not to any previous questions or requests that may appear in the conversation context.`;
+}
+
+// Main app mention handler factory
+function createAppMentionHandler(deps: {
+  sessionManager: SessionManager;
+  messageStreamer: MessageStreamer;
+  errorHandler: ErrorHandler;
+  hosted: HostedClient;
+  sessionStore: SessionStore;
+  threadHistory: ThreadHistory;
+  defaultWorkspaceRoot: string;
+  formatSlackMessage: FormatSlackMessage;
+  HostedError: new (...args: unknown[]) => { status: number };
+}) {
+  return async ({
+    event,
+    say,
+    client,
+    context,
+    logger,
+  }: {
+    event: unknown;
+    say: (
+      message: string | { thread_ts?: string; text: string },
+    ) => Promise<{ ts?: string }>;
+    client: SlackClient;
+    context: unknown;
+    logger?: {
+      warn?: (obj: { err: unknown }, msg: string) => void;
+      error?: (obj: { err: unknown }, msg: string) => void;
+    };
+  }) => {
+    // Set client for service classes that need it
+    deps.messageStreamer.client = client;
+    deps.errorHandler.client = client;
+
+    const slackEvent = event as unknown as SlackEvent;
+    const slackContext = context as unknown as SlackContext;
+
+    const channel = slackEvent.channel;
+    const timestamp = slackEvent.ts;
+    const userId = slackEvent.user;
+    let loadingMsgTs: string | undefined;
+    let phraseCycler: PhraseCycler | undefined;
+    const state = { lastBuiltText: '' };
+
+    try {
+      const teamId = slackContext.teamId ?? 'default';
+      const botUserId = slackContext.botUserId;
+      const threadTs = slackEvent.thread_ts ?? slackEvent.ts;
+      const rawText = slackEvent.text ?? '';
+      const message = rawText.replace(/<@[^>]+>\s*/, '').trim();
+
+      if (!message) {
+        await say({ thread_ts: threadTs, text: 'Please include a message.' });
+        return;
+      }
+
+      // Send initial loading message
+      const loadingMsg = await say({
+        thread_ts: threadTs,
+        text: getRandomLoadingPhrase(),
+      });
+      loadingMsgTs = (loadingMsg as { ts?: string }).ts;
+
+      // Start phrase cycling
+      let currentLoadingPhrase = getRandomLoadingPhrase().replace(
+        `:${EMOJIS.loading}: `,
+        '',
+      );
+      phraseCycler = new PhraseCycler({
+        intervalMs: CONFIG.phraseCycleIntervalMs,
+        onPhraseChange: async (phrase: string) => {
+          currentLoadingPhrase = phrase;
+          try {
+            if (loadingMsgTs && state.lastBuiltText) {
+              await deps.messageStreamer.updateSlackMessage(
+                channel,
+                loadingMsgTs,
+                state.lastBuiltText,
+                currentLoadingPhrase,
+              );
+            }
+          } catch (err) {
+            logger?.warn?.({ err }, 'Failed to update loading phrase');
+          }
+        },
+      });
+      phraseCycler.start();
+
+      const { sessionId, conversationKey } =
+        await deps.sessionManager.ensureThreadSession(
+          teamId,
+          channel,
+          threadTs,
+        );
+
+      // Handle thread history updates
+      await updateThreadHistory(
+        deps,
+        conversationKey,
+        threadTs,
+        channel,
+        client,
+      );
+
+      try {
+        await handleMessageStreaming(deps, {
+          sessionId,
+          conversationKey,
+          message,
+          userId,
+          channel,
+          loadingMsgTs: loadingMsgTs!,
+          phraseCycler,
+          currentLoadingPhrase,
+          lastBuiltText: state.lastBuiltText,
+          botUserId,
+          state,
+        });
+      } catch (err) {
+        await handleStreamingError(deps, err, {
+          conversationKey,
+          message,
+          userId,
+          channel,
+          timestamp,
+          loadingMsgTs: loadingMsgTs!,
+          phraseCycler,
+          lastBuiltText: state.lastBuiltText,
+          botUserId,
+        });
+      }
+    } catch (err) {
+      console.error('❌ Failed to handle app_mention:', err);
+      logger?.error?.({ err }, 'Failed to handle app_mention');
+
+      phraseCycler?.stop();
+      await deps.errorHandler.handleGeneralError(
+        channel,
+        timestamp,
+        loadingMsgTs,
+        state.lastBuiltText,
+        say,
+      );
+    }
+  };
+}
+
+// Helper functions for the main handler
+async function updateThreadHistory(
+  deps: {
+    sessionStore: SessionStore;
+    threadHistory: ThreadHistory;
+  },
+  conversationKey: string,
+  threadTs: string | undefined,
+  channel: string,
+  client: SlackClient,
+): Promise<void> {
+  const mapping = deps.sessionStore.get(conversationKey);
+  if (!mapping) {
+    throw new Error('Session mapping not found after creation');
+  }
+
+  if (threadTs) {
+    const slackMessages = await deps.threadHistory.fetchSlackThreadHistory(
+      client,
+      channel,
+      threadTs,
+      mapping.lastCodeyResponseTs,
+    );
+
+    for (const slackMsg of slackMessages) {
+      const threadMessage = {
+        text: slackMsg.text,
+        timestamp: slackMsg.ts,
+        userId: slackMsg.user,
+      };
+      deps.sessionStore.addMessage(conversationKey, threadMessage);
+    }
+  }
+}
+
+async function handleMessageStreaming(
+  deps: {
+    hosted: HostedClient;
+    sessionStore: SessionStore;
+    threadHistory: ThreadHistory;
+    messageStreamer: MessageStreamer;
+    defaultWorkspaceRoot: string;
+  },
+  params: {
+    sessionId: string;
+    conversationKey: string;
+    message: string;
+    userId: string;
+    channel: string;
+    loadingMsgTs: string;
+    phraseCycler: PhraseCycler;
+    currentLoadingPhrase: string;
+    lastBuiltText: string;
+    botUserId?: string;
+    state: { lastBuiltText: string };
+  },
+): Promise<void> {
+  const updatedMapping = deps.sessionStore.get(params.conversationKey)!;
+  const context = deps.threadHistory.formatThreadContext(
+    updatedMapping.threadMessages,
+    CONFIG.threadContextLimit,
+  );
+
+  const composedMessage = createComposedMessage(
+    params.message,
+    params.userId,
+    context,
+  );
+
+  const streamState: MessageStreamState = {
+    accumulated: '',
+    lastUpdate: 0,
+    toolStatusLines: [],
+    toolCallMap: new Map(),
+    lastBuiltText: '',
+  };
+
+  // Process the stream
+  for await (const event of deps.hosted.sendMessageStream(
+    params.sessionId,
+    deps.defaultWorkspaceRoot,
+    composedMessage,
+  )) {
+    const now = Date.now();
+    const isStreamCompleted = deps.messageStreamer.processStreamEvent(
+      event,
+      streamState,
+    );
+
+    if (
+      deps.messageStreamer.shouldUpdateMessage(
+        now,
+        streamState.lastUpdate,
+        event as ServerGeminiStreamEvent,
+        isStreamCompleted,
+      )
+    ) {
+      streamState.lastUpdate = now;
+      const displayText = deps.messageStreamer.buildDisplayText(streamState);
+      streamState.lastBuiltText = displayText;
+      params.state.lastBuiltText = displayText;
+
+      const loadingPhrase = params.phraseCycler?.isRunning()
+        ? params.currentLoadingPhrase
+        : undefined;
+      await deps.messageStreamer.updateSlackMessage(
+        params.channel,
+        params.loadingMsgTs,
+        displayText,
+        loadingPhrase,
+      );
+    }
+
+    if (isStreamCompleted) {
+      break;
+    }
+  }
+
+  // Finalize the message
+  params.phraseCycler?.stop();
+  await deps.messageStreamer.updateSlackMessage(
+    params.channel,
+    params.loadingMsgTs,
+    streamState.lastBuiltText,
+  );
+
+  // Record final response to thread store
+  deps.sessionStore.addMessage(params.conversationKey, {
+    text: streamState.accumulated,
+    timestamp: params.loadingMsgTs,
+    userId: params.botUserId || 'codey-bot',
+  });
+
+  deps.sessionStore.updateLastCodeyResponse(
+    params.conversationKey,
+    params.loadingMsgTs,
+  );
+}
+
+async function handleStreamingError(
+  deps: {
+    sessionManager: SessionManager;
+    sessionStore: SessionStore;
+    threadHistory: ThreadHistory;
+    messageStreamer: MessageStreamer;
+    errorHandler: ErrorHandler;
+    hosted: HostedClient;
+    defaultWorkspaceRoot: string;
+    HostedError: new (...args: unknown[]) => { status: number };
+  },
+  err: unknown,
+  params: {
+    conversationKey: string;
+    message: string;
+    userId: string;
+    channel: string;
+    timestamp: string;
+    loadingMsgTs: string;
+    phraseCycler: PhraseCycler;
+    lastBuiltText: string;
+    botUserId?: string;
+  },
+): Promise<void> {
+  if (err instanceof deps.HostedError && err.status === 404) {
+    // Recreate session and retry
+    const mapping = deps.sessionStore.get(params.conversationKey);
+    if (!mapping) {
+      throw new Error('Session mapping not found');
+    }
+    const recreatedSessionId = await deps.sessionManager.recreateSession(
+      params.conversationKey,
+      mapping,
+    );
+
+    const updatedMapping = deps.sessionStore.get(params.conversationKey)!;
+    const context = deps.threadHistory.formatThreadContext(
+      updatedMapping.threadMessages,
+      CONFIG.threadContextLimit,
+    );
+    const composedMessage = createComposedMessage(
+      params.message,
+      params.userId,
+      context,
+    );
+
+    const result = await deps.hosted.sendMessage(
+      recreatedSessionId,
+      deps.defaultWorkspaceRoot,
+      composedMessage,
+    );
+
+    params.phraseCycler?.stop();
+    await deps.messageStreamer.updateSlackMessage(
+      params.channel,
+      params.loadingMsgTs,
+      result.response,
+    );
+
+    deps.sessionStore.addMessage(params.conversationKey, {
+      text: result.response,
+      timestamp: params.loadingMsgTs,
+      userId: params.botUserId || 'codey-bot',
+    });
+
+    deps.sessionStore.updateLastCodeyResponse(
+      params.conversationKey,
+      params.loadingMsgTs,
+    );
+    return;
+  }
+
+  if (err instanceof deps.HostedError && err.status === 401) {
+    params.phraseCycler?.stop();
+    await deps.errorHandler.handleHostedError(
+      err,
+      params.channel,
+      params.timestamp,
+      params.loadingMsgTs,
+      params.lastBuiltText,
+    );
+    return;
+  }
+
+  throw err;
 }
 
 async function main(): Promise<void> {
@@ -75,8 +824,6 @@ async function main(): Promise<void> {
     console.error('❌ Slack app error:', error);
   });
 
-  // Mentions-only POC configuration
-
   // Minimal hosted integration for POC
   const { HostedClient, HostedError } = await import('./hosted-client');
   const { formatSlackMessage } = await import('./markdown-converter');
@@ -91,409 +838,37 @@ async function main(): Promise<void> {
   const sessionStore = await import('./session-store');
   const threadHistory = await import('./thread-history');
 
-  async function ensureThreadSession(
-    teamId: string,
-    channelId: string,
-    threadTs?: string,
-  ): Promise<{
-    sessionId: string;
-    conversationKey: string;
-    isNewSession: boolean;
-  }> {
-    const conversationKey = sessionStore.getKey(teamId, channelId, threadTs);
-    const existing = sessionStore.get(conversationKey);
+  // Initialize service classes
+  const sessionManager = new SessionManager(
+    hosted as HostedClient,
+    sessionStore as SessionStore,
+    defaultWorkspaceRoot,
+  );
+  const messageStreamer = new MessageStreamer(
+    null,
+    formatSlackMessage as FormatSlackMessage,
+  );
+  const errorHandler = new ErrorHandler(
+    null,
+    formatSlackMessage as FormatSlackMessage,
+  );
 
-    if (existing) {
-      return {
-        sessionId: existing.sessionId,
-        conversationKey,
-        isNewSession: false,
-      };
-    }
-
-    // Create new session for this thread
-    const { sessionId } = await hosted.createSession(defaultWorkspaceRoot);
-    sessionStore.set(conversationKey, {
-      sessionId,
-      workspaceRoot: defaultWorkspaceRoot,
-      threadMessages: [],
-    });
-
-    return { sessionId, conversationKey, isNewSession: true };
-  }
-
-  // Mentions: use thread-aware sessions, reply in thread
-  app.event('app_mention', async ({ event, say, client, context, logger }) => {
-    const channel = (event as unknown as { channel: string }).channel;
-    const timestamp = (event as unknown as { ts: string }).ts;
-    const userId = (event as unknown as { user: string }).user;
-    let loadingMsgTs: string | undefined;
-    let phraseCycler: PhraseCycler | undefined;
-    let lastBuiltText = '';
-
-    try {
-      const teamId: string =
-        (context as unknown as { teamId?: string }).teamId ?? 'default';
-      const botUserId: string | undefined = (
-        context as unknown as { botUserId?: string }
-      ).botUserId;
-      const threadTs: string | undefined =
-        (event as unknown as { thread_ts?: string; ts?: string }).thread_ts ??
-        (event as unknown as { ts?: string }).ts;
-      const rawText: string =
-        (event as unknown as { text?: string }).text ?? '';
-      const message = rawText.replace(/<@[^>]+>\s*/, '').trim();
-
-      if (!message) {
-        await say({ thread_ts: threadTs, text: 'Please include a message.' });
-        return;
-      }
-
-      // Send initial loading message
-      const loadingMsg = await say({
-        thread_ts: threadTs,
-        text: getRandomLoadingPhrase(),
-      });
-      loadingMsgTs = (loadingMsg as { ts?: string }).ts;
-
-      // Start cycling through loading phrases every 10 seconds
-      let currentLoadingPhrase = getRandomLoadingPhrase().replace(
-        `:${loadingEmoji}: `,
-        '',
-      );
-      phraseCycler = new PhraseCycler({
-        intervalMs: 10000, // 10 seconds
-        onPhraseChange: async (phrase: string) => {
-          currentLoadingPhrase = phrase;
-          // We don't overwrite content; the streaming loop will include the
-          // current loading phrase at the bottom on its next update. For
-          // responsiveness, do a light-weight refresh here as well if we have
-          // started streaming.
-          try {
-            if (loadingMsgTs && lastBuiltText) {
-              const loadingLine = `\n\n:${loadingEmoji}: ${currentLoadingPhrase}`;
-              const base = lastBuiltText ?? '';
-              const formattedMessage = formatSlackMessage(
-                `${base}${loadingLine}`,
-              );
-              const updatePayload =
-                typeof formattedMessage === 'string'
-                  ? { text: formattedMessage }
-                  : formattedMessage;
-              await client.chat.update({
-                channel,
-                ts: loadingMsgTs,
-                ...updatePayload,
-              });
-            }
-          } catch (err) {
-            logger?.warn?.({ err }, 'Failed to update loading phrase');
-          }
-        },
-      });
-      phraseCycler.start();
-
-      const { sessionId, conversationKey } = await ensureThreadSession(
-        teamId,
-        channel,
-        threadTs,
-      );
-
-      // Handle thread history updates
-      const mapping = sessionStore.get(conversationKey);
-      if (!mapping) {
-        throw new Error('Session mapping not found after creation');
-      }
-
-      // Fetch thread deltas and add to store
-      if (threadTs) {
-        const slackMessages = await threadHistory.fetchSlackThreadHistory(
-          // @ts-expect-error for now
-          client,
-          channel,
-          threadTs,
-          mapping.lastCodeyResponseTs,
-        );
-
-        // Convert Slack messages to our format and add to store
-        for (const slackMsg of slackMessages) {
-          const threadMessage = {
-            text: slackMsg.text,
-            timestamp: slackMsg.ts,
-            userId: slackMsg.user,
-          };
-          sessionStore.addMessage(conversationKey, threadMessage);
-        }
-      }
-
-      try {
-        // Build thread context from stored messages (recent window)
-        const updatedMapping = sessionStore.get(conversationKey)!;
-        const context = threadHistory.formatThreadContext(
-          updatedMapping.threadMessages,
-          50,
-        );
-
-        const composedMessage = `You are responding to a new user request in a Slack conversation. Please focus ONLY on the current request below and use the provided context only as background information to understand the conversation history.
-
-CURRENT REQUEST (this is what you need to respond to):
-${message}
-
-REQUEST MADE BY: ${userId}
-
-CONVERSATION CONTEXT (for background only - do NOT respond to questions or requests in this context):
-${context}
-
-Please respond only to the current request above, not to any previous questions or requests that may appear in the conversation context.`;
-
-        // Stream result and progressively update Slack message
-        let accumulated = '';
-        let lastUpdate = 0;
-        const minUpdateIntervalMs = 300; // basic debounce
-        const toolStatusLines: string[] = [];
-        const toolCallMap = new Map<string, string>(); // callId -> toolName
-
-        for await (const event of hosted.sendMessageStream(
-          sessionId,
-          defaultWorkspaceRoot,
-          composedMessage,
-        )) {
-          const now = Date.now();
-          // Handle events; also recognize a final completion sentinel
-          const rawType = (event as { type?: string })?.type;
-          const isStreamCompleted = rawType === 'stream_completed';
-          // Handle ServerGeminiStreamEvent directly when applicable
-          const e = event as ServerGeminiStreamEvent;
-
-          if (e.type === GeminiEventType.Content) {
-            accumulated += e.value;
-          } else if (e.type === GeminiEventType.ToolCallRequest) {
-            const argsPreview = e.value.args
-              ? ` ${JSON.stringify(e.value.args).slice(0, 120)}...`
-              : '';
-            toolCallMap.set(e.value.callId, e.value.name);
-            toolStatusLines.push(
-              `:${runningEmoji}: ${e.value.name}${argsPreview}`,
-            );
-          } else if (e.type === GeminiEventType.ToolCallResponse) {
-            const toolName = toolCallMap.get(e.value.callId) || e.value.callId;
-            const idx = toolStatusLines.findIndex((l) =>
-              l.includes(`:${runningEmoji}: ${toolName}`),
-            );
-            const status = !e.value.error
-              ? `:${completedEmoji}:`
-              : `:${errorEmoji}: ${e.value.error?.message ?? ''}`;
-            const line = `${status} ${toolName}`;
-            if (idx >= 0) {
-              toolStatusLines[idx] = line;
-            } else {
-              toolStatusLines.push(line);
-            }
-          } else if (e.type === GeminiEventType.Error) {
-            accumulated += `\n\nError: ${e.value.error.message}`;
-          } else if (e.type === GeminiEventType.Finished) {
-            // Add a new line when we see a finished event (but don't break the stream)
-            accumulated += '\n\n';
-          }
-          // Note: GeminiEventType.Thought events are ignored for Slack display
-
-          // throttle updates; always update on finished/error/tool completion
-          const shouldForce =
-            isStreamCompleted ||
-            e.type === GeminiEventType.Error ||
-            e.type === GeminiEventType.ToolCallResponse;
-          if (shouldForce || now - lastUpdate > minUpdateIntervalMs) {
-            lastUpdate = now;
-            const statusBlock = toolStatusLines.length
-              ? `\n\n_Tools:_\n${toolStatusLines.join('\n')}`
-              : '';
-            const loadingLine = phraseCycler?.isRunning()
-              ? `\n\n:${loadingEmoji}: ${currentLoadingPhrase}`
-              : '';
-            const text = `${accumulated}${statusBlock}`.trim();
-            lastBuiltText = text; // store without loading line
-
-            const formattedMessage = formatSlackMessage(
-              `${text}${loadingLine}`,
-            );
-            const updatePayload =
-              typeof formattedMessage === 'string'
-                ? { text: formattedMessage }
-                : formattedMessage;
-
-            await client.chat.update({
-              channel,
-              ts: loadingMsgTs!,
-              ...updatePayload,
-            });
-          }
-
-          if (isStreamCompleted) {
-            break;
-          }
-        }
-        // Stream completed naturally (either via stream_completed event or end-of-stream)
-
-        // Stop and remove the loading cycler indicator by replacing with final content only
-        phraseCycler?.stop();
-        try {
-          if (loadingMsgTs) {
-            const formattedMessage = formatSlackMessage(lastBuiltText);
-            const updatePayload =
-              typeof formattedMessage === 'string'
-                ? { text: formattedMessage }
-                : formattedMessage;
-            await client.chat.update({
-              channel,
-              ts: loadingMsgTs,
-              ...updatePayload,
-            });
-          }
-        } catch (err) {
-          logger?.warn?.({ err }, 'Failed to remove loading line');
-        }
-
-        // Record final response to thread store
-        sessionStore.addMessage(conversationKey, {
-          text: accumulated,
-          timestamp: loadingMsgTs!,
-          userId: botUserId || 'codey-bot',
-        });
-
-        if (loadingMsgTs) {
-          sessionStore.updateLastCodeyResponse(conversationKey, loadingMsgTs);
-        }
-      } catch (err) {
-        if (err instanceof HostedError && err.status === 404) {
-          // Recreate session and retry once
-          const recreated = await hosted.createSession(defaultWorkspaceRoot);
-          sessionStore.set(conversationKey, {
-            sessionId: recreated.sessionId,
-            workspaceRoot: defaultWorkspaceRoot,
-            threadMessages: mapping.threadMessages, // Preserve existing messages
-            lastCodeyResponseTs: mapping.lastCodeyResponseTs,
-          });
-
-          const updatedMapping2 = sessionStore.get(conversationKey)!;
-          const context2 = threadHistory.formatThreadContext(
-            updatedMapping2.threadMessages,
-            50,
-          );
-          const composedMessage2 = `You are responding to a new user request in a Slack conversation. Please focus ONLY on the current request below and use the provided context only as background information to understand the conversation history.
-
-CURRENT REQUEST (this is what you need to respond to):
-${message}
-
-REQUEST MADE BY: ${userId}
-
-CONVERSATION CONTEXT (for background only - do NOT respond to questions or requests in this context):
-${context2}
-
-Please respond only to the current request above, not to any previous questions or requests that may appear in the conversation context.`;
-          const result = await hosted.sendMessage(
-            recreated.sessionId,
-            defaultWorkspaceRoot,
-            composedMessage2,
-          );
-
-          // Stop the phrase cycling since we have the response
-          phraseCycler?.stop();
-
-          // Update the loading message with the actual response
-          const formattedMessage = formatSlackMessage(result.response);
-          const updatePayload =
-            typeof formattedMessage === 'string'
-              ? { text: formattedMessage }
-              : formattedMessage;
-
-          await client.chat.update({
-            channel,
-            ts: loadingMsgTs!,
-            ...updatePayload,
-          });
-
-          // Add Codey's response to thread store explicitly (same ts as loading message)
-          sessionStore.addMessage(conversationKey, {
-            text: result.response,
-            timestamp: loadingMsgTs!,
-            userId: botUserId || 'codey-bot',
-          });
-
-          // Track when Codey responded for future thread history filtering
-          if (loadingMsgTs) {
-            sessionStore.updateLastCodeyResponse(conversationKey, loadingMsgTs);
-          }
-          return;
-        }
-        if (err instanceof HostedError && err.status === 401) {
-          // Stop the phrase cycling since we have an error
-          phraseCycler?.stop();
-
-          await client.reactions.add({
-            channel,
-            timestamp,
-            name: 'x',
-          });
-
-          // Update the loading message with error appended to accumulated content
-          const errorMessage =
-            '\n\n❌ **Error:** Hosted configuration/token appears invalid (401).';
-          const finalText = `${lastBuiltText}${errorMessage}`;
-          const formattedMessage = formatSlackMessage(finalText);
-          const updatePayload =
-            typeof formattedMessage === 'string'
-              ? { text: formattedMessage }
-              : formattedMessage;
-
-          await client.chat.update({
-            channel,
-            ts: loadingMsgTs!,
-            ...updatePayload,
-          });
-          return;
-        }
-        throw err;
-      }
-    } catch (err) {
-      console.error('❌ Failed to handle app_mention:', err);
-      logger?.error?.({ err }, 'Failed to handle app_mention');
-
-      // Stop the phrase cycling since we have an error
-      phraseCycler?.stop();
-
-      // Add error reaction and update message
-      try {
-        await client.reactions.add({
-          channel,
-          timestamp,
-          name: errorEmoji,
-        });
-
-        // Update the loading message with error appended to accumulated content if we have the timestamp
-        if (loadingMsgTs) {
-          const errorMessage =
-            '\n\n❌ **Error:** Request failed; please try again.';
-          const finalText = `${lastBuiltText || ''}${errorMessage}`;
-          const formattedMessage = formatSlackMessage(finalText);
-          const updatePayload =
-            typeof formattedMessage === 'string'
-              ? { text: formattedMessage }
-              : formattedMessage;
-
-          await client.chat.update({
-            channel,
-            ts: loadingMsgTs,
-            ...updatePayload,
-          });
-        } else {
-          await say('Request failed; please try again.');
-        }
-      } catch {
-        // If updating fails, fall back to posting a new message
-        await say('Request failed; please try again.');
-      }
-    }
+  // Create the app mention handler
+  const handleAppMention = createAppMentionHandler({
+    sessionManager,
+    messageStreamer,
+    errorHandler,
+    hosted: hosted as HostedClient,
+    sessionStore: sessionStore as SessionStore,
+    threadHistory: threadHistory as ThreadHistory,
+    defaultWorkspaceRoot,
+    formatSlackMessage: formatSlackMessage as FormatSlackMessage,
+    HostedError: HostedError as new (...args: unknown[]) => { status: number },
   });
+
+  // Register the event handler
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  app.event('app_mention', handleAppMention as any);
 
   console.log('✅ Event handlers registered');
 
