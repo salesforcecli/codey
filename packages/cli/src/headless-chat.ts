@@ -109,128 +109,108 @@ export async function initClient(
   return { config, client };
 }
 
-export async function sendMessage(
-  client: GeminiClient,
+interface MessageProcessingOptions {
+  onEvent?: (event: StreamEvent) => void;
+  collectEvents?: boolean;
+}
+
+interface MessageProcessingResult {
+  response: string;
+  events?: ServerGeminiStreamEvent[];
+  turnCount: number;
+}
+
+async function executeToolCalls(
+  functionCalls: FunctionCall[],
   config: Config,
-  message: string,
-) {
-  const toolRegistry = await config.getToolRegistry();
-  const promptId = Math.random().toString(16).slice(2);
-  const abortController = new AbortController();
+  toolRegistry: Awaited<ReturnType<Config['getToolRegistry']>>,
+  promptId: string,
+  abortController: AbortController,
+  onEvent?: (event: StreamEvent) => void,
+): Promise<Part[]> {
+  const toolResponseParts: Part[] = [];
 
-  // Process the message using the agentic loop with tool execution
-  let currentMessages: Content[] = [
-    { role: 'user', parts: [{ text: message }] },
-  ];
+  for (const fc of functionCalls) {
+    const callId = fc.id ?? `${fc.name}-${Date.now()}`;
+    const requestInfo: ToolCallRequestInfo = {
+      callId,
+      name: fc.name as string,
+      args: (fc.args ?? {}) as Record<string, unknown>,
+      isClientInitiated: false,
+      prompt_id: promptId,
+    };
 
-  let finalResponseText = '';
-  let turnCount = 0;
-  const maxTurns = 50; // Prevent infinite loops
-  const events: ServerGeminiStreamEvent[] = [];
-  while (true) {
-    turnCount++;
-    if (turnCount > maxTurns) {
-      throw new Error('Maximum turns exceeded');
+    if (onEvent) {
+      onEvent({
+        type: 'tool_start',
+        name: requestInfo.name,
+        args: requestInfo.args,
+      });
     }
 
-    const functionCalls: FunctionCall[] = [];
-    let responseText = '';
-    const responseStream = client.sendMessageStream(
-      currentMessages[0]?.parts || [],
-      abortController.signal,
-      promptId,
-    );
+    try {
+      const toolResponse = await executeToolCall(
+        config,
+        requestInfo,
+        toolRegistry,
+        abortController.signal,
+      );
 
-    for await (const event of responseStream) {
-      events.push(event);
-      if (abortController.signal.aborted) {
-        throw new Error('Operation cancelled');
-      }
-
-      if (event.type === GeminiEventType.Content) {
-        responseText += event.value;
-      } else if (event.type === GeminiEventType.ToolCallRequest) {
-        const toolCallRequest = event.value;
-        const fc: FunctionCall = {
-          name: toolCallRequest.name,
-          args: toolCallRequest.args,
-          id: toolCallRequest.callId,
-        };
-        functionCalls.push(fc);
-      }
-      // Note: GeminiEventType.Thought events are ignored (internal reasoning)
-    }
-
-    // Store the response text from this turn
-    finalResponseText += responseText;
-
-    if (functionCalls.length > 0) {
-      // Execute tool calls and continue the conversation
-      const toolResponseParts: Part[] = [];
-
-      for (const fc of functionCalls) {
-        const callId = fc.id ?? `${fc.name}-${Date.now()}`;
-        const requestInfo: ToolCallRequestInfo = {
-          callId,
-          name: fc.name as string,
-          args: (fc.args ?? {}) as Record<string, unknown>,
-          isClientInitiated: false,
-          prompt_id: promptId,
-        };
-
-        const toolResponse = await executeToolCall(
-          config,
-          requestInfo,
-          toolRegistry,
-          abortController.signal,
-        );
-
-        if (toolResponse.error) {
-          if (toolResponse.errorType === ToolErrorType.UNHANDLED_EXCEPTION) {
-            throw new Error(
-              `Tool execution failed: ${toolResponse.error.message}`,
-            );
+      if (toolResponse.error) {
+        if (toolResponse.errorType === ToolErrorType.UNHANDLED_EXCEPTION) {
+          const errorMessage = `Tool execution failed: ${toolResponse.error.message}`;
+          if (onEvent) {
+            onEvent({
+              type: 'tool_result',
+              name: requestInfo.name,
+              ok: false,
+              error: toolResponse.error.message,
+            });
           }
+          throw new Error(errorMessage);
         }
+      }
 
-        if (toolResponse.responseParts) {
-          const parts = Array.isArray(toolResponse.responseParts)
-            ? toolResponse.responseParts
-            : [toolResponse.responseParts];
-          for (const part of parts) {
-            if (typeof part === 'string') {
-              toolResponseParts.push({ text: part });
-            } else if (part) {
-              toolResponseParts.push(part);
-            }
+      if (toolResponse.responseParts) {
+        const parts = Array.isArray(toolResponse.responseParts)
+          ? toolResponse.responseParts
+          : [toolResponse.responseParts];
+        for (const part of parts) {
+          if (typeof part === 'string') {
+            toolResponseParts.push({ text: part });
+          } else if (part) {
+            toolResponseParts.push(part);
           }
         }
       }
 
-      // Continue conversation with tool responses
-      currentMessages = [{ role: 'user', parts: toolResponseParts }];
-    } else {
-      // No more tool calls, conversation is complete
-      break;
+      if (onEvent) {
+        onEvent({ type: 'tool_result', name: requestInfo.name, ok: true });
+      }
+    } catch (err: unknown) {
+      const e = err as Error;
+      if (onEvent) {
+        onEvent({
+          type: 'tool_result',
+          name: requestInfo.name,
+          ok: false,
+          error: e?.message || String(e),
+        });
+      }
+      throw err;
     }
   }
 
-  return {
-    response: finalResponseText,
-    events,
-    turnCount,
-  };
+  return toolResponseParts;
 }
 
-// for production implementation, we need to DRY this with sendMessage
-// we also need to return ALL events and let the API layer decide
-// which ones to send to the client
-export async function sendMessageStreaming(
+async function processMessage(
   client: GeminiClient,
   config: Config,
   message: string,
-  onEvent: (event: StreamEvent) => void,
-) {
+  options: MessageProcessingOptions = {},
+): Promise<MessageProcessingResult> {
+  const { onEvent, collectEvents = false } = options;
   const toolRegistry = await config.getToolRegistry();
   const promptId = Math.random().toString(16).slice(2);
   const abortController = new AbortController();
@@ -242,6 +222,7 @@ export async function sendMessageStreaming(
   let finalResponseText = '';
   let turnCount = 0;
   const maxTurns = 50;
+  const events: ServerGeminiStreamEvent[] = [];
 
   try {
     while (true) {
@@ -259,13 +240,19 @@ export async function sendMessageStreaming(
       );
 
       for await (const event of responseStream) {
+        if (collectEvents) {
+          events.push(event);
+        }
+
         if (abortController.signal.aborted) {
           throw new Error('Operation cancelled');
         }
 
         if (event.type === GeminiEventType.Content) {
           responseText += event.value;
-          onEvent({ type: 'content', delta: event.value });
+          if (onEvent) {
+            onEvent({ type: 'content', delta: event.value });
+          }
         } else if (event.type === GeminiEventType.ToolCallRequest) {
           const toolCallRequest = event.value;
           const fc: FunctionCall = {
@@ -275,78 +262,20 @@ export async function sendMessageStreaming(
           };
           functionCalls.push(fc);
         }
-        // Thoughts are intentionally not emitted
+        // Note: GeminiEventType.Thought events are ignored (internal reasoning)
       }
 
       finalResponseText += responseText;
 
       if (functionCalls.length > 0) {
-        const toolResponseParts: Part[] = [];
-
-        for (const fc of functionCalls) {
-          const callId = fc.id ?? `${fc.name}-${Date.now()}`;
-          const requestInfo: ToolCallRequestInfo = {
-            callId,
-            name: fc.name as string,
-            args: (fc.args ?? {}) as Record<string, unknown>,
-            isClientInitiated: false,
-            prompt_id: promptId,
-          };
-
-          onEvent({
-            type: 'tool_start',
-            name: requestInfo.name,
-            args: requestInfo.args,
-          });
-          try {
-            const toolResponse = await executeToolCall(
-              config,
-              requestInfo,
-              toolRegistry,
-              abortController.signal,
-            );
-
-            if (toolResponse.error) {
-              if (
-                toolResponse.errorType === ToolErrorType.UNHANDLED_EXCEPTION
-              ) {
-                onEvent({
-                  type: 'tool_result',
-                  name: requestInfo.name,
-                  ok: false,
-                  error: toolResponse.error.message,
-                });
-                throw new Error(
-                  `Tool execution failed: ${toolResponse.error.message}`,
-                );
-              }
-            }
-
-            if (toolResponse.responseParts) {
-              const parts = Array.isArray(toolResponse.responseParts)
-                ? toolResponse.responseParts
-                : [toolResponse.responseParts];
-              for (const part of parts) {
-                if (typeof part === 'string') {
-                  toolResponseParts.push({ text: part });
-                } else if (part) {
-                  toolResponseParts.push(part);
-                }
-              }
-            }
-
-            onEvent({ type: 'tool_result', name: requestInfo.name, ok: true });
-          } catch (err: unknown) {
-            const e = err as Error;
-            onEvent({
-              type: 'tool_result',
-              name: requestInfo.name,
-              ok: false,
-              error: e?.message || String(e),
-            });
-            throw err;
-          }
-        }
+        const toolResponseParts = await executeToolCalls(
+          functionCalls,
+          config,
+          toolRegistry,
+          promptId,
+          abortController,
+          onEvent,
+        );
 
         currentMessages = [{ role: 'user', parts: toolResponseParts }];
       } else {
@@ -354,11 +283,53 @@ export async function sendMessageStreaming(
       }
     }
 
-    onEvent({ type: 'done', finalText: finalResponseText, turnCount });
-    return { response: finalResponseText, turnCount };
+    if (onEvent) {
+      onEvent({ type: 'done', finalText: finalResponseText, turnCount });
+    }
+
+    return {
+      response: finalResponseText,
+      events: collectEvents ? events : undefined,
+      turnCount,
+    };
   } catch (err: unknown) {
     const e = err as Error;
-    onEvent({ type: 'error', message: e?.message || String(e) });
+    if (onEvent) {
+      onEvent({ type: 'error', message: e?.message || String(e) });
+    }
     throw err;
   }
+}
+
+export async function sendMessage(
+  client: GeminiClient,
+  config: Config,
+  message: string,
+) {
+  const result = await processMessage(client, config, message, {
+    collectEvents: true,
+  });
+
+  return {
+    response: result.response,
+    events: result.events!,
+    turnCount: result.turnCount,
+  };
+}
+
+export async function sendMessageStreaming(
+  client: GeminiClient,
+  config: Config,
+  message: string,
+  onEvent: (event: StreamEvent) => void,
+) {
+  const result = await processMessage(client, config, message, {
+    onEvent,
+    collectEvents: false,
+  });
+
+  return {
+    response: result.response,
+    turnCount: result.turnCount,
+  };
 }
