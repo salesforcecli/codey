@@ -11,6 +11,10 @@ import {
   GeminiEventType,
 } from '@google/gemini-cli-core';
 
+process.on('SIGINT', () => {
+  process.exit(0);
+});
+
 function requireEnv(name: string): string {
   const value = process.env[name];
   if (!value) {
