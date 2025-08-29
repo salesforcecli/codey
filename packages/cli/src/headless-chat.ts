@@ -20,18 +20,6 @@ import {
 } from '@google/gemini-cli-core';
 import { Content, FunctionCall, Part } from '@google/genai';
 
-export type StreamEvent =
-  | { type: 'content'; delta: string }
-  | { type: 'tool_start'; name: string; args?: Record<string, unknown> }
-  | {
-      type: 'tool_result';
-      name: string;
-      ok: boolean;
-      error?: string;
-    }
-  | { type: 'done'; finalText: string; turnCount: number }
-  | { type: 'error'; message: string };
-
 export async function initClient(
   workspaceRoot: string,
   sessionId: string,
@@ -110,7 +98,7 @@ export async function initClient(
 }
 
 interface MessageProcessingOptions {
-  onEvent?: (event: StreamEvent) => void;
+  onEvent?: (event: ServerGeminiStreamEvent) => void;
   collectEvents?: boolean;
 }
 
@@ -126,7 +114,7 @@ async function executeToolCalls(
   toolRegistry: Awaited<ReturnType<Config['getToolRegistry']>>,
   promptId: string,
   abortController: AbortController,
-  onEvent?: (event: StreamEvent) => void,
+  onEvent?: (event: ServerGeminiStreamEvent) => void,
 ): Promise<Part[]> {
   const toolResponseParts: Part[] = [];
 
@@ -140,64 +128,47 @@ async function executeToolCalls(
       prompt_id: promptId,
     };
 
+    // Tool execution will be tracked via ServerGeminiStreamEvent.ToolCallRequest/Response
+    const toolResponse = await executeToolCall(
+      config,
+      requestInfo,
+      toolRegistry,
+      abortController.signal,
+    );
+
+    // Emit ToolCallResponse event after tool execution completes
     if (onEvent) {
-      onEvent({
-        type: 'tool_start',
-        name: requestInfo.name,
-        args: requestInfo.args,
-      });
+      const responseEvent: ServerGeminiStreamEvent = {
+        type: GeminiEventType.ToolCallResponse,
+        value: {
+          callId,
+          responseParts: toolResponse.responseParts || [],
+          resultDisplay: toolResponse.resultDisplay,
+          error: toolResponse.error,
+          errorType: toolResponse.errorType,
+        },
+      };
+      onEvent(responseEvent);
     }
 
-    try {
-      const toolResponse = await executeToolCall(
-        config,
-        requestInfo,
-        toolRegistry,
-        abortController.signal,
-      );
+    if (toolResponse.error) {
+      if (toolResponse.errorType === ToolErrorType.UNHANDLED_EXCEPTION) {
+        const errorMessage = `Tool execution failed: ${toolResponse.error.message}`;
+        throw new Error(errorMessage);
+      }
+    }
 
-      if (toolResponse.error) {
-        if (toolResponse.errorType === ToolErrorType.UNHANDLED_EXCEPTION) {
-          const errorMessage = `Tool execution failed: ${toolResponse.error.message}`;
-          if (onEvent) {
-            onEvent({
-              type: 'tool_result',
-              name: requestInfo.name,
-              ok: false,
-              error: toolResponse.error.message,
-            });
-          }
-          throw new Error(errorMessage);
+    if (toolResponse.responseParts) {
+      const parts = Array.isArray(toolResponse.responseParts)
+        ? toolResponse.responseParts
+        : [toolResponse.responseParts];
+      for (const part of parts) {
+        if (typeof part === 'string') {
+          toolResponseParts.push({ text: part });
+        } else if (part) {
+          toolResponseParts.push(part);
         }
       }
-
-      if (toolResponse.responseParts) {
-        const parts = Array.isArray(toolResponse.responseParts)
-          ? toolResponse.responseParts
-          : [toolResponse.responseParts];
-        for (const part of parts) {
-          if (typeof part === 'string') {
-            toolResponseParts.push({ text: part });
-          } else if (part) {
-            toolResponseParts.push(part);
-          }
-        }
-      }
-
-      if (onEvent) {
-        onEvent({ type: 'tool_result', name: requestInfo.name, ok: true });
-      }
-    } catch (err: unknown) {
-      const e = err as Error;
-      if (onEvent) {
-        onEvent({
-          type: 'tool_result',
-          name: requestInfo.name,
-          ok: false,
-          error: e?.message || String(e),
-        });
-      }
-      throw err;
     }
   }
 
@@ -224,81 +195,70 @@ async function processMessage(
   const maxTurns = 50;
   const events: ServerGeminiStreamEvent[] = [];
 
-  try {
-    while (true) {
-      turnCount++;
-      if (turnCount > maxTurns) {
-        throw new Error('Maximum turns exceeded');
+  while (true) {
+    turnCount++;
+    if (turnCount > maxTurns) {
+      throw new Error('Maximum turns exceeded');
+    }
+
+    const functionCalls: FunctionCall[] = [];
+    let responseText = '';
+    const responseStream = client.sendMessageStream(
+      currentMessages[0]?.parts || [],
+      abortController.signal,
+      promptId,
+    );
+
+    for await (const event of responseStream) {
+      if (collectEvents) {
+        events.push(event);
       }
 
-      const functionCalls: FunctionCall[] = [];
-      let responseText = '';
-      const responseStream = client.sendMessageStream(
-        currentMessages[0]?.parts || [],
-        abortController.signal,
+      // Emit ALL events to the comprehensive handler
+      if (onEvent) {
+        onEvent(event);
+      }
+
+      if (abortController.signal.aborted) {
+        throw new Error('Operation cancelled');
+      }
+
+      if (event.type === GeminiEventType.Content) {
+        responseText += event.value;
+      } else if (event.type === GeminiEventType.ToolCallRequest) {
+        const toolCallRequest = event.value;
+        const fc: FunctionCall = {
+          name: toolCallRequest.name,
+          args: toolCallRequest.args,
+          id: toolCallRequest.callId,
+        };
+        functionCalls.push(fc);
+      }
+    }
+
+    finalResponseText += responseText;
+
+    if (functionCalls.length > 0) {
+      const toolResponseParts = await executeToolCalls(
+        functionCalls,
+        config,
+        toolRegistry,
         promptId,
+        abortController,
+        onEvent,
       );
 
-      for await (const event of responseStream) {
-        if (collectEvents) {
-          events.push(event);
-        }
-
-        if (abortController.signal.aborted) {
-          throw new Error('Operation cancelled');
-        }
-
-        if (event.type === GeminiEventType.Content) {
-          responseText += event.value;
-          if (onEvent) {
-            onEvent({ type: 'content', delta: event.value });
-          }
-        } else if (event.type === GeminiEventType.ToolCallRequest) {
-          const toolCallRequest = event.value;
-          const fc: FunctionCall = {
-            name: toolCallRequest.name,
-            args: toolCallRequest.args,
-            id: toolCallRequest.callId,
-          };
-          functionCalls.push(fc);
-        }
-        // Note: GeminiEventType.Thought events are ignored (internal reasoning)
-      }
-
-      finalResponseText += responseText;
-
-      if (functionCalls.length > 0) {
-        const toolResponseParts = await executeToolCalls(
-          functionCalls,
-          config,
-          toolRegistry,
-          promptId,
-          abortController,
-          onEvent,
-        );
-
-        currentMessages = [{ role: 'user', parts: toolResponseParts }];
-      } else {
-        break;
-      }
+      currentMessages = [{ role: 'user', parts: toolResponseParts }];
+    } else {
+      break;
     }
-
-    if (onEvent) {
-      onEvent({ type: 'done', finalText: finalResponseText, turnCount });
-    }
-
-    return {
-      response: finalResponseText,
-      events: collectEvents ? events : undefined,
-      turnCount,
-    };
-  } catch (err: unknown) {
-    const e = err as Error;
-    if (onEvent) {
-      onEvent({ type: 'error', message: e?.message || String(e) });
-    }
-    throw err;
   }
+
+  return {
+    response: finalResponseText,
+    events: collectEvents ? events : undefined,
+    turnCount,
+  };
 }
 
 export async function sendMessage(
@@ -321,12 +281,19 @@ export async function sendMessageStreaming(
   client: GeminiClient,
   config: Config,
   message: string,
-  onEvent: (event: StreamEvent) => void,
+  onEvent: (event: ServerGeminiStreamEvent) => void,
 ) {
   const result = await processMessage(client, config, message, {
     onEvent,
     collectEvents: false,
   });
+
+  // Send final completion event to indicate stream is truly done
+  const completionEvent = {
+    type: 'stream_completed',
+    value: 'COMPLETED',
+  };
+  onEvent(completionEvent as ServerGeminiStreamEvent);
 
   return {
     response: result.response,

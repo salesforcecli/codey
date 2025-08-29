@@ -17,6 +17,10 @@ import {
   createSuccessResponse,
 } from '../../../../lib/utils';
 import { logger } from '../../../../lib/logger';
+import {
+  ServerGeminiStreamEvent,
+  GeminiEventType,
+} from '@google/gemini-cli-core';
 
 export async function POST(
   request: NextRequest,
@@ -74,23 +78,64 @@ export async function POST(
             controller.enqueue(encoder.encode(JSON.stringify(obj) + '\n'));
           }
 
-          sendMessageToSessionStreaming(sessionId, message, (event) => {
+          sendMessageToSessionStreaming(sessionId, message, (geminiEvent) => {
             try {
-              const eventType = (event as { type?: string } | undefined)?.type;
+              // Log ALL ServerGeminiStreamEvent events comprehensively
               logger.debug(
-                { requestId, sessionId, eventType, event },
-                'Streaming event received',
+                {
+                  requestId,
+                  sessionId,
+                  eventType: geminiEvent.type,
+                  event: geminiEvent,
+                  // Add structured logging for different event types
+                  ...(geminiEvent.type === GeminiEventType.Thought
+                    ? { thoughtContent: geminiEvent.value }
+                    : {}),
+                  ...(geminiEvent.type === GeminiEventType.ToolCallRequest
+                    ? {
+                        toolName: geminiEvent.value.name,
+                        toolArgs: geminiEvent.value.args,
+                      }
+                    : {}),
+                  ...(geminiEvent.type === GeminiEventType.ToolCallResponse
+                    ? {
+                        toolCallId: geminiEvent.value.callId,
+                        toolSuccess: !geminiEvent.value.error,
+                        toolError: geminiEvent.value.error?.message,
+                      }
+                    : {}),
+                  ...(geminiEvent.type === GeminiEventType.Content
+                    ? { contentDelta: geminiEvent.value }
+                    : {}),
+                },
+                'ServerGeminiStreamEvent received',
               );
-            } catch {}
+            } catch (logError) {
+              logger.warn(
+                { requestId, sessionId, logError },
+                'Failed to log event',
+              );
+            }
 
-            write(event);
+            // Pass ServerGeminiStreamEvent directly to client
+            write(geminiEvent);
           })
             .catch((err) => {
               logger.error(
                 { requestId, sessionId, err },
                 'Error during streaming',
               );
-              write({ type: 'error', message: err?.message || String(err) });
+              // Send error in ServerGeminiStreamEvent format
+              const errorEvent: ServerGeminiStreamEvent = {
+                type: GeminiEventType.Error,
+                value: {
+                  error: {
+                    message: err?.message || String(err),
+                    status: 500,
+                  },
+                },
+              };
+              write(errorEvent);
             })
             .finally(() => {
               logger.info(

@@ -4,7 +4,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { AuthType, Config, GeminiClient } from '@google/gemini-cli-core';
+import {
+  AuthType,
+  Config,
+  GeminiClient,
+  ServerGeminiStreamEvent,
+} from '@google/gemini-cli-core';
 import {
   initClient,
   sendMessage,
@@ -69,7 +74,7 @@ export async function sendMessageToSession(
 export async function sendMessageToSessionStreaming(
   sessionId: SessionId,
   message: string,
-  onEvent: (event: unknown) => void,
+  onEvent: (event: ServerGeminiStreamEvent) => void,
 ) {
   const session = sessions.get(sessionId);
   if (!session) {

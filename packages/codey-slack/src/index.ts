@@ -6,6 +6,10 @@
 
 import { WITTY_LOADING_PHRASES } from './witty-phrases';
 import { PhraseCycler } from './phrase-cycler';
+import {
+  ServerGeminiStreamEvent,
+  GeminiEventType,
+} from '@google/gemini-cli-core';
 
 function requireEnv(name: string): string {
   const value = process.env[name];
@@ -243,6 +247,7 @@ Please respond only to the current request above, not to any previous questions 
         let lastUpdate = 0;
         const minUpdateIntervalMs = 300; // basic debounce
         const toolStatusLines: string[] = [];
+        const toolCallMap = new Map<string, string>(); // callId -> toolName
 
         for await (const event of hosted.sendMessageStream(
           sessionId,
@@ -250,46 +255,49 @@ Please respond only to the current request above, not to any previous questions 
           composedMessage,
         )) {
           const now = Date.now();
-          // Normalize event type
-          const e = event as
-            | { type: 'content'; delta: string }
-            | {
-                type: 'tool_start';
-                name: string;
-                args?: Record<string, unknown>;
-              }
-            | { type: 'tool_result'; name: string; ok: boolean; error?: string }
-            | { type: 'done'; finalText: string; turnCount: number }
-            | { type: 'error'; message: string };
+          // Handle events; also recognize a final completion sentinel
+          const rawType = (event as { type?: string })?.type;
+          const isStreamCompleted = rawType === 'stream_completed';
+          // Handle ServerGeminiStreamEvent directly when applicable
+          const e = event as ServerGeminiStreamEvent;
 
-          if (e.type === 'content') {
-            accumulated += e.delta;
-          } else if (e.type === 'tool_start') {
-            const argsPreview = e.args
-              ? ` ${JSON.stringify(e.args).slice(0, 120)}...`
+          if (e.type === GeminiEventType.Content) {
+            accumulated += e.value;
+          } else if (e.type === GeminiEventType.ToolCallRequest) {
+            const argsPreview = e.value.args
+              ? ` ${JSON.stringify(e.value.args).slice(0, 120)}...`
               : '';
-            toolStatusLines.push(`:${runningEmoji}: ${e.name}${argsPreview}`);
-          } else if (e.type === 'tool_result') {
-            const idx = toolStatusLines.findIndex((l) =>
-              l.includes(`:${runningEmoji}: ${e.name}`),
+            toolCallMap.set(e.value.callId, e.value.name);
+            toolStatusLines.push(
+              `:${runningEmoji}: ${e.value.name}${argsPreview}`,
             );
-            const status = e.ok
+          } else if (e.type === GeminiEventType.ToolCallResponse) {
+            const toolName = toolCallMap.get(e.value.callId) || e.value.callId;
+            const idx = toolStatusLines.findIndex((l) =>
+              l.includes(`:${runningEmoji}: ${toolName}`),
+            );
+            const status = !e.value.error
               ? `:${completedEmoji}:`
-              : `:${errorEmoji}:${e.error ?? ''}`;
-            const line = `${status} ${e.name}`;
+              : `:${errorEmoji}: ${e.value.error?.message ?? ''}`;
+            const line = `${status} ${toolName}`;
             if (idx >= 0) {
               toolStatusLines[idx] = line;
             } else {
               toolStatusLines.push(line);
             }
-          } else if (e.type === 'error') {
-            accumulated += `\n\nError: ${e.message}`;
-          } else if (e.type === 'done') {
-            accumulated = e.finalText; // ensure final text is authoritative
+          } else if (e.type === GeminiEventType.Error) {
+            accumulated += `\n\nError: ${e.value.error.message}`;
+          } else if (e.type === GeminiEventType.Finished) {
+            // Add a new line when we see a finished event (but don't break the stream)
+            accumulated += '\n\n';
           }
+          // Note: GeminiEventType.Thought events are ignored for Slack display
 
-          // throttle updates; always update on done/error
-          const shouldForce = e.type === 'done' || e.type === 'error';
+          // throttle updates; always update on finished/error/tool completion
+          const shouldForce =
+            isStreamCompleted ||
+            e.type === GeminiEventType.Error ||
+            e.type === GeminiEventType.ToolCallResponse;
           if (shouldForce || now - lastUpdate > minUpdateIntervalMs) {
             lastUpdate = now;
             const statusBlock = toolStatusLines.length
@@ -316,10 +324,11 @@ Please respond only to the current request above, not to any previous questions 
             });
           }
 
-          if (e.type === 'done') {
+          if (isStreamCompleted) {
             break;
           }
         }
+        // Stream completed naturally (either via stream_completed event or end-of-stream)
 
         // Stop and remove the loading cycler indicator by replacing with final content only
         phraseCycler?.stop();
