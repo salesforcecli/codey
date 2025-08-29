@@ -275,7 +275,7 @@ Please respond only to the current request above, not to any previous questions 
             );
             const status = e.ok
               ? `:${completedEmoji}:`
-              : `:${errorEmoji}:${e.error ? `: ${e.error}` : ''}`;
+              : `:${errorEmoji}:${e.error ?? ''}`;
             const line = `${status} ${e.name}`;
             if (idx >= 0) {
               toolStatusLines[idx] = line;
