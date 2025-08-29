@@ -75,13 +75,37 @@ export async function POST(
           }
 
           sendMessageToSessionStreaming(sessionId, message, (event) => {
+            try {
+              const eventType = (event as { type?: string } | undefined)?.type;
+              logger.debug(
+                { requestId, sessionId, eventType, event },
+                'Streaming event received',
+              );
+            } catch {}
+
             write(event);
           })
             .catch((err) => {
+              logger.error(
+                { requestId, sessionId, err },
+                'Error during streaming',
+              );
               write({ type: 'error', message: err?.message || String(err) });
             })
             .finally(() => {
-              controller.close();
+              logger.info(
+                { requestId, sessionId, duration: Date.now() - startTime },
+                'Session message streaming finished',
+              );
+              try {
+                controller.close();
+              } catch (error) {
+                // Controller might already be closed due to client disconnect or other reasons
+                logger.debug(
+                  { requestId, sessionId, error },
+                  'Controller already closed',
+                );
+              }
             });
         },
       });

@@ -121,6 +121,7 @@ async function main(): Promise<void> {
     const userId = (event as unknown as { user: string }).user;
     let loadingMsgTs: string | undefined;
     let phraseCycler: PhraseCycler | undefined;
+    let lastBuiltText = '';
 
     try {
       const teamId: string =
@@ -152,7 +153,6 @@ async function main(): Promise<void> {
         `:${loadingEmoji}: `,
         '',
       );
-      let lastBuiltText: string | undefined;
       phraseCycler = new PhraseCycler({
         intervalMs: 10000, // 10 seconds
         onPhraseChange: async (phrase: string) => {
@@ -243,7 +243,6 @@ Please respond only to the current request above, not to any previous questions 
         let lastUpdate = 0;
         const minUpdateIntervalMs = 300; // basic debounce
         const toolStatusLines: string[] = [];
-        let lastBuiltText = '';
 
         for await (const event of hosted.sendMessageStream(
           sessionId,
@@ -423,11 +422,20 @@ Please respond only to the current request above, not to any previous questions 
             name: 'x',
           });
 
-          // Update the loading message with error
+          // Update the loading message with error appended to accumulated content
+          const errorMessage =
+            '\n\n❌ **Error:** Hosted configuration/token appears invalid (401).';
+          const finalText = `${lastBuiltText}${errorMessage}`;
+          const formattedMessage = formatSlackMessage(finalText);
+          const updatePayload =
+            typeof formattedMessage === 'string'
+              ? { text: formattedMessage }
+              : formattedMessage;
+
           await client.chat.update({
             channel,
             ts: loadingMsgTs!,
-            text: 'Hosted configuration/token appears invalid (401).',
+            ...updatePayload,
           });
           return;
         }
@@ -448,12 +456,21 @@ Please respond only to the current request above, not to any previous questions 
           name: errorEmoji,
         });
 
-        // Update the loading message with error if we have the timestamp
+        // Update the loading message with error appended to accumulated content if we have the timestamp
         if (loadingMsgTs) {
+          const errorMessage =
+            '\n\n❌ **Error:** Request failed; please try again.';
+          const finalText = `${lastBuiltText || ''}${errorMessage}`;
+          const formattedMessage = formatSlackMessage(finalText);
+          const updatePayload =
+            typeof formattedMessage === 'string'
+              ? { text: formattedMessage }
+              : formattedMessage;
+
           await client.chat.update({
             channel,
             ts: loadingMsgTs,
-            text: 'Request failed; please try again.',
+            ...updatePayload,
           });
         } else {
           await say('Request failed; please try again.');

@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { execSync } from 'child_process';
 import { loadSettings } from './config/settings.js';
 import { loadExtensions } from './config/extension.js';
 import { CliArgs, loadCliConfig } from './config/config.js';
@@ -37,6 +38,34 @@ export async function initClient(
   auth: AuthType,
   opts?: Partial<CliArgs>,
 ) {
+  // Checkout the session-specific branch before anything else
+  try {
+    execSync(`git checkout codey/${sessionId}`, {
+      cwd: workspaceRoot,
+      stdio: 'inherit',
+    });
+    console.log(`Checked out branch codey/${sessionId}`);
+  } catch (_error) {
+    // If the branch doesn't exist, create it from main
+    try {
+      // First checkout main to ensure we're creating the branch from main
+      execSync(`git checkout main`, {
+        cwd: workspaceRoot,
+        stdio: 'inherit',
+      });
+      // Then create and checkout the new branch from main
+      execSync(`git checkout -b codey/${sessionId}`, {
+        cwd: workspaceRoot,
+        stdio: 'inherit',
+      });
+      console.log(`Created and checked out branch codey/${sessionId}`);
+    } catch (createError) {
+      throw new Error(
+        `Failed to checkout or create branch codey/${sessionId}: ${createError}`,
+      );
+    }
+  }
+
   const settings = loadSettings(workspaceRoot);
   const extensions = loadExtensions(workspaceRoot);
   const config = await loadCliConfig(
@@ -193,6 +222,9 @@ export async function sendMessage(
   };
 }
 
+// for production implementation, we need to DRY this with sendMessage
+// we also need to return ALL events and let the API layer decide
+// which ones to send to the client
 export async function sendMessageStreaming(
   client: GeminiClient,
   config: Config,

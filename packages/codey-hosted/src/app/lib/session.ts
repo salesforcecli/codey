@@ -78,15 +78,6 @@ export async function sendMessageToSessionStreaming(
 
   session.lastUsed = Date.now();
 
-  // // Dynamic import to avoid build-time type coupling for POC
-  // const mod = await import('@google/gemini-cli/headless-chat');
-  // const sendMessageStreaming = mod.sendMessageStreaming as (
-  //   client: GeminiClient,
-  //   config: Config,
-  //   message: string,
-  //   onEvent: (event: unknown) => void,
-  // ) => Promise<{ response: string; turnCount: number }>;
-
   return await sendMessageStreaming(
     session.client,
     session.config,
