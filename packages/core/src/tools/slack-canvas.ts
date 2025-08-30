@@ -429,7 +429,7 @@ export class SlackCanvasCreateTool extends BaseDeclarativeTool<
     super(
       SlackCanvasCreateTool.Name,
       'SlackCanvasCreate',
-      'Creates a new Slack Canvas within a specified channel. The canvas will be accessible to all channel members. Always share the returned canvas URL with the user so they can access the canvas directly.',
+      'Creates a new Slack Canvas within a specified channel. The canvas will be accessible to all channel members. If you have the URL to the returned canvas, you must share it with the user so they can access the canvas directly.',
       Kind.Other,
       {
         type: 'object',

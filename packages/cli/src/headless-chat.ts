@@ -41,6 +41,16 @@ export async function initClient(
         cwd: workspaceRoot,
         stdio: 'inherit',
       });
+      // Reset the main branch to the latest commit
+      execSync(`git reset --hard HEAD`, {
+        cwd: workspaceRoot,
+        stdio: 'inherit',
+      });
+      // Clean the workspace
+      execSync(`git clean -fd`, {
+        cwd: workspaceRoot,
+        stdio: 'inherit',
+      });
       // Then create and checkout the new branch from main
       execSync(`git checkout -b codey/${sessionId}`, {
         cwd: workspaceRoot,
