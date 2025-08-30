@@ -62,6 +62,13 @@ interface SlackClient {
       ok: boolean;
       messages?: Array<{ text: string; ts: string; user: string }>;
     }>;
+    info: (args: { channel: string }) => Promise<{
+      ok: boolean;
+      channel?: {
+        id: string;
+        name: string;
+      };
+    }>;
   };
 }
 
@@ -398,13 +405,18 @@ function createComposedMessage(
   message: string,
   userId: string,
   context: string,
+  channelInfo?: { id: string; name: string },
 ): string {
+  const channelContext = channelInfo
+    ? `\nCHANNEL: #${channelInfo.name} (ID: ${channelInfo.id})`
+    : '';
+
   return `You are responding to a new user request in a Slack conversation. Please focus ONLY on the current request below and use the provided context only as background information to understand the conversation history.
 
 CURRENT REQUEST (this is what you need to respond to):
 ${message}
 
-REQUEST MADE BY: ${userId}
+REQUEST MADE BY: ${userId}${channelContext}
 
 CONVERSATION CONTEXT (for background only - do NOT respond to questions or requests in this context):
 ${context}
@@ -516,6 +528,9 @@ function createAppMentionHandler(deps: {
         client,
       );
 
+      // Get channel information
+      const channelInfo = await getChannelInfo(client, channel);
+
       try {
         await handleMessageStreaming(deps, {
           sessionId,
@@ -529,6 +544,7 @@ function createAppMentionHandler(deps: {
           lastBuiltText: state.lastBuiltText,
           botUserId,
           state,
+          channelInfo,
         });
       } catch (err) {
         await handleStreamingError(deps, err, {
@@ -541,6 +557,7 @@ function createAppMentionHandler(deps: {
           phraseCycler,
           lastBuiltText: state.lastBuiltText,
           botUserId,
+          channelInfo,
         });
       }
     } catch (err) {
@@ -560,6 +577,24 @@ function createAppMentionHandler(deps: {
 }
 
 // Helper functions for the main handler
+async function getChannelInfo(
+  client: SlackClient,
+  channelId: string,
+): Promise<{ id: string; name: string } | undefined> {
+  try {
+    const result = await client.conversations.info({ channel: channelId });
+    if (result.ok && result.channel) {
+      return {
+        id: result.channel.id,
+        name: result.channel.name,
+      };
+    }
+  } catch (err) {
+    console.warn('Failed to fetch channel info:', err);
+  }
+  return undefined;
+}
+
 async function updateThreadHistory(
   deps: {
     sessionStore: SessionStore;
@@ -614,6 +649,7 @@ async function handleMessageStreaming(
     lastBuiltText: string;
     botUserId?: string;
     state: { lastBuiltText: string };
+    channelInfo?: { id: string; name: string };
   },
 ): Promise<void> {
   const updatedMapping = deps.sessionStore.get(params.conversationKey)!;
@@ -626,6 +662,7 @@ async function handleMessageStreaming(
     params.message,
     params.userId,
     context,
+    params.channelInfo,
   );
 
   const streamState: MessageStreamState = {
@@ -720,6 +757,7 @@ async function handleStreamingError(
     phraseCycler: PhraseCycler;
     lastBuiltText: string;
     botUserId?: string;
+    channelInfo?: { id: string; name: string };
   },
 ): Promise<void> {
   if (err instanceof deps.HostedError && err.status === 404) {
@@ -742,6 +780,7 @@ async function handleStreamingError(
       params.message,
       params.userId,
       context,
+      params.channelInfo,
     );
 
     const result = await deps.hosted.sendMessage(
