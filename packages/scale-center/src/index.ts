@@ -76,8 +76,11 @@ async function main(): Promise<void> {
 
     // If no text provided, post default message
     try {
-      const defaultMessage =
-        'We detected an issue: the ProductController ApexClass is causing page timeouts.';
+      const defaultMessage = `:rotating_light:Performance Degradation in Production :rotating_light:
+
+_Source_: \`ProductController.cls\`
+_Details_: Average page load time has exceeded threshold.
+`;
       const posted = await client.chat.postMessage({
         channel: alertsChannelId,
         text: defaultMessage,
