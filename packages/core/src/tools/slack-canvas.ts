@@ -37,6 +37,7 @@ interface SlackApiResponse {
   error?: string;
   canvas_id?: string;
   warning?: string;
+  detail?: string;
   response_metadata?: {
     warnings?: string[];
   };
@@ -211,6 +212,7 @@ class SlackCanvasCreateInvocation extends BaseToolInvocation<
         ok: res.ok,
         canvas_id: res.canvas_id,
         error: res.error,
+        detail: res.detail,
         warning: res.warning,
       });
 
@@ -231,6 +233,14 @@ class SlackCanvasCreateInvocation extends BaseToolInvocation<
         } else if (err === 'not_in_channel') {
           errorMsg +=
             '. Bot is not a member of the specified channel. Add the bot to the channel first.';
+        } else if (
+          err === 'canvas_creation_failed' &&
+          res.detail?.includes('content')
+        ) {
+          errorMsg +=
+            '. Canvas creation failed because the content is invalid. Please ensure the content is in valid Slack markdown format:\n\n```\n' +
+            res.detail +
+            '\n```';
         } else {
           errorMsg +=
             '. Ensure the bot has proper permissions and is added to the channel.';
