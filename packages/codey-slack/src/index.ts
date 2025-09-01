@@ -497,7 +497,8 @@ function createAppMentionHandler(deps: {
         onPhraseChange: async (phrase: string) => {
           currentLoadingPhrase = phrase;
           try {
-            if (loadingMsgTs) {
+            // Prevent race condition: don't update if cycler has been stopped
+            if (loadingMsgTs && phraseCycler?.isRunning()) {
               await deps.messageStreamer.updateSlackMessage(
                 channel,
                 loadingMsgTs,
@@ -708,12 +709,13 @@ async function handleMessageStreaming(
     }
 
     if (isStreamCompleted) {
+      // Stop phrase cycling immediately when stream completes to prevent race condition
+      params.phraseCycler?.stop();
       break;
     }
   }
 
-  // Finalize the message
-  params.phraseCycler?.stop();
+  // Finalize the message (phraseCycler already stopped above)
   await deps.messageStreamer.updateSlackMessage(
     params.channel,
     params.loadingMsgTs,
