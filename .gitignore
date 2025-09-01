@@ -41,3 +41,6 @@ packages/core/src/generated/
 .integration-tests/
 packages/vscode-ide-companion/*.vsix
 .vercel
+
+# GHA credentials
+gha-creds-*.json

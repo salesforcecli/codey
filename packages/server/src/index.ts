@@ -17,7 +17,7 @@ import {
   sendError,
 } from './utils.js';
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env['PORT'] || 3000;
 
 // Health check endpoint
 function handleHealth(
@@ -42,7 +42,7 @@ async function handleCreateSession(
   try {
     const body = await parseRequestBody(req);
     const workspaceRoot = validateWorkspaceRoot(body);
-    const model = body.model as string | undefined;
+    const model = body['model'] as string | undefined;
 
     if (!workspaceRoot) {
       return sendError(
@@ -52,7 +52,7 @@ async function handleCreateSession(
         400,
         'workspaceRoot is required',
         {
-          workspaceRoot: body.workspaceRoot,
+          workspaceRoot: body['workspaceRoot'],
           model,
         },
       );
@@ -235,7 +235,7 @@ server.listen(PORT, () => {
   logger.info('Server started', {
     port: PORT,
     nodeVersion: process.version,
-    environment: process.env.NODE_ENV || 'development',
+    environment: process.env['NODE_ENV'] || 'development',
     endpoints: [
       'GET /health',
       'POST /sessions',

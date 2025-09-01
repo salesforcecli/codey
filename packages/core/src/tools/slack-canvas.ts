@@ -25,8 +25,8 @@ import {
   BaseDeclarativeTool,
   BaseToolInvocation,
   Kind,
-  ToolInvocation,
-  ToolResult,
+  type ToolInvocation,
+  type ToolResult,
 } from './tools.js';
 import { getErrorMessage } from '../utils/errors.js';
 import { Config } from '../config/config.js';
@@ -173,7 +173,7 @@ class SlackCanvasCreateInvocation extends BaseToolInvocation<
   }
 
   async execute(signal: AbortSignal): Promise<ToolResult> {
-    const token = process.env.SLACK_BOT_TOKEN;
+    const token = process.env['SLACK_BOT_TOKEN'];
     if (!token) {
       const msg =
         'Missing SLACK_BOT_TOKEN environment variable. Please set your Slack bot token.';
@@ -321,7 +321,7 @@ class SlackCanvasAppendInvocation extends BaseToolInvocation<
   }
 
   async execute(signal: AbortSignal): Promise<ToolResult> {
-    const token = process.env.SLACK_BOT_TOKEN;
+    const token = process.env['SLACK_BOT_TOKEN'];
     if (!token) {
       const msg =
         'Missing SLACK_BOT_TOKEN environment variable. Please set your Slack bot token.';
@@ -463,7 +463,7 @@ export class SlackCanvasCreateTool extends BaseDeclarativeTool<
     );
   }
 
-  protected override validateToolParams(
+  public override validateToolParams(
     params: SlackCanvasCreateToolParams,
   ): string | null {
     const errors = SchemaValidator.validate(
@@ -516,7 +516,7 @@ export class SlackCanvasAppendTool extends BaseDeclarativeTool<
     );
   }
 
-  protected override validateToolParams(
+  public override validateToolParams(
     params: SlackCanvasAppendToolParams,
   ): string | null {
     const errors = SchemaValidator.validate(

@@ -76,7 +76,8 @@ export async function detectAndEnableKittyProtocol(): Promise<boolean> {
     process.stdout.write('\x1b[c'); // Query device attributes
 
     // Timeout after configurable ms (default 50ms)
-    const timeoutMs = Number(process.env.CODEY_KITTY_PROTOCOL_TIMEOUT_MS) || 50;
+    const timeoutMs =
+      Number(process.env['CODEY_KITTY_PROTOCOL_TIMEOUT_MS']) || 50;
     setTimeout(() => {
       if (!checkFinished) {
         process.stdin.removeListener('data', handleData);

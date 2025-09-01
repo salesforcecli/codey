@@ -7,18 +7,18 @@
 import { execSync } from 'child_process';
 import { loadSettings } from './config/settings.js';
 import { loadExtensions } from './config/extension.js';
-import { CliArgs, loadCliConfig } from './config/config.js';
+import { type CliArgs, loadCliConfig } from './config/config.js';
 import {
   AuthType,
   Config,
   executeToolCall,
   GeminiClient,
   GeminiEventType,
-  ServerGeminiStreamEvent,
-  ToolCallRequestInfo,
+  type ServerGeminiStreamEvent,
+  type ToolCallRequestInfo,
   ToolErrorType,
 } from '@google/gemini-cli-core';
-import { Content, FunctionCall, Part } from '@google/genai';
+import { type Content, type FunctionCall, type Part } from '@google/genai';
 
 export async function initClient(
   workspaceRoot: string,
@@ -78,23 +78,26 @@ export async function initClient(
       prompt: undefined,
       promptInteractive: undefined,
       allFiles: false,
-      all_files: false,
       showMemoryUsage: false,
-      show_memory_usage: false,
       yolo: true,
       approvalMode: undefined,
       telemetry: undefined,
       checkpointing: false,
       telemetryTarget: undefined,
       telemetryOtlpEndpoint: undefined,
+      telemetryOtlpProtocol: undefined,
       telemetryLogPrompts: false,
       telemetryOutfile: undefined,
       allowedMcpServerNames: undefined,
+      allowedTools: undefined,
       experimentalAcp: false,
       extensions: [],
       listExtensions: false,
       proxy: undefined,
       includeDirectories: undefined,
+      screenReader: false,
+      useSmartEdit: false,
+      sessionSummary: undefined,
       ...opts,
     },
     workspaceRoot,
@@ -121,7 +124,6 @@ interface MessageProcessingResult {
 async function executeToolCalls(
   functionCalls: FunctionCall[],
   config: Config,
-  toolRegistry: Awaited<ReturnType<Config['getToolRegistry']>>,
   promptId: string,
   abortController: AbortController,
   onEvent?: (event: ServerGeminiStreamEvent) => void,
@@ -142,7 +144,6 @@ async function executeToolCalls(
     const toolResponse = await executeToolCall(
       config,
       requestInfo,
-      toolRegistry,
       abortController.signal,
     );
 
@@ -192,7 +193,6 @@ async function processMessage(
   options: MessageProcessingOptions = {},
 ): Promise<MessageProcessingResult> {
   const { onEvent, collectEvents = false } = options;
-  const toolRegistry = await config.getToolRegistry();
   const promptId = Math.random().toString(16).slice(2);
   const abortController = new AbortController();
 
@@ -252,7 +252,6 @@ async function processMessage(
       const toolResponseParts = await executeToolCalls(
         functionCalls,
         config,
-        toolRegistry,
         promptId,
         abortController,
         onEvent,

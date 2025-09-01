@@ -101,14 +101,14 @@ export function validateRequired(
 export function validateWorkspaceRoot(
   body: Record<string, unknown>,
 ): string | null {
-  const workspaceRoot = body.workspaceRoot;
+  const workspaceRoot = body['workspaceRoot'];
   const error = validateRequired(workspaceRoot, 'workspaceRoot');
   return error ? null : (workspaceRoot as string);
 }
 
 // Validate message specifically
 export function validateMessage(body: Record<string, unknown>): string | null {
-  const message = body.message;
+  const message = body['message'];
   if (!message || typeof message !== 'string') {
     return null;
   }

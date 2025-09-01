@@ -38,7 +38,7 @@ export function getSalesforceRegionHeader(env: SfApiEnv = 'prod'): string {
 }
 
 export function resolveSfApiEnv(): SfApiEnv {
-  const env = (process.env.SF_API_ENV || 'prod').toLowerCase();
+  const env = (process.env['SF_API_ENV'] || 'prod').toLowerCase();
   const allowed: SfApiEnv[] = ['prod', 'dev', 'test', 'perf', 'stage'];
   if (allowed.includes(env as SfApiEnv)) {
     return env as SfApiEnv;

@@ -40,6 +40,14 @@ const nextConfig = {
     'pino-pretty',
     'pino-abstract-transport',
     'sonic-boom',
+    // Add node-pty packages to prevent bundling of binary files
+    '@lydell/node-pty',
+    '@lydell/node-pty-darwin-arm64',
+    '@lydell/node-pty-darwin-x64',
+    '@lydell/node-pty-linux-x64',
+    '@lydell/node-pty-win32-arm64',
+    '@lydell/node-pty-win32-x64',
+    'node-pty',
   ],
 
   // Webpack configuration to handle warnings

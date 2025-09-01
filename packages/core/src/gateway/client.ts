@@ -12,7 +12,7 @@ import {
   resolveSfApiEnv,
 } from './env.js';
 import { Org } from '@salesforce/core';
-import { GatewayModel } from './models.js';
+import { type GatewayModel } from './models.js';
 import { randomBytes } from 'crypto';
 import { createParser } from 'eventsource-parser';
 
@@ -191,7 +191,7 @@ export class GatewayClient {
       return;
     }
 
-    const username = process.env.SF_LLMG_USERNAME;
+    const username = process.env['SF_LLMG_USERNAME'];
     if (!username) {
       throw new Error('SF_LLMG_USERNAME is required for SF LLMG auth');
     }

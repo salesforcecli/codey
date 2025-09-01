@@ -8,8 +8,8 @@ import {
   BaseDeclarativeTool,
   BaseToolInvocation,
   Kind,
-  ToolInvocation,
-  ToolResult,
+  type ToolInvocation,
+  type ToolResult,
 } from './tools.js';
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type

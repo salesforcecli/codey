@@ -7,25 +7,25 @@
 import {
   CountTokensResponse,
   GenerateContentResponse,
-  GenerateContentParameters,
-  CountTokensParameters,
-  EmbedContentResponse,
-  EmbedContentParameters,
-  Content,
-  Part,
-  Candidate,
-  ContentListUnion,
-  ContentUnion,
-  ToolListUnion,
+  type GenerateContentParameters,
+  type CountTokensParameters,
+  type EmbedContentResponse,
+  type EmbedContentParameters,
+  type Content,
+  type Part,
+  type Candidate,
+  type ContentListUnion,
+  type ContentUnion,
+  type ToolListUnion,
 } from '@google/genai';
 import {
   GatewayClient,
-  ChatGenerations,
-  GatewayResponse,
-  ChatCompletionTool,
-  ChatGenerationRequest,
+  type ChatGenerations,
+  type GatewayResponse,
+  type ChatCompletionTool,
+  type ChatGenerationRequest,
 } from './client.js';
-import { ContentGenerator } from '../core/contentGenerator.js';
+import { type ContentGenerator } from '../core/contentGenerator.js';
 import { Claude4Sonnet } from './models.js';
 import { FunctionCallAccumulator } from './functionCallAccumulator.js';
 
@@ -52,8 +52,8 @@ const mapToolParameters = (
   switch (toolName) {
     case 'read_file':
       if ('file_path' in mappedArgs) {
-        mappedArgs.absolute_path = mappedArgs.file_path;
-        delete mappedArgs.file_path;
+        mappedArgs['absolute_path'] = mappedArgs['file_path'];
+        delete mappedArgs['file_path'];
       }
       break;
     case 'write_file':
@@ -210,6 +210,7 @@ export class GatewayContentGenerator implements ContentGenerator {
     };
   }
 
+  // NOTE: This has not been test yet
   async embedContent(
     request: EmbedContentParameters,
   ): Promise<EmbedContentResponse> {
@@ -230,10 +231,10 @@ export class GatewayContentGenerator implements ContentGenerator {
         {
           values:
             ((
-              (response.data as Record<string, unknown>)?.embeddings as Array<
-                Record<string, unknown>
-              >
-            )?.[0]?.values as number[]) || [],
+              (response.data as Record<string, unknown>)?.[
+                'embeddings'
+              ] as Array<Record<string, unknown>>
+            )?.[0]?.['values'] as number[]) || [],
         },
       ],
     };
