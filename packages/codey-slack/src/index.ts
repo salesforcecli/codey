@@ -497,7 +497,7 @@ function createAppMentionHandler(deps: {
         onPhraseChange: async (phrase: string) => {
           currentLoadingPhrase = phrase;
           try {
-            if (loadingMsgTs && state.lastBuiltText) {
+            if (loadingMsgTs) {
               await deps.messageStreamer.updateSlackMessage(
                 channel,
                 loadingMsgTs,
@@ -540,7 +540,6 @@ function createAppMentionHandler(deps: {
           channel,
           loadingMsgTs: loadingMsgTs!,
           phraseCycler,
-          currentLoadingPhrase,
           lastBuiltText: state.lastBuiltText,
           botUserId,
           state,
@@ -645,7 +644,6 @@ async function handleMessageStreaming(
     channel: string;
     loadingMsgTs: string;
     phraseCycler: PhraseCycler;
-    currentLoadingPhrase: string;
     lastBuiltText: string;
     botUserId?: string;
     state: { lastBuiltText: string };
@@ -699,7 +697,7 @@ async function handleMessageStreaming(
       params.state.lastBuiltText = displayText;
 
       const loadingPhrase = params.phraseCycler?.isRunning()
-        ? params.currentLoadingPhrase
+        ? params.phraseCycler.getCurrentPhrase()
         : undefined;
       await deps.messageStreamer.updateSlackMessage(
         params.channel,

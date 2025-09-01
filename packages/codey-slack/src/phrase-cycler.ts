@@ -26,14 +26,18 @@ export class PhraseCycler {
   private readonly intervalMs: number;
   private readonly onPhraseChange?: (phrase: string) => void;
   private isActive = false;
+  private unusedPhrases: number[] = [];
 
   constructor(options: PhraseCyclerOptions = {}) {
     this.phrases = options.phrases ?? WITTY_LOADING_PHRASES;
     this.intervalMs = options.intervalMs ?? 10000; // 10 seconds default
     this.onPhraseChange = options.onPhraseChange;
 
-    // Start with a random phrase to avoid always showing the same first phrase
-    this.currentPhraseIndex = Math.floor(Math.random() * this.phrases.length);
+    // Initialize the cycle with all phrase indices shuffled
+    this.resetCycle();
+
+    // Start with the first phrase from the shuffled cycle
+    this.currentPhraseIndex = this.unusedPhrases.pop()!;
   }
 
   /**
@@ -78,17 +82,37 @@ export class PhraseCycler {
 
   /**
    * Advances to the next phrase in the sequence.
-   * Uses random selection to avoid predictable patterns.
+   * Cycles through all phrases before repeating any.
    */
   private nextPhrase(): void {
-    // Get a random index that's different from the current one
-    // This ensures we don't show the same phrase twice in a row
-    let nextIndex;
-    do {
-      nextIndex = Math.floor(Math.random() * this.phrases.length);
-    } while (nextIndex === this.currentPhraseIndex && this.phrases.length > 1);
+    // If we've used all phrases, reset the cycle
+    if (this.unusedPhrases.length === 0) {
+      this.resetCycle();
+    }
 
-    this.currentPhraseIndex = nextIndex;
+    // Get the next phrase from the shuffled unused phrases
+    this.currentPhraseIndex = this.unusedPhrases.pop()!;
+  }
+
+  /**
+   * Resets the cycle by creating a shuffled array of all phrase indices.
+   * This ensures we go through all phrases before repeating any.
+   */
+  private resetCycle(): void {
+    // Create array of all indices
+    this.unusedPhrases = Array.from(
+      { length: this.phrases.length },
+      (_, i) => i,
+    );
+
+    // Shuffle the array using Fisher-Yates algorithm
+    for (let i = this.unusedPhrases.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [this.unusedPhrases[i], this.unusedPhrases[j]] = [
+        this.unusedPhrases[j],
+        this.unusedPhrases[i],
+      ];
+    }
   }
 
   /**
