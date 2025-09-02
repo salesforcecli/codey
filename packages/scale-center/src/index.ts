@@ -63,6 +63,8 @@ async function main(): Promise<void> {
         const posted = await client.chat.postMessage({
           channel: alertsChannelId,
           text: command.text.trim(),
+          unfurl_links: true,
+          unfurl_media: true,
         });
         logger?.info?.(
           { ts: (posted as { ts?: string }).ts },
@@ -84,6 +86,8 @@ _Details_: Average page load time has exceeded threshold.
       const posted = await client.chat.postMessage({
         channel: alertsChannelId,
         text: defaultMessage,
+        unfurl_links: true,
+        unfurl_media: true,
       });
       logger?.info?.(
         { ts: (posted as { ts?: string }).ts },

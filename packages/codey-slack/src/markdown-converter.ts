@@ -44,13 +44,19 @@ export function convertMarkdownToSlackMrkdwn(markdown: string): string {
  */
 interface SlackBlock {
   type: string;
-  text?: {
-    type: string;
-    text: string;
-  };
+  text?:
+    | string
+    | {
+        type: string;
+        text: string;
+      };
   elements?: Array<{
     type: string;
-    text: string;
+    text?: string;
+    elements?: Array<{
+      type: string;
+      text: string;
+    }>;
   }>;
 }
 
@@ -261,22 +267,18 @@ export function formatSlackMessage(
                   },
                 });
               } else if (part.trim()) {
+                // Use markdown blocks for proper link unfurling and native markdown support
                 blocks.push({
-                  type: 'section',
-                  text: {
-                    type: 'mrkdwn',
-                    text: convertMarkdownToSlackMrkdwn(part),
-                  },
+                  type: 'markdown',
+                  text: part.trim(),
                 });
               }
             }
           } else {
+            // Use markdown blocks for proper link unfurling and native markdown support
             blocks.push({
-              type: 'section',
-              text: {
-                type: 'mrkdwn',
-                text: convertMarkdownToSlackMrkdwn(beforeText),
-              },
+              type: 'markdown',
+              text: beforeText.trim(),
             });
           }
         }
@@ -308,22 +310,18 @@ export function formatSlackMessage(
                 },
               });
             } else if (part.trim()) {
+              // Use markdown blocks for proper link unfurling and native markdown support
               blocks.push({
-                type: 'section',
-                text: {
-                  type: 'mrkdwn',
-                  text: convertMarkdownToSlackMrkdwn(part),
-                },
+                type: 'markdown',
+                text: part.trim(),
               });
             }
           }
         } else {
+          // Use markdown blocks for proper link unfurling and native markdown support
           blocks.push({
-            type: 'section',
-            text: {
-              type: 'mrkdwn',
-              text: convertMarkdownToSlackMrkdwn(afterText),
-            },
+            type: 'markdown',
+            text: afterText.trim(),
           });
         }
       }
@@ -352,11 +350,8 @@ export function formatSlackMessage(
     return {
       blocks: [
         {
-          type: 'section',
-          text: {
-            type: 'mrkdwn',
-            text: convertedText,
-          },
+          type: 'markdown',
+          text: text.trim(),
         },
         {
           type: 'context', // Use context type for loading phrases
