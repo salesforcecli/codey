@@ -44,15 +44,103 @@ export function convertMarkdownToSlackMrkdwn(markdown: string): string {
  */
 interface SlackBlock {
   type: string;
-  text: {
+  text?: {
     type: string;
     text: string;
   };
+  elements?: Array<{
+    type: string;
+    text: string;
+  }>;
+}
+
+interface ToolBlockData {
+  name: string;
+  status: string;
+  callId: string;
+  params?: string;
+  error?: string;
+}
+
+function parseToolBlock(toolBlockText: string): ToolBlockData | null {
+  const lines = toolBlockText.split('\n');
+  const data: Partial<ToolBlockData> = {};
+
+  for (const line of lines) {
+    if (line.startsWith('TOOL_NAME:')) {
+      data.name = line.substring('TOOL_NAME:'.length).trim();
+    } else if (line.startsWith('TOOL_STATUS:')) {
+      data.status = line.substring('TOOL_STATUS:'.length).trim();
+    } else if (line.startsWith('TOOL_CALL_ID:')) {
+      data.callId = line.substring('TOOL_CALL_ID:'.length).trim();
+    } else if (line.startsWith('TOOL_PARAMS:')) {
+      data.params = line.substring('TOOL_PARAMS:'.length).trim();
+    } else if (line.startsWith('TOOL_ERROR:')) {
+      data.error = line.substring('TOOL_ERROR:'.length).trim();
+    }
+  }
+
+  return data.name && data.status && data.callId
+    ? (data as ToolBlockData)
+    : null;
+}
+
+function createToolBlocks(toolData: ToolBlockData): SlackBlock[] {
+  const blocks: SlackBlock[] = [];
+
+  // Divider before tool
+  // blocks.push({ type: 'divider' });
+
+  // Main tool section with inline button
+  const hasParams = toolData.params && toolData.params !== '{}';
+  const toolSection: SlackBlock = {
+    type: 'section',
+    text: {
+      type: 'mrkdwn',
+      text: `:wrench: ${toolData.status} *${toolData.name}*`,
+    },
+  };
+
+  // Add button inline if there are parameters to show
+  if (hasParams) {
+    (toolSection as any).accessory = {
+      type: 'button',
+      text: {
+        type: 'plain_text',
+        text: 'View Parameters',
+        emoji: true,
+      },
+      action_id: 'view_tool_params',
+      value: JSON.stringify({
+        toolName: toolData.name,
+        callId: toolData.callId,
+        params: toolData.params,
+      }),
+    };
+  }
+
+  blocks.push(toolSection);
+
+  // Error section if present
+  if (toolData.error) {
+    blocks.push({
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: `*Error:* ${toolData.error}`,
+      },
+    });
+  }
+
+  // Divider after tool
+  // blocks.push({ type: 'divider' });
+
+  return blocks;
 }
 
 export function formatSlackMessage(
   text: string,
-  useBlocks: boolean = false,
+  useBlocks: boolean = true, // Default to true for better formatting
 ): string | { blocks: SlackBlock[] } {
   const convertedText = convertMarkdownToSlackMrkdwn(text);
 
@@ -60,40 +148,113 @@ export function formatSlackMessage(
     return convertedText;
   }
 
-  // For enhanced formatting, we can use Slack's Block Kit
-  // This is useful for code blocks and structured content
+  // Check for tool blocks first
+  const toolBlockRegex =
+    /\[TOOL_BLOCK_START:[^\]]+\]([\s\S]*?)\[TOOL_BLOCK_END:[^\]]+\]/g;
+  const hasToolBlocks = toolBlockRegex.test(text);
+
+  // Reset regex for actual processing
+  toolBlockRegex.lastIndex = 0;
+
+  // Check for code blocks
   const hasCodeBlocks = /```[\s\S]*?```/.test(text);
 
-  if (hasCodeBlocks) {
+  if (hasToolBlocks || hasCodeBlocks) {
     const blocks: SlackBlock[] = [];
-    const parts = text.split(/(```[\s\S]*?```)/);
+    let lastIndex = 0;
+    let match;
 
-    for (const part of parts) {
-      if (part.startsWith('```') && part.endsWith('```')) {
-        // Code block
-        const code = part.slice(3, -3).trim();
-        blocks.push({
-          type: 'section',
-          text: {
-            type: 'mrkdwn',
-            text: `\`\`\`${code}\`\`\``,
-          },
-        });
-      } else if (part.trim()) {
-        // Regular text
-        blocks.push({
-          type: 'section',
-          text: {
-            type: 'mrkdwn',
-            text: convertMarkdownToSlackMrkdwn(part),
-          },
-        });
+    // Process tool blocks
+    while ((match = toolBlockRegex.exec(text)) !== null) {
+      // Add any text before this tool block
+      if (match.index > lastIndex) {
+        const beforeText = text.substring(lastIndex, match.index).trim();
+        if (beforeText) {
+          // Check if this text has code blocks
+          if (/```[\s\S]*?```/.test(beforeText)) {
+            const codeParts = beforeText.split(/(```[\s\S]*?```)/);
+            for (const part of codeParts) {
+              if (part.startsWith('```') && part.endsWith('```')) {
+                const code = part.slice(3, -3).trim();
+                blocks.push({
+                  type: 'section',
+                  text: {
+                    type: 'mrkdwn',
+                    text: `\`\`\`${code}\`\`\``,
+                  },
+                });
+              } else if (part.trim()) {
+                blocks.push({
+                  type: 'section',
+                  text: {
+                    type: 'mrkdwn',
+                    text: convertMarkdownToSlackMrkdwn(part),
+                  },
+                });
+              }
+            }
+          } else {
+            blocks.push({
+              type: 'section',
+              text: {
+                type: 'mrkdwn',
+                text: convertMarkdownToSlackMrkdwn(beforeText),
+              },
+            });
+          }
+        }
+      }
+
+      // Parse and add the tool block
+      const toolData = parseToolBlock(match[1]);
+      if (toolData) {
+        blocks.push(...createToolBlocks(toolData));
+      }
+
+      lastIndex = match.index + match[0].length;
+    }
+
+    // Add any remaining text after the last tool block
+    if (lastIndex < text.length) {
+      const afterText = text.substring(lastIndex).trim();
+      if (afterText) {
+        if (/```[\s\S]*?```/.test(afterText)) {
+          const codeParts = afterText.split(/(```[\s\S]*?```)/);
+          for (const part of codeParts) {
+            if (part.startsWith('```') && part.endsWith('```')) {
+              const code = part.slice(3, -3).trim();
+              blocks.push({
+                type: 'section',
+                text: {
+                  type: 'mrkdwn',
+                  text: `\`\`\`${code}\`\`\``,
+                },
+              });
+            } else if (part.trim()) {
+              blocks.push({
+                type: 'section',
+                text: {
+                  type: 'mrkdwn',
+                  text: convertMarkdownToSlackMrkdwn(part),
+                },
+              });
+            }
+          }
+        } else {
+          blocks.push({
+            type: 'section',
+            text: {
+              type: 'mrkdwn',
+              text: convertMarkdownToSlackMrkdwn(afterText),
+            },
+          });
+        }
       }
     }
 
     return { blocks };
   }
 
-  // For simple text without code blocks, just return converted text
+  // For simple text without special blocks, just return converted text
   return convertedText;
 }

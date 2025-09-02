@@ -36,11 +36,6 @@ export async function initClient(
   } catch (_error) {
     // If the branch doesn't exist, create it from main
     try {
-      // First checkout main to ensure we're creating the branch from main
-      execSync(`git checkout main`, {
-        cwd: workspaceRoot,
-        stdio: 'inherit',
-      });
       // Reset the main branch to the latest commit
       execSync(`git reset --hard HEAD`, {
         cwd: workspaceRoot,
@@ -48,6 +43,11 @@ export async function initClient(
       });
       // Clean the workspace
       execSync(`git clean -fd`, {
+        cwd: workspaceRoot,
+        stdio: 'inherit',
+      });
+      // First checkout main to ensure we're creating the branch from main
+      execSync(`git checkout main`, {
         cwd: workspaceRoot,
         stdio: 'inherit',
       });

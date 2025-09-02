@@ -33,8 +33,12 @@ interface MessageStreamState {
   accumulated: string;
   lastUpdate: number;
   toolStatusLines: string[];
-  toolCallMap: Map<string, string>;
+  toolCallMap: Map<string, string>; // callId -> toolName
+  toolLineMap: Map<string, string>; // callId -> full tool line for precise replacement
+  toolArgsMap: Map<string, Record<string, unknown>>; // callId -> original args
   lastBuiltText: string;
+  messageTimestamps: string[]; // Track all message timestamps for multi-message responses
+  currentMessageIndex: number; // Index of the current message being updated (for future use)
 }
 
 interface SlackClient {
@@ -133,6 +137,8 @@ const CONFIG = {
   minUpdateIntervalMs: 300,
   phraseCycleIntervalMs: 10000,
   threadContextLimit: 50,
+  slackMessageLimit: 40000, // Slack's actual character limit
+  slackMessageSplitThreshold: 38000, // Split before hitting the limit to account for loading phrases and formatting
 } as const;
 
 // Utility functions
@@ -225,6 +231,75 @@ class MessageStreamer {
     this.client = client;
   }
 
+  /**
+   * Formats tool parameters for display, truncating values if needed
+   */
+  private formatToolParams(args: Record<string, unknown> | undefined): string {
+    if (!args || Object.keys(args).length === 0) {
+      return '';
+    }
+
+    const paramLines = Object.entries(args).map(([key, value]) => {
+      let valueStr = '';
+      if (typeof value === 'string') {
+        valueStr = value.length > 100 ? `${value.substring(0, 100)}...` : value;
+      } else if (value !== null && value !== undefined) {
+        const jsonStr = JSON.stringify(value);
+        valueStr =
+          jsonStr.length > 100 ? `${jsonStr.substring(0, 100)}...` : jsonStr;
+      } else {
+        valueStr = String(value);
+      }
+      return `  - ${key}: ${valueStr}`;
+    });
+
+    return `\nparams:\n${paramLines.join('\n')}`;
+  }
+
+  /**
+   * Creates a formatted tool message with Block Kit and interactive button:
+   * Uses Block Kit blocks with a "View Parameters" button that opens a modal
+   */
+  private createToolMessage(
+    toolName: string,
+    status: 'running' | 'completed' | 'error',
+    args?: Record<string, unknown>,
+    errorMessage?: string,
+    callId?: string,
+  ): string {
+    const statusEmoji =
+      status === 'running'
+        ? `:${EMOJIS.running}:`
+        : status === 'completed'
+          ? `:${EMOJIS.completed}:`
+          : `:${EMOJIS.error}:`;
+
+    // Create a special marker for Block Kit tool blocks
+    const toolId =
+      callId || `tool_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    // Create tool block marker that will be converted to Block Kit by formatSlackMessage
+    let toolBlock = `[TOOL_BLOCK_START:${toolId}]
+TOOL_NAME:${toolName}
+TOOL_STATUS:${statusEmoji}
+TOOL_CALL_ID:${toolId}`;
+
+    if (args && Object.keys(args).length > 0) {
+      toolBlock += `
+TOOL_PARAMS:${JSON.stringify(args)}`;
+    }
+
+    if (errorMessage) {
+      toolBlock += `
+TOOL_ERROR:${errorMessage}`;
+    }
+
+    toolBlock += `
+[TOOL_BLOCK_END:${toolId}]`;
+
+    return toolBlock;
+  }
+
   async updateSlackMessage(
     channel: string,
     messageTs: string,
@@ -251,6 +326,119 @@ class MessageStreamer {
     });
   }
 
+  async createNewMessage(
+    channel: string,
+    threadTs: string,
+    text: string,
+    say: (message: {
+      thread_ts: string;
+      text: string;
+    }) => Promise<{ ts?: string }>,
+    loadingPhrase?: string,
+  ): Promise<string> {
+    const displayText = loadingPhrase
+      ? `${text}\n\n:${EMOJIS.loading}: ${loadingPhrase}`
+      : text;
+
+    const result = await say({
+      thread_ts: threadTs,
+      text: displayText,
+    });
+
+    if (!result.ts) {
+      throw new Error('Failed to create new message - no timestamp returned');
+    }
+
+    return result.ts;
+  }
+
+  /**
+   * Splits long text into multiple messages to avoid Slack's 40k character limit.
+   * Attempts to split at line boundaries when possible. Tool status is now inline.
+   */
+  splitTextForSlack(text: string, toolStatusLines?: string[]): string[] {
+    // toolStatusLines parameter kept for compatibility but not used since tools are now inline
+    const fullText = text.trim();
+
+    if (fullText.length <= CONFIG.slackMessageSplitThreshold) {
+      return [fullText];
+    }
+
+    const messages: string[] = [];
+    let currentMessage = '';
+    const lines = fullText.split('\n');
+
+    for (const line of lines) {
+      const potentialMessage = currentMessage
+        ? `${currentMessage}\n${line}`
+        : line;
+
+      // Check if adding this line would exceed the threshold
+      if (potentialMessage.length > CONFIG.slackMessageSplitThreshold) {
+        if (currentMessage) {
+          // Save current message and start a new one
+          messages.push(currentMessage.trim());
+          currentMessage = line;
+        } else {
+          // Single line is too long, we need to split it
+          const chunks = this.splitLongLine(
+            line,
+            CONFIG.slackMessageSplitThreshold,
+          );
+          messages.push(...chunks.slice(0, -1));
+          currentMessage = chunks[chunks.length - 1];
+        }
+      } else {
+        currentMessage = potentialMessage;
+      }
+    }
+
+    if (currentMessage.trim()) {
+      // Final safety check - if the message is too long, truncate it
+      if (currentMessage.length > CONFIG.slackMessageLimit) {
+        const truncatedMessage =
+          `${currentMessage.substring(0, CONFIG.slackMessageLimit - 100)}...\n\n_[Message truncated]_`.trim();
+        messages.push(truncatedMessage);
+      } else {
+        messages.push(currentMessage.trim());
+      }
+    }
+
+    return messages.length > 0 ? messages : [''];
+  }
+
+  private splitLongLine(line: string, maxLength: number): string[] {
+    if (line.length <= maxLength) {
+      return [line];
+    }
+
+    const chunks: string[] = [];
+    let remaining = line;
+
+    while (remaining.length > maxLength) {
+      // Try to split at word boundaries
+      let splitIndex = maxLength;
+      const lastSpace = remaining.lastIndexOf(' ', maxLength);
+      if (lastSpace > maxLength * 0.7) {
+        // Don't split too early
+        splitIndex = lastSpace;
+      }
+
+      chunks.push(remaining.substring(0, splitIndex));
+      remaining = remaining.substring(splitIndex).trim();
+    }
+
+    if (remaining) {
+      chunks.push(remaining);
+    }
+
+    return chunks;
+  }
+
+  /**
+   * Processes streaming events and updates the message state.
+   * Tool status is now displayed inline as events arrive, with real-time status updates.
+   */
   processStreamEvent(
     event: ServerGeminiStreamEvent,
     state: MessageStreamState,
@@ -261,27 +449,46 @@ class MessageStreamer {
     if (event.type === GeminiEventType.Content) {
       state.accumulated += event.value;
     } else if (event.type === GeminiEventType.ToolCallRequest) {
-      const argsPreview = event.value.args
-        ? ` ${JSON.stringify(event.value.args).slice(0, 120)}...`
-        : '';
-      state.toolCallMap.set(event.value.callId, event.value.name);
-      state.toolStatusLines.push(
-        `:${EMOJIS.running}: ${event.value.name}${argsPreview}`,
+      const toolLine = this.createToolMessage(
+        event.value.name,
+        'running',
+        event.value.args,
+        undefined,
+        event.value.callId,
       );
+
+      // Add tool status directly to accumulated content
+      state.accumulated += `\n\n${toolLine}`;
+
+      // Keep track for precise updates using callId
+      state.toolCallMap.set(event.value.callId, event.value.name);
+      state.toolLineMap.set(event.value.callId, toolLine);
+      state.toolArgsMap.set(event.value.callId, event.value.args || {});
+      state.toolStatusLines.push(toolLine);
     } else if (event.type === GeminiEventType.ToolCallResponse) {
       const toolName =
         state.toolCallMap.get(event.value.callId) || event.value.callId;
-      const idx = state.toolStatusLines.findIndex((l) =>
-        l.includes(`:${EMOJIS.running}: ${toolName}`),
-      );
-      const status = !event.value.error
-        ? `:${EMOJIS.completed}:`
-        : `:${EMOJIS.error}: ${event.value.error?.message ?? ''}`;
-      const line = `${status} ${toolName}`;
-      if (idx >= 0) {
-        state.toolStatusLines[idx] = line;
-      } else {
-        state.toolStatusLines.push(line);
+      const oldToolLine = state.toolLineMap.get(event.value.callId);
+      const originalArgs = state.toolArgsMap.get(event.value.callId);
+
+      if (oldToolLine) {
+        const newToolLine = this.createToolMessage(
+          toolName,
+          event.value.error ? 'error' : 'completed',
+          originalArgs,
+          event.value.error?.message,
+          event.value.callId,
+        );
+
+        // Replace the exact tool line in accumulated content using precise match
+        state.accumulated = state.accumulated.replace(oldToolLine, newToolLine);
+
+        // Update the tracking maps
+        state.toolLineMap.set(event.value.callId, newToolLine);
+        const idx = state.toolStatusLines.findIndex((l) => l === oldToolLine);
+        if (idx >= 0) {
+          state.toolStatusLines[idx] = newToolLine;
+        }
       }
     } else if (event.type === GeminiEventType.Error) {
       state.accumulated += `\n\nError: ${event.value.error.message}`;
@@ -307,10 +514,89 @@ class MessageStreamer {
   }
 
   buildDisplayText(state: MessageStreamState): string {
-    const statusBlock = state.toolStatusLines.length
-      ? `\n\n_Tools:_\n${state.toolStatusLines.join('\n')}`
-      : '';
-    return `${state.accumulated}${statusBlock}`.trim();
+    // Tools are now displayed inline, so just return the accumulated content
+    return state.accumulated.trim();
+  }
+
+  /**
+   * Updates multiple Slack messages when content is too long for a single message.
+   * Creates new messages as needed and ensures loading phrases only appear on the newest message.
+   */
+  async updateMultipleMessages(
+    channel: string,
+    state: MessageStreamState,
+    threadTs: string,
+    loadingPhrase?: string,
+    say?: (message: {
+      thread_ts: string;
+      text: string;
+    }) => Promise<{ ts?: string }>,
+  ): Promise<void> {
+    const messageParts = this.splitTextForSlack(state.accumulated);
+
+    // Limit the number of messages to prevent spam (Slack has rate limits)
+    const maxMessages = 10;
+    const limitedMessageParts = messageParts.slice(0, maxMessages);
+
+    if (messageParts.length > maxMessages) {
+      // Add a note to the last message that content was truncated
+      const lastIndex = limitedMessageParts.length - 1;
+      limitedMessageParts[lastIndex] +=
+        `\n\n_[Response split into ${messageParts.length} parts, showing first ${maxMessages}. Ask for continuation if needed.]_`;
+    }
+
+    // Ensure we have enough message timestamps
+    while (state.messageTimestamps.length < limitedMessageParts.length) {
+      if (!say) {
+        throw new Error('Cannot create new messages without say function');
+      }
+
+      const newTs = await this.createNewMessage(
+        channel,
+        threadTs,
+        '',
+        say,
+        undefined,
+      );
+      state.messageTimestamps.push(newTs);
+    }
+
+    // Update all messages
+    for (let i = 0; i < limitedMessageParts.length; i++) {
+      const isLastMessage = i === limitedMessageParts.length - 1;
+      const messageText = limitedMessageParts[i];
+      const shouldShowLoading = isLastMessage && loadingPhrase;
+
+      // Final safety check before updating
+      const finalText = shouldShowLoading
+        ? `${messageText}\n\n:${EMOJIS.loading}: ${loadingPhrase}`
+        : messageText;
+
+      if (finalText.length > CONFIG.slackMessageLimit) {
+        console.warn(
+          `Message ${i} still too long (${finalText.length} chars), truncating further`,
+        );
+        const truncated =
+          messageText.substring(0, CONFIG.slackMessageLimit - 100) +
+          '\n\n_[Message truncated due to length]_';
+        await this.updateSlackMessage(
+          channel,
+          state.messageTimestamps[i],
+          truncated,
+          shouldShowLoading ? loadingPhrase : undefined,
+        );
+      } else {
+        await this.updateSlackMessage(
+          channel,
+          state.messageTimestamps[i],
+          messageText,
+          shouldShowLoading ? loadingPhrase : undefined,
+        );
+      }
+    }
+
+    // Update current message index
+    state.currentMessageIndex = limitedMessageParts.length - 1;
   }
 }
 
@@ -499,12 +785,30 @@ function createAppMentionHandler(deps: {
           try {
             // Prevent race condition: don't update if cycler has been stopped
             if (loadingMsgTs && phraseCycler?.isRunning()) {
-              await deps.messageStreamer.updateSlackMessage(
-                channel,
-                loadingMsgTs,
+              // For phrase cycling, we need to create a temporary state to use updateMultipleMessages
+              // But we need access to the current streamState, so we'll use the simpler approach
+              // and update only the last message with the loading phrase
+              const messageParts = deps.messageStreamer.splitTextForSlack(
                 state.lastBuiltText,
-                currentLoadingPhrase,
               );
+              if (messageParts.length === 1) {
+                // Single message, use the original method
+                await deps.messageStreamer.updateSlackMessage(
+                  channel,
+                  loadingMsgTs,
+                  state.lastBuiltText,
+                  currentLoadingPhrase,
+                );
+              } else {
+                // Multiple messages would be needed, but we don't have access to streamState here
+                // So we'll just update the first message without loading phrase to avoid errors
+                await deps.messageStreamer.updateSlackMessage(
+                  channel,
+                  loadingMsgTs,
+                  messageParts[0],
+                  undefined,
+                );
+              }
             }
           } catch (err) {
             logger?.warn?.({ err }, 'Failed to update loading phrase');
@@ -545,6 +849,8 @@ function createAppMentionHandler(deps: {
           botUserId,
           state,
           channelInfo,
+          threadTs,
+          say,
         });
       } catch (err) {
         await handleStreamingError(deps, err, {
@@ -649,6 +955,11 @@ async function handleMessageStreaming(
     botUserId?: string;
     state: { lastBuiltText: string };
     channelInfo?: { id: string; name: string };
+    threadTs: string;
+    say: (message: {
+      thread_ts: string;
+      text: string;
+    }) => Promise<{ ts?: string }>;
   },
 ): Promise<void> {
   const updatedMapping = deps.sessionStore.get(params.conversationKey)!;
@@ -669,7 +980,11 @@ async function handleMessageStreaming(
     lastUpdate: 0,
     toolStatusLines: [],
     toolCallMap: new Map(),
+    toolLineMap: new Map(),
+    toolArgsMap: new Map(),
     lastBuiltText: '',
+    messageTimestamps: [params.loadingMsgTs], // Start with the initial loading message
+    currentMessageIndex: 0,
   };
 
   // Process the stream
@@ -700,11 +1015,14 @@ async function handleMessageStreaming(
       const loadingPhrase = params.phraseCycler?.isRunning()
         ? params.phraseCycler.getCurrentPhrase()
         : undefined;
-      await deps.messageStreamer.updateSlackMessage(
+
+      // Use multi-message update to handle long content
+      await deps.messageStreamer.updateMultipleMessages(
         params.channel,
-        params.loadingMsgTs,
-        displayText,
+        streamState,
+        params.threadTs,
         loadingPhrase,
+        params.say,
       );
     }
 
@@ -716,10 +1034,12 @@ async function handleMessageStreaming(
   }
 
   // Finalize the message (phraseCycler already stopped above)
-  await deps.messageStreamer.updateSlackMessage(
+  await deps.messageStreamer.updateMultipleMessages(
     params.channel,
-    params.loadingMsgTs,
-    streamState.lastBuiltText,
+    streamState,
+    params.threadTs,
+    undefined, // No loading phrase for final message
+    params.say,
   );
 
   // Record final response to thread store
@@ -790,11 +1110,32 @@ async function handleStreamingError(
     );
 
     params.phraseCycler?.stop();
-    await deps.messageStreamer.updateSlackMessage(
-      params.channel,
-      params.loadingMsgTs,
+
+    // Handle potentially long responses by splitting if needed
+    const messageParts = deps.messageStreamer.splitTextForSlack(
       result.response,
     );
+    if (messageParts.length === 1) {
+      // Single message, use the original method
+      await deps.messageStreamer.updateSlackMessage(
+        params.channel,
+        params.loadingMsgTs,
+        result.response,
+      );
+    } else {
+      // Multiple messages needed - we need to create a temporary state and use say function
+      // For now, let's just truncate to avoid the error and add a note
+      const truncatedResponse =
+        result.response.length > CONFIG.slackMessageSplitThreshold
+          ? `${result.response.substring(0, CONFIG.slackMessageSplitThreshold - 100)}\n\n_[Response truncated due to length - please ask for continuation if needed]_`
+          : result.response;
+
+      await deps.messageStreamer.updateSlackMessage(
+        params.channel,
+        params.loadingMsgTs,
+        truncatedResponse,
+      );
+    }
 
     deps.sessionStore.addMessage(params.conversationKey, {
       text: result.response,
@@ -908,6 +1249,73 @@ async function main(): Promise<void> {
   // Register the event handler
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   app.event('app_mention', handleAppMention as any);
+
+  // Register interaction handlers for tool parameter buttons
+  app.action('view_tool_params', async ({ ack, body, client }) => {
+    await ack();
+
+    try {
+      const buttonValue = JSON.parse((body as any).actions[0].value);
+      const { toolName, callId, params } = buttonValue;
+
+      // Parse parameters for display
+      let paramBlocks = [];
+      try {
+        const parsedParams = JSON.parse(params);
+        paramBlocks = Object.entries(parsedParams).map(([key, value]) => ({
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: `*${key}:*\n\`\`\`${JSON.stringify(value, null, 2)}\`\`\``,
+          },
+        }));
+      } catch (e) {
+        paramBlocks = [
+          {
+            type: 'section',
+            text: {
+              type: 'mrkdwn',
+              text: `\`\`\`${params}\`\`\``,
+            },
+          },
+        ];
+      }
+
+      // Create and open modal
+      await client.views.open({
+        trigger_id: (body as any).trigger_id,
+        view: {
+          type: 'modal',
+          title: {
+            type: 'plain_text',
+            text: `Tool Parameters`,
+            emoji: true,
+          },
+          close: {
+            type: 'plain_text',
+            text: 'Close',
+            emoji: true,
+          },
+          blocks: [
+            {
+              type: 'header',
+              text: {
+                type: 'plain_text',
+                text: `🔧 ${toolName}`,
+                emoji: true,
+              },
+            },
+            {
+              type: 'divider',
+            },
+            ...paramBlocks,
+          ],
+        },
+      });
+    } catch (error) {
+      console.error('Error handling tool params button:', error);
+    }
+  });
 
   console.log('✅ Event handlers registered');
 
