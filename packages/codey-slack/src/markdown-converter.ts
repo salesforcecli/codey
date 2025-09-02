@@ -331,13 +331,8 @@ export function formatSlackMessage(
     // This ensures it's always visible even if other sections are truncated
     if (loadingPhrase) {
       blocks.push({
-        type: 'context', // Use context type for loading phrases - less likely to be truncated
-        elements: [
-          {
-            type: 'mrkdwn',
-            text: loadingPhrase,
-          },
-        ],
+        type: 'markdown',
+        text: loadingPhrase,
       });
     }
 
@@ -354,13 +349,8 @@ export function formatSlackMessage(
           text: text.trim(),
         },
         {
-          type: 'context', // Use context type for loading phrases
-          elements: [
-            {
-              type: 'mrkdwn',
-              text: loadingPhrase,
-            },
-          ],
+          type: 'markdown',
+          text: loadingPhrase,
         },
       ],
     };
