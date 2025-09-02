@@ -62,6 +62,41 @@ interface ToolBlockData {
   error?: string;
 }
 
+// Global parameter storage to avoid Slack's 2001 character button value limit
+const toolParameterStorage = new Map<string, string>();
+
+/**
+ * Stores tool parameters and returns a storage key
+ */
+function storeToolParameters(callId: string, params: string): string {
+  const storageKey = `params_${callId}_${Date.now()}`;
+  toolParameterStorage.set(storageKey, params);
+
+  // Clean up old entries to prevent memory leaks (keep last 100)
+  if (toolParameterStorage.size > 100) {
+    const entries = Array.from(toolParameterStorage.entries());
+    const keepEntries = entries.slice(-50); // Keep last 50
+    toolParameterStorage.clear();
+    for (const [key, value] of keepEntries) {
+      toolParameterStorage.set(key, value);
+    }
+  }
+
+  return storageKey;
+}
+
+/**
+ * Retrieves tool parameters from storage
+ */
+function getStoredToolParameters(storageKey: string): string | undefined {
+  return toolParameterStorage.get(storageKey);
+}
+
+/**
+ * Exports for use in the main index file
+ */
+export { getStoredToolParameters };
+
 function parseToolBlock(toolBlockText: string): ToolBlockData | null {
   const lines = toolBlockText.split('\n');
   const data: Partial<ToolBlockData> = {};
@@ -103,6 +138,48 @@ function createToolBlocks(toolData: ToolBlockData): SlackBlock[] {
 
   // Add button inline if there are parameters to show
   if (hasParams) {
+    // Store parameters separately to avoid Slack's 2001 character limit on button values
+    const storageKey = storeToolParameters(toolData.callId, toolData.params!);
+
+    // Create a much smaller button value
+    const buttonValue = {
+      toolName: toolData.name,
+      callId: toolData.callId,
+      storageKey: storageKey,
+      // Include a truncated preview for debugging
+      preview:
+        toolData.params!.length > 100
+          ? `${toolData.params!.substring(0, 100)}...`
+          : toolData.params!,
+    };
+
+    const buttonValueStr = JSON.stringify(buttonValue);
+
+    // Final safety check - if still too long, truncate further
+    let finalButtonValue = buttonValueStr;
+    if (buttonValueStr.length > 1900) {
+      // Create minimal button value
+      const minimalValue = {
+        toolName:
+          toolData.name.length > 50
+            ? `${toolData.name.substring(0, 50)}...`
+            : toolData.name,
+        callId: toolData.callId,
+        storageKey: storageKey,
+        truncated: true,
+      };
+      finalButtonValue = JSON.stringify(minimalValue);
+
+      // Ultimate fallback if even minimal value is too long
+      if (finalButtonValue.length > 1900) {
+        finalButtonValue = JSON.stringify({
+          callId: toolData.callId.substring(0, 20),
+          storageKey: storageKey.substring(0, 50),
+          minimal: true,
+        });
+      }
+    }
+
     (toolSection as any).accessory = {
       type: 'button',
       text: {
@@ -111,11 +188,7 @@ function createToolBlocks(toolData: ToolBlockData): SlackBlock[] {
         emoji: true,
       },
       action_id: 'view_tool_params',
-      value: JSON.stringify({
-        toolName: toolData.name,
-        callId: toolData.callId,
-        params: toolData.params,
-      }),
+      value: finalButtonValue,
     };
   }
 
@@ -141,11 +214,15 @@ function createToolBlocks(toolData: ToolBlockData): SlackBlock[] {
 export function formatSlackMessage(
   text: string,
   useBlocks: boolean = true, // Default to true for better formatting
+  loadingPhrase?: string, // Optional loading phrase to display in separate section
 ): string | { blocks: SlackBlock[] } {
   const convertedText = convertMarkdownToSlackMrkdwn(text);
 
   if (!useBlocks) {
-    return convertedText;
+    // For non-block mode, append loading phrase if provided
+    return loadingPhrase
+      ? `${convertedText}\n\n${loadingPhrase}`
+      : convertedText;
   }
 
   // Check for tool blocks first
@@ -252,9 +329,47 @@ export function formatSlackMessage(
       }
     }
 
+    // Add loading phrase as a separate section if provided
+    // This ensures it's always visible even if other sections are truncated
+    if (loadingPhrase) {
+      blocks.push({
+        type: 'context', // Use context type for loading phrases - less likely to be truncated
+        elements: [
+          {
+            type: 'mrkdwn',
+            text: loadingPhrase,
+          },
+        ],
+      });
+    }
+
     return { blocks };
   }
 
-  // For simple text without special blocks, just return converted text
+  // For simple text without special blocks
+  if (loadingPhrase) {
+    // Even for simple text, use blocks if we have a loading phrase to ensure visibility
+    return {
+      blocks: [
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: convertedText,
+          },
+        },
+        {
+          type: 'context', // Use context type for loading phrases
+          elements: [
+            {
+              type: 'mrkdwn',
+              text: loadingPhrase,
+            },
+          ],
+        },
+      ],
+    };
+  }
+
   return convertedText;
 }
