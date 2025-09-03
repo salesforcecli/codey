@@ -891,8 +891,6 @@ TOOL_ERROR:${errorMessage}`;
       }
     } else if (event.type === GeminiEventType.Error) {
       state.accumulated += `\n\nError: ${event.value.error.message}`;
-    } else if (event.type === GeminiEventType.Finished) {
-      state.accumulated += '\n\n';
     }
 
     return isStreamCompleted;
