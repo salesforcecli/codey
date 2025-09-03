@@ -27,7 +27,7 @@ export class FileTokenStorage extends BaseTokenStorage {
 
   constructor(serviceName: string) {
     super(serviceName);
-    const configDir = path.join(os.homedir(), '.gemini');
+    const configDir = path.join(os.homedir(), '.codey');
     this.tokenFilePath = path.join(configDir, 'mcp-oauth-tokens-v2.json');
     this.encryptionKey = this.deriveEncryptionKey();
   }

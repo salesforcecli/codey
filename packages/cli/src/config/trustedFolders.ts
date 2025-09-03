@@ -22,7 +22,7 @@ import type { Settings } from './settings.js';
 import stripJsonComments from 'strip-json-comments';
 
 export const TRUSTED_FOLDERS_FILENAME = 'trustedFolders.json';
-export const SETTINGS_DIRECTORY_NAME = '.gemini';
+export const SETTINGS_DIRECTORY_NAME = '.codey';
 export const USER_SETTINGS_DIR = path.join(homedir(), SETTINGS_DIRECTORY_NAME);
 export const USER_TRUSTED_FOLDERS_PATH = path.join(
   USER_SETTINGS_DIR,

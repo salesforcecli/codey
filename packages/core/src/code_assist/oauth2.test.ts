@@ -180,7 +180,7 @@ describe('oauth2', () => {
     // Verify Google Account was cached
     const googleAccountPath = path.join(
       tempHomeDir,
-      '.gemini',
+      '.codey',
       'google_accounts.json',
     );
     expect(fs.existsSync(googleAccountPath)).toBe(true);
@@ -284,7 +284,7 @@ describe('oauth2', () => {
 
     it('should attempt to load cached credentials first', async () => {
       const cachedCreds = { refresh_token: 'cached-token' };
-      const credsPath = path.join(tempHomeDir, '.gemini', 'oauth_creds.json');
+      const credsPath = path.join(tempHomeDir, '.codey', 'oauth_creds.json');
       await fs.promises.mkdir(path.dirname(credsPath), { recursive: true });
       await fs.promises.writeFile(credsPath, JSON.stringify(cachedCreds));
 
@@ -322,7 +322,7 @@ describe('oauth2', () => {
 
       await getOauthClient(AuthType.CLOUD_SHELL, mockConfig);
 
-      const credsPath = path.join(tempHomeDir, '.gemini', 'oauth_creds.json');
+      const credsPath = path.join(tempHomeDir, '.codey', 'oauth_creds.json');
       expect(fs.existsSync(credsPath)).toBe(false);
     });
 
@@ -349,7 +349,7 @@ describe('oauth2', () => {
       const defaultCreds = { refresh_token: 'default-cached-token' };
       const defaultCredsPath = path.join(
         tempHomeDir,
-        '.gemini',
+        '.codey',
         'oauth_creds.json',
       );
       await fs.promises.mkdir(path.dirname(defaultCredsPath), {
@@ -457,7 +457,7 @@ describe('oauth2', () => {
       // Verify Google Account was cached
       const googleAccountPath = path.join(
         tempHomeDir,
-        '.gemini',
+        '.codey',
         'google_accounts.json',
       );
       const cachedContent = fs.readFileSync(googleAccountPath, 'utf-8');
@@ -487,7 +487,7 @@ describe('oauth2', () => {
 
       // Make it fall through to cached credentials path
       const cachedCreds = { refresh_token: 'cached-token' };
-      const credsPath = path.join(tempHomeDir, '.gemini', 'oauth_creds.json');
+      const credsPath = path.join(tempHomeDir, '.codey', 'oauth_creds.json');
       await fs.promises.mkdir(path.dirname(credsPath), { recursive: true });
       await fs.promises.writeFile(credsPath, JSON.stringify(cachedCreds));
 
@@ -518,7 +518,7 @@ describe('oauth2', () => {
 
       // Make it fall through to cached credentials path
       const cachedCreds = { refresh_token: 'cached-token' };
-      const credsPath = path.join(tempHomeDir, '.gemini', 'oauth_creds.json');
+      const credsPath = path.join(tempHomeDir, '.codey', 'oauth_creds.json');
       await fs.promises.mkdir(path.dirname(credsPath), { recursive: true });
       await fs.promises.writeFile(credsPath, JSON.stringify(cachedCreds));
 
@@ -533,13 +533,13 @@ describe('oauth2', () => {
   describe('clearCachedCredentialFile', () => {
     it('should clear cached credentials and Google account', async () => {
       const cachedCreds = { refresh_token: 'test-token' };
-      const credsPath = path.join(tempHomeDir, '.gemini', 'oauth_creds.json');
+      const credsPath = path.join(tempHomeDir, '.codey', 'oauth_creds.json');
       await fs.promises.mkdir(path.dirname(credsPath), { recursive: true });
       await fs.promises.writeFile(credsPath, JSON.stringify(cachedCreds));
 
       const googleAccountPath = path.join(
         tempHomeDir,
-        '.gemini',
+        '.codey',
         'google_accounts.json',
       );
       const accountData = { active: 'test@example.com', old: [] };
@@ -582,7 +582,7 @@ describe('oauth2', () => {
       );
 
       // Pre-populate credentials to make getOauthClient resolve quickly
-      const credsPath = path.join(tempHomeDir, '.gemini', 'oauth_creds.json');
+      const credsPath = path.join(tempHomeDir, '.codey', 'oauth_creds.json');
       await fs.promises.mkdir(path.dirname(credsPath), { recursive: true });
       await fs.promises.writeFile(
         credsPath,
