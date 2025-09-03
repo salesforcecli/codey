@@ -1,13 +1,23 @@
-/**
- * @license
- * Copyright 2025 Google LLC
- * SPDX-License-Identifier: Apache-2.0
+/*
+ * Copyright 2025, Salesforce, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 import { WITTY_LOADING_PHRASES } from './witty-phrases';
 import { PhraseCycler } from './phrase-cycler';
 import {
-  ServerGeminiStreamEvent,
+  type ServerGeminiStreamEvent,
   GeminiEventType,
 } from '@google/gemini-cli-core';
 
@@ -522,7 +532,12 @@ TOOL_ERROR:${errorMessage}`;
         ? { thread_ts: threadTs, text: formattedMessage }
         : { thread_ts: threadTs, ...formattedMessage };
 
-    const result = await say(messagePayload as any);
+    const result = await say(
+      messagePayload as unknown as {
+        thread_ts: string;
+        text: string;
+      },
+    );
 
     if (!result.ts) {
       throw new Error('Failed to create new message - no timestamp returned');
@@ -535,8 +550,7 @@ TOOL_ERROR:${errorMessage}`;
    * Splits long text into multiple messages to avoid Slack's 40k character limit.
    * Respects tool block boundaries and attempts to split at safe points.
    */
-  splitTextForSlack(text: string, toolStatusLines?: string[]): string[] {
-    // toolStatusLines parameter kept for compatibility but not used since tools are now inline
+  splitTextForSlack(text: string): string[] {
     const fullText = text.trim();
 
     if (fullText.length <= CONFIG.slackMessageSplitThreshold) {
@@ -1062,7 +1076,7 @@ TOOL_ERROR:${errorMessage}`;
     try {
       // Check for orphaned tool blocks (blocks without corresponding map entries)
       const orphanedBlocks: string[] = [];
-      for (const [callId, block] of state.toolBlocks.entries()) {
+      for (const [callId] of state.toolBlocks.entries()) {
         if (!state.toolCallMap.has(callId)) {
           orphanedBlocks.push(callId);
         }
@@ -2031,6 +2045,7 @@ async function main(): Promise<void> {
     await ack();
 
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const buttonValue = JSON.parse((body as any).actions[0].value);
       const {
         toolName,
@@ -2086,7 +2101,7 @@ async function main(): Promise<void> {
               },
             };
           });
-        } catch (e) {
+        } catch {
           // Fallback for non-JSON parameters
           let displayParams = params;
           if (displayParams.length > 1000) {
@@ -2107,7 +2122,7 @@ async function main(): Promise<void> {
 
       // Create and open modal
       await client.views.open({
-        trigger_id: (body as any).trigger_id,
+        trigger_id: (body as unknown as { trigger_id: string }).trigger_id,
         view: {
           type: 'modal',
           title: {
@@ -2151,7 +2166,7 @@ async function main(): Promise<void> {
       // Try to show an error modal
       try {
         await client.views.open({
-          trigger_id: (body as any).trigger_id,
+          trigger_id: (body as unknown as { trigger_id: string }).trigger_id,
           view: {
             type: 'modal',
             title: {

@@ -1,7 +1,17 @@
-/**
- * @license
- * Copyright 2025 Google LLC
- * SPDX-License-Identifier: Apache-2.0
+/*
+ * Copyright 2025, Salesforce, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 /**
@@ -18,12 +28,21 @@ import { writeFileSync } from 'node:fs';
 // Create a minimal MCP server that doesn't require external dependencies
 // This implements the MCP protocol directly using Node.js built-ins
 const serverScript = `#!/usr/bin/env node
-/**
- * @license
- * Copyright 2025 Google LLC
- * SPDX-License-Identifier: Apache-2.0
+/*
+ * Copyright 2025, Salesforce, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 const readline = require('readline');
 const fs = require('fs');
 
@@ -46,7 +65,7 @@ class SimpleJSONRPC {
       output: process.stdout,
       terminal: false
     });
-    
+
     this.rl.on('line', (line) => {
       debug(\`Received line: \${line}\`);
       try {
@@ -58,13 +77,13 @@ class SimpleJSONRPC {
       }
     });
   }
-  
+
   send(message) {
     const msgStr = JSON.stringify(message);
     debug(\`Sending message: \${msgStr}\`);
     process.stdout.write(msgStr + '\\n');
   }
-  
+
   async handleMessage(message) {
     if (message.method && this.handlers.has(message.method)) {
       try {
@@ -99,7 +118,7 @@ class SimpleJSONRPC {
       });
     }
   }
-  
+
   on(method, handler) {
     this.handlers.set(method, handler);
   }

@@ -1,7 +1,17 @@
-/**
- * @license
- * Copyright 2025 Google LLC
- * SPDX-License-Identifier: Apache-2.0
+/*
+ * Copyright 2025, Salesforce, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 function requireEnv(name: string): string {
@@ -28,9 +38,9 @@ async function main(): Promise<void> {
   const { App, LogLevel } = slackBolt;
 
   const logLevel =
-    (process.env
-      .SLACK_LOG_LEVEL as unknown as (typeof LogLevel)[keyof typeof LogLevel]) ??
-    LogLevel.INFO;
+    (process.env[
+      'SLACK_LOG_LEVEL'
+    ] as unknown as (typeof LogLevel)[keyof typeof LogLevel]) ?? LogLevel.INFO;
   // @ts-expect-error printing enum key for readability
   console.log(`📝 Log level: ${LogLevel[logLevel]}`);
 
@@ -48,9 +58,6 @@ async function main(): Promise<void> {
 
   // Slash command -> open modal to collect alert text or send directly
   const SLASH_COMMAND = '/scale-center';
-  const VIEW_CALLBACK_ID = 'scale_center_alert_view';
-  const BLOCK_ID = 'alert_block';
-  const ACTION_ID = 'alert_input';
 
   app.command(SLASH_COMMAND, async ({ command, ack, client, logger }) => {
     await ack();
@@ -93,33 +100,6 @@ _Details_: Average page load time has exceeded threshold.
       );
     } catch (err) {
       logger?.error?.({ err }, 'Failed to post default alert message');
-    }
-  });
-
-  // Handle modal submission and post to current channel
-  // Note: Modal submissions don't have direct access to the original channel,
-  // so this handler is kept for completeness but the slash command now posts directly
-  app.view(VIEW_CALLBACK_ID, async ({ ack, view, client, logger }) => {
-    await ack();
-    try {
-      const values =
-        (
-          view as {
-            state?: {
-              values?: Record<string, Record<string, { value?: string }>>;
-            };
-          }
-        ).state?.values ?? {};
-      const input = values[BLOCK_ID]?.[ACTION_ID]?.value ?? '';
-      const text = input.trim() || 'Scale Center alert triggered.';
-
-      // Since we can't determine the original channel from modal submission,
-      // we would need to implement channel tracking if modals are needed
-      logger?.info?.(
-        'Modal submitted, but posting directly from slash command is preferred',
-      );
-    } catch (err) {
-      console.error('❌ Failed to handle modal submission', err);
     }
   });
 
