@@ -30,7 +30,6 @@ import { DebugProfiler } from './DebugProfiler.js';
 import { useTerminalSize } from '../hooks/useTerminalSize.js';
 import { isNarrowWidth } from '../utils/isNarrowWidth.js';
 
-
 interface FooterProps {
   model: string;
   targetDir: string;

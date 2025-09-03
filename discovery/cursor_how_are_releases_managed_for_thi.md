@@ -1,4 +1,5 @@
 # How are releases managed for this project?
+
 _Exported on 8/4/2025 at 10:26:07 MDT from Cursor (1.3.9)_
 
 ---
@@ -11,8 +12,6 @@ how are releases handled for this project?
 
 **Cursor**
 
-
-
 Okay, I'll investigate how releases are handled for this project. I will start by looking for release-related configurations, scripts, and documentation. I'll begin with the `.github/` directory, as it likely contains automated workflow definitions for releases.
 
 Okay, `.github/workflows` seems like the right place for release scripts. I'll check there.
@@ -23,8 +22,8 @@ I've reviewed the `release.yml` file. Here's a summary of how releases are handl
 
 **Triggering a Release:**
 
-*   **Scheduled Nightly Releases:** A release is automatically triggered every day at midnight UTC.
-*   **Manual Releases:** A release can be manually triggered through the GitHub UI. This allows for patch releases and gives the user the option to specify a version, a branch or commit, and whether to run in "dry-run" mode.
+- **Scheduled Nightly Releases:** A release is automatically triggered every day at midnight UTC.
+- **Manual Releases:** A release can be manually triggered through the GitHub UI. This allows for patch releases and gives the user the option to specify a version, a branch or commit, and whether to run in "dry-run" mode.
 
 **Release Process:**
 
@@ -58,8 +57,6 @@ is the package only distrubted to npm?
 
 **Cursor**
 
-
-
 Based on my analysis of the `release.yml` file, the package is distributed in two main ways:
 
 1.  **npm Registry:** The `@google/gemini-cli` and `@google/gemini-cli-core` packages are published to an npm registry. The `release.yml` file shows this is done using `npm publish`.
@@ -79,4 +76,3 @@ You're right to question if npm is the only distribution method. Based on my pre
 4.  **VS Code Extension:** There's a `build:vscode` script in `package.json` which runs `scripts/build_vscode_companion.js`. This, along with the `packages/vscode-ide-companion` directory in the project structure, strongly suggests that a companion VS Code extension is also built and distributed.
 
 To summarize, while npm is a key distribution channel, the project is also distributed as a standalone executable via GitHub Releases, as a Docker image, and as a VS Code extension.
-

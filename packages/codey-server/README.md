@@ -1,14 +1,13 @@
-codey-server
-============
+# codey-server
 
 A lightweight Hono + Pino Node.js server that replaces the Next.js-based `codey-hosted` API. It exposes the same API surface, except streaming is moved to a dedicated endpoint.
 
-Requirements
-------------
+## Requirements
+
 - Node.js 18+
 
-Install & Run
--------------
+## Install & Run
+
 From the monorepo root:
 
 ```bash
@@ -24,8 +23,8 @@ npm run -w packages/codey-server start
 
 The server listens on `PORT` (default 3000).
 
-API
----
+## API
+
 Base path: `/api`
 
 - GET `/api/health`
@@ -55,7 +54,7 @@ Base path: `/api`
     - `Connection: keep-alive`
     - `Transfer-Encoding: chunked`
 
-Notes
------
+## Notes
+
 - Uses in-memory sessions with periodic cleanup of idle sessions (>2h).
 - Logging via Pino with pretty transport in development.

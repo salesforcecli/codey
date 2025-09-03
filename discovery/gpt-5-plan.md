@@ -9,6 +9,7 @@
 - Target the Salesforce LLM Gateway endpoints and headers per `@llmg-api-spec.md` and environment/endpoint conventions from `@vscode-llmg-integration.md`.
 
 References
+
 - `@salesforce/core` `Org` class for connection lookup and auth: https://github.com/forcedotcom/sfdx-core/blob/a7d0d1dde4b9cc2be171777116e75e947382142b/src/org/org.ts
 
 ## High-level approach
@@ -42,10 +43,10 @@ References
 
 ## Configuration
 
- - Environment variables (defaults shown):
-  - `SF_LLMG_USERNAME` (required): Username (or alias) of an already-authenticated org.
-  - `SF_API_ENV` (optional): `prod` | `dev` | `test` | `perf` | `stage` (default `prod`).
-  - Note: The following headers are fixed constants and are not configurable: `x-client-feature-id`, `x-llm-provider`, `x-sfdc-app-context`.
+- Environment variables (defaults shown):
+- `SF_LLMG_USERNAME` (required): Username (or alias) of an already-authenticated org.
+- `SF_API_ENV` (optional): `prod` | `dev` | `test` | `perf` | `stage` (default `prod`).
+- Note: The following headers are fixed constants and are not configurable: `x-client-feature-id`, `x-llm-provider`, `x-sfdc-app-context`.
 
 ## Authentication and JWT acquisition
 
@@ -74,15 +75,15 @@ References
 
 - Keep the path segment configurable so we can switch to the root `@llmg-api-spec.md` shape (`/generations`, `/chat/generations`, etc.) without code edits.
 
- - Required headers (aligned to VS Code client; see `SfApiClient.ts`):
-  - `Authorization: Bearer <jwt>`
-  - `Content-Type: application/json`
-  - `x-client-feature-id: EinsteinGptForDevelopers`
-  - `x-llm-provider: InternalTextGeneration`
-  - `x-sfdc-app-context: EinsteinGPT`
-  - `x-sfdc-core-tenant-id`: from JWT claim when present; fallback to `SF_LLMG_CORE_TENANT_ID`
-  - `x-salesforce-region`: derived from `SF_API_ENV` (same mapping as VS Code: Production→EAST_REGION_1, Stage→EAST_REGION_2, Dev/Test/Perf→WEST_REGION)
-  - `x-client-trace-id`: generated per request
+- Required headers (aligned to VS Code client; see `SfApiClient.ts`):
+- `Authorization: Bearer <jwt>`
+- `Content-Type: application/json`
+- `x-client-feature-id: EinsteinGptForDevelopers`
+- `x-llm-provider: InternalTextGeneration`
+- `x-sfdc-app-context: EinsteinGPT`
+- `x-sfdc-core-tenant-id`: from JWT claim when present; fallback to `SF_LLMG_CORE_TENANT_ID`
+- `x-salesforce-region`: derived from `SF_API_ENV` (same mapping as VS Code: Production→EAST_REGION_1, Stage→EAST_REGION_2, Dev/Test/Perf→WEST_REGION)
+- `x-client-trace-id`: generated per request
 
 ## Request/response mapping to `ContentGenerator`
 
@@ -119,6 +120,3 @@ References
   - Map 401/403 to auth errors that trigger JWT refresh + retry once.
   - Map 429 to rate-limit error (optionally include `Retry-After`).
   - Preserve gateway error codes/messages from body in an `error` field for diagnostics.
-
-
-

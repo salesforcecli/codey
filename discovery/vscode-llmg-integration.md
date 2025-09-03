@@ -8,8 +8,8 @@ The extension is designed as a companion to the core Salesforce VS Code extensio
 
 The core logic for interacting with the LLM Gateway is encapsulated in two client classes:
 
-*   **`ModelApiClient`**: The primary, model-agnostic client that features use to make requests. It supports a fallback mechanism to a different model if it encounters a rate-limiting error.
-*   **`SfApiClient`**: A direct client for the Salesforce LLM Gateway API. It's used as the fallback by `ModelApiClient` and handles all the specifics of the Salesforce API, including endpoints, headers, and request/response formats.
+- **`ModelApiClient`**: The primary, model-agnostic client that features use to make requests. It supports a fallback mechanism to a different model if it encounters a rate-limiting error.
+- **`SfApiClient`**: A direct client for the Salesforce LLM Gateway API. It's used as the fallback by `ModelApiClient` and handles all the specifics of the Salesforce API, including endpoints, headers, and request/response formats.
 
 ## Model Configuration
 
@@ -17,14 +17,14 @@ A key aspect of the extension's architecture is its model-agnostic design, which
 
 At the core of this system is the `ModelConfiguration` object. Each LLM supported by the extension is defined by a `ModelConfiguration`, which contains:
 
-*   **Model Properties**: Metadata about the model, such as its display ID, whether it supports streaming, token limits, and the API endpoint URL.
-*   **`ModelHandler`**: A handler object that implements the `ModelHandler` interface. This is the most critical part of the configuration, as it abstracts all model-specific logic.
+- **Model Properties**: Metadata about the model, such as its display ID, whether it supports streaming, token limits, and the API endpoint URL.
+- **`ModelHandler`**: A handler object that implements the `ModelHandler` interface. This is the most critical part of the configuration, as it abstracts all model-specific logic.
 
 The `ModelHandler` interface defines a contract for how the extension interacts with a model, including methods for:
 
-*   **`convertToMessageBody`**: Transforms a generic request from the extension into the specific format required by the model's API.
-*   **`handleGenerationResponse`**: Processes a complete, non-streaming response from the model.
-*   **`handleStreamingResponse`**: Processes a streaming response, typically by converting the raw stream into an async iterator that the rest of the extension can consume.
+- **`convertToMessageBody`**: Transforms a generic request from the extension into the specific format required by the model's API.
+- **`handleGenerationResponse`**: Processes a complete, non-streaming response from the model.
+- **`handleStreamingResponse`**: Processes a streaming response, typically by converting the raw stream into an async iterator that the rest of the extension can consume.
 
 At startup, the extension registers several `ModelConfiguration` objects for different models (e.g., `GPT4o`, `SFModel`, `Claude37Sonnet`). This decoupled approach means that adding support for a new LLM is as simple as creating a new `ModelConfiguration` and a corresponding class that implements the `ModelHandler` interface.
 
@@ -63,20 +63,21 @@ The extension communicates with the following endpoints on the Salesforce API, w
 The environment is determined by reading the `salesforcedx-vscode-einstein-gpt.salesforce.api.environment` setting in the user's VS Code `settings.json` file. The `Settings` class retrieves this value, and if it's not present, it defaults to the production environment.
 
 ### Base URLs
-*   **Production**: `https://api.salesforce.com`
-*   **Development**: `https://dev.api.salesforce.com`
-*   **Test**: `https://test.api.salesforce.com`
-*   **Perf**: `https://perf.api.salesforce.com`
-*   **Stage**: `https://stage.api.salesforce.com`
+
+- **Production**: `https://api.salesforce.com`
+- **Development**: `https://dev.api.salesforce.com`
+- **Test**: `https://test.api.salesforce.com`
+- **Perf**: `https://perf.api.salesforce.com`
+- **Stage**: `https://stage.api.salesforce.com`
 
 ### Endpoints
 
 The available endpoints, which are appended to the base URL, are:
 
-*   **`/einstein/gpt/code/v1.1/generations`**: For non-streaming LLM requests.
-*   **`/einstein/gpt/code/v1.1/generations/stream`**: For streaming LLM requests.
-*   **`/einstein/gpt/code/v1.1/feedback`**: To send user feedback.
-*   **`/einstein/gpt/code/v1.1/embeddings`**: To retrieve text embeddings.
+- **`/einstein/gpt/code/v1.1/generations`**: For non-streaming LLM requests.
+- **`/einstein/gpt/code/v1.1/generations/stream`**: For streaming LLM requests.
+- **`/einstein/gpt/code/v1.1/feedback`**: To send user feedback.
+- **`/einstein/gpt/code/v1.1/embeddings`**: To retrieve text embeddings.
 
 All requests include the JWT in the `Authorization` header and a set of custom headers for tracing and context, such as `x-client-trace-id`, `x-sfdc-core-tenant-id`, and `x-command-source`.
 
@@ -219,7 +220,7 @@ export enum CommandSource {
   InlineAutocomplete = 'InlineAutocomplete',
   Chat = 'Chat',
   Optimize = 'Optimize',
-  AgenticChat = 'AgenticChat'
+  AgenticChat = 'AgenticChat',
 }
 ```
 
@@ -256,10 +257,12 @@ export interface ToolInvocation {
 **`AiCompletion`**: Represents a single completion from the LLM.
 
 ```typescript
-export type AiCompletion = {
-    completion: string;
-} | {
-    id: string;
-    text: string;
-};
+export type AiCompletion =
+  | {
+      completion: string;
+    }
+  | {
+      id: string;
+      text: string;
+    };
 ```

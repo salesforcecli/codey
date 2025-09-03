@@ -6,8 +6,8 @@ This document outlines how the `@gemini-cli/` package integrates with the Gemini
 
 The project is structured into two main packages:
 
--   `packages/cli`: Handles the user interface and command-line aspects of the tool.
--   `packages/core`: Contains the core logic for interacting with the Gemini API.
+- `packages/cli`: Handles the user interface and command-line aspects of the tool.
+- `packages/core`: Contains the core logic for interacting with the Gemini API.
 
 The separation of concerns makes it easier to modify the LLM provider without affecting the user-facing parts of the application.
 
@@ -19,10 +19,10 @@ The integration with the Gemini LLM is primarily handled through the `ContentGen
 
 The `ContentGenerator` interface, defined in `packages/core/src/core/contentGenerator.ts`, is the central abstraction for all LLM interactions. It defines the following methods:
 
--   `generateContent(request: GenerateContentParameters): Promise<GenerateContentResponse>`
--   `generateContentStream(request: GenerateContentParameters): Promise<AsyncGenerator<GenerateContentResponse>>`
--   `countTokens(request: CountTokensParameters): Promise<CountTokensResponse>`
--   `embedContent(request: EmbedContentParameters): Promise<EmbedContentResponse>`
+- `generateContent(request: GenerateContentParameters): Promise<GenerateContentResponse>`
+- `generateContentStream(request: GenerateContentParameters): Promise<AsyncGenerator<GenerateContentResponse>>`
+- `countTokens(request: CountTokensParameters): Promise<CountTokensResponse>`
+- `embedContent(request: EmbedContentParameters): Promise<EmbedContentResponse>`
 
 To replace Gemini with a new LLM provider, you must create a new class that implements this interface.
 
@@ -34,10 +34,10 @@ The `createContentGenerator` function, located in `packages/core/src/core/conten
 
 The `AuthType` enum, also in `packages/core/src/core/contentGenerator.ts`, determines which `ContentGenerator` implementation is used. The existing `AuthType` values are:
 
--   `LOGIN_WITH_GOOGLE`: Uses the `CodeAssistServer` for Google-internal users.
--   `USE_GEMINI`: Uses the `@google/genai` SDK directly with a Gemini API key.
--   `USE_VERTEX_AI`: Uses the `@google/genai` SDK with Vertex AI.
--   `CLOUD_SHELL`: Also uses the `CodeAssistServer`.
+- `LOGIN_WITH_GOOGLE`: Uses the `CodeAssistServer` for Google-internal users.
+- `USE_GEMINI`: Uses the `@google/genai` SDK directly with a Gemini API key.
+- `USE_VERTEX_AI`: Uses the `@google/genai` SDK with Vertex AI.
+- `CLOUD_SHELL`: Also uses the `CodeAssistServer`.
 
 ## How to Replace the LLM Provider
 
@@ -45,9 +45,9 @@ To replace the Gemini LLM with a different provider, follow these steps:
 
 1.  **Implement the `ContentGenerator` Interface**:
     Create a new class that implements the `ContentGenerator` interface. This class will be responsible for:
-    -   Connecting to the new LLM's API.
-    -   Converting the `@google/genai` request objects (`GenerateContentParameters`, `CountTokensParameters`, `EmbedContentParameters`) into the format expected by the new LLM.
-    -   Converting the new LLM's responses back into the format expected by the `@gemini-cli/` application (`GenerateContentResponse`, `CountTokensResponse`, `EmbedContentResponse`).
+    - Connecting to the new LLM's API.
+    - Converting the `@google/genai` request objects (`GenerateContentParameters`, `CountTokensParameters`, `EmbedContentParameters`) into the format expected by the new LLM.
+    - Converting the new LLM's responses back into the format expected by the `@gemini-cli/` application (`GenerateContentResponse`, `CountTokensResponse`, `EmbedContentResponse`).
 
 2.  **Add a New `AuthType`**:
     Add a new value to the `AuthType` enum in `packages/core/src/core/contentGenerator.ts` to represent the new LLM provider. For example:
@@ -85,4 +85,3 @@ To replace the Gemini LLM with a different provider, follow these steps:
     You will likely need to add new configuration options to `packages/cli/src/config/config.ts` to handle API keys and other settings for the new LLM. These settings would be used when creating your new `ContentGenerator`.
 
 By following these steps, you can replace the Gemini LLM with any other provider while minimizing changes to the existing codebase.
-

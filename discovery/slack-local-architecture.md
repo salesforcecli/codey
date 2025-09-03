@@ -46,22 +46,26 @@ By keeping `codey` execution local while routing commands through Slack, users g
    - If the app isn't available, ask your workspace admin to install it
 
 2. **Install the Local Agent**
+
    ```bash
    # Install the codey CLI tool
    npm install -g @saleforce/codey
    ```
 
 3. **Start the Local Agent**
+
    ```bash
    # Connect to the service
    codey daemon start
    ```
+
    This will:
    - Generate a unique agent token for your machine
    - Establish the connection between your Slack user and local agent
    - Start the agent in the background (optional)
 
 4. **Test the Integration**
+
    ```bash
    # In Slack, try:
    /codey status
