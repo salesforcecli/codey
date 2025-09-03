@@ -18,12 +18,10 @@ async function main(): Promise<void> {
   // Required for Socket Mode
   const botToken = requireEnv('SLACK_BOT_TOKEN');
   const appToken = requireEnv('SLACK_APP_TOKEN');
-  const alertsChannelId = requireEnv('SCALE_CENTER_ALERTS_CHANNEL_ID');
 
   console.log('✅ Environment variables loaded');
   console.log(`Bot token: ${botToken.substring(0, 12)}...`);
   console.log(`App token: ${appToken.substring(0, 12)}...`);
-  console.log(`Alerts channel ID: ${alertsChannelId}`);
 
   // Import Bolt lazily to avoid module resolution issues
   const slackBolt = await import('@slack/bolt');
@@ -61,7 +59,7 @@ async function main(): Promise<void> {
     if (command.text && command.text.trim()) {
       try {
         const posted = await client.chat.postMessage({
-          channel: alertsChannelId,
+          channel: command.channel_id,
           text: command.text.trim(),
           unfurl_links: true,
           unfurl_media: true,
@@ -84,7 +82,7 @@ _Source_: \`ProductController.cls\`
 _Details_: Average page load time has exceeded threshold.
 `;
       const posted = await client.chat.postMessage({
-        channel: alertsChannelId,
+        channel: command.channel_id,
         text: defaultMessage,
         unfurl_links: true,
         unfurl_media: true,
@@ -98,7 +96,9 @@ _Details_: Average page load time has exceeded threshold.
     }
   });
 
-  // Handle modal submission and post to alerts channel
+  // Handle modal submission and post to current channel
+  // Note: Modal submissions don't have direct access to the original channel,
+  // so this handler is kept for completeness but the slash command now posts directly
   app.view(VIEW_CALLBACK_ID, async ({ ack, view, client, logger }) => {
     await ack();
     try {
@@ -113,16 +113,13 @@ _Details_: Average page load time has exceeded threshold.
       const input = values[BLOCK_ID]?.[ACTION_ID]?.value ?? '';
       const text = input.trim() || 'Scale Center alert triggered.';
 
-      const posted = await client.chat.postMessage({
-        channel: alertsChannelId,
-        text,
-      });
+      // Since we can't determine the original channel from modal submission,
+      // we would need to implement channel tracking if modals are needed
       logger?.info?.(
-        { ts: (posted as { ts?: string }).ts },
-        'Alert message posted',
+        'Modal submitted, but posting directly from slash command is preferred',
       );
     } catch (err) {
-      console.error('❌ Failed to post alert', err);
+      console.error('❌ Failed to handle modal submission', err);
     }
   });
 

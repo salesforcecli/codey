@@ -28,6 +28,7 @@ import { MemoryTool, setGeminiMdFilename } from '../tools/memoryTool.js';
 import { WebSearchTool } from '../tools/web-search.js';
 import { GetScaleCenterStatusTool } from '../tools/scaleCenterStatus.js';
 import { CreateDevopsWorkItemTool } from '../tools/createDevopsWorkItem.js';
+import { SfDeployMetadataTool } from '../tools/sfDeployMetadata.js';
 import { RunApexGuruTool } from '../tools/runApexGuru.js';
 import {
   SlackCanvasAppendTool,
@@ -893,6 +894,7 @@ export class Config {
     registerCoreTool(WebSearchTool, this);
     registerCoreTool(GetScaleCenterStatusTool);
     registerCoreTool(CreateDevopsWorkItemTool);
+    registerCoreTool(SfDeployMetadataTool);
     registerCoreTool(RunApexGuruTool);
     registerCoreTool(SlackCanvasCreateTool, this);
     registerCoreTool(SlackCanvasAppendTool, this);
