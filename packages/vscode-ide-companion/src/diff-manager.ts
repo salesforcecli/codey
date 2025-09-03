@@ -142,7 +142,7 @@ export class DiffManager {
   /**
    * Closes an open diff view for a specific file.
    */
-  async closeDiff(filePath: string) {
+  async closeDiff(filePath: string, suppressNotification = false) {
     let uriToClose: vscode.Uri | undefined;
     for (const [uriString, diffInfo] of this.diffDocuments.entries()) {
       if (diffInfo.originalFilePath === filePath) {
@@ -155,16 +155,18 @@ export class DiffManager {
       const rightDoc = await vscode.workspace.openTextDocument(uriToClose);
       const modifiedContent = rightDoc.getText();
       await this.closeDiffEditor(uriToClose);
-      this.onDidChangeEmitter.fire(
-        IdeDiffClosedNotificationSchema.parse({
-          jsonrpc: '2.0',
-          method: 'ide/diffClosed',
-          params: {
-            filePath,
-            content: modifiedContent,
-          },
-        }),
-      );
+      if (!suppressNotification) {
+        this.onDidChangeEmitter.fire(
+          IdeDiffClosedNotificationSchema.parse({
+            jsonrpc: '2.0',
+            method: 'ide/diffClosed',
+            params: {
+              filePath,
+              content: modifiedContent,
+            },
+          }),
+        );
+      }
       return modifiedContent;
     }
     return;

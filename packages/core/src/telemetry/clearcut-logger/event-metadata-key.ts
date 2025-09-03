@@ -176,6 +176,9 @@ export enum EventMetadataKey {
   // Logs the Gemini CLI OS
   GEMINI_CLI_OS = 82,
 
+  // Logs active user settings
+  GEMINI_CLI_USER_SETTINGS = 84,
+
   // ==========================================================================
   // Loop Detected Event Keys
   // ===========================================================================

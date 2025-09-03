@@ -14,5 +14,6 @@
  * limitations under the License.
  */
 
-export * from './agent.js';
+export * from './agent/executor.js';
+export * from './http/app.js';
 export * from './types.js';

@@ -47,10 +47,10 @@ import type {
   Artifact,
 } from '@a2a-js/sdk';
 import { v4 as uuidv4 } from 'uuid';
-import { logger } from './logger.js';
+import { logger } from '../utils/logger.js';
 import * as fs from 'node:fs';
 
-import { CoderAgentEvent } from './types.js';
+import { CoderAgentEvent } from '../types.js';
 import type {
   CoderAgentMessage,
   StateChange,
@@ -59,7 +59,7 @@ import type {
   TaskMetadata,
   Thought,
   ThoughtSummary,
-} from './types.js';
+} from '../types.js';
 import type { PartUnion, Part as genAiPart } from '@google/genai';
 
 export class Task {
