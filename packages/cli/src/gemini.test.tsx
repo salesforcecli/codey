@@ -144,7 +144,7 @@ describe('gemini.tsx main function', () => {
       settings: {},
     };
     const workspaceSettingsFile: SettingsFile = {
-      path: '/workspace/.gemini/settings.json',
+      path: '/workspace/.codey/settings.json',
       settings: {},
     };
     const systemSettingsFile: SettingsFile = {

@@ -302,10 +302,10 @@ ${testRootDir}${path.sep}
     });
   });
 
-  describe('with geminiignore', () => {
-    it('should ignore geminiignore files by default', async () => {
+  describe('with codeyignore', () => {
+    it('should ignore codeyignore files by default', async () => {
       await fsPromises.writeFile(
-        nodePath.join(testRootDir, '.geminiignore'),
+        nodePath.join(testRootDir, '.codeyignore'),
         'ignored.txt\nnode_modules/\n.codey/\n!/.codey/config.yaml',
       );
       await createTestFile('file1.txt');
@@ -325,7 +325,7 @@ ${testRootDir}${path.sep}
 
     it('should not ignore files if respectGeminiIgnore is false', async () => {
       await fsPromises.writeFile(
-        nodePath.join(testRootDir, '.geminiignore'),
+        nodePath.join(testRootDir, '.codeyignore'),
         'ignored.txt\nnode_modules/\n.codey/\n!/.codey/config.yaml',
       );
       await createTestFile('file1.txt');

@@ -525,11 +525,11 @@ export const SETTINGS_SCHEMA = {
           },
           respectGeminiIgnore: {
             type: 'boolean',
-            label: 'Respect .geminiignore',
+            label: 'Respect .codeyignore',
             category: 'Context',
             requiresRestart: true,
             default: true,
-            description: 'Respect .geminiignore files when searching',
+            description: 'Respect .codeyignore files when searching',
             showInDialog: true,
           },
           enableRecursiveFileSearch: {

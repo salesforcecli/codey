@@ -16,6 +16,7 @@
 
 import { describe, it, expect } from 'vitest';
 import * as themeModule from './theme.js';
+import { salesforceDarkColors } from './salesforce-dark.js';
 import { themeManager } from './theme-manager.js';
 
 const { validateCustomTheme } = themeModule;
@@ -91,7 +92,6 @@ describe('themeManager.loadCustomThemes', () => {
   };
 
   it('should use values from DEFAULT_THEME when DiffAdded and DiffRemoved are not provided', () => {
-    const { darkTheme } = themeModule;
     const legacyTheme: Partial<CustomTheme> = { ...baseTheme };
     delete legacyTheme.DiffAdded;
     delete legacyTheme.DiffRemoved;
@@ -99,8 +99,8 @@ describe('themeManager.loadCustomThemes', () => {
     themeManager.loadCustomThemes({ 'Legacy Custom Theme': legacyTheme });
     const result = themeManager.getTheme('Legacy Custom Theme')!;
 
-    expect(result.colors.DiffAdded).toBe(darkTheme.DiffAdded);
-    expect(result.colors.DiffRemoved).toBe(darkTheme.DiffRemoved);
+    expect(result.colors.DiffAdded).toBe(salesforceDarkColors.DiffAdded);
+    expect(result.colors.DiffRemoved).toBe(salesforceDarkColors.DiffRemoved);
     expect(result.colors.AccentBlue).toBe(legacyTheme.AccentBlue);
     expect(result.name).toBe(legacyTheme.name);
   });

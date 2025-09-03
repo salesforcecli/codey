@@ -31,8 +31,8 @@ import { resolveEnvVarsInObject } from '../utils/envVarResolver.js';
 
 export const EXTENSIONS_DIRECTORY_NAME = path.join(GEMINI_DIR, 'extensions');
 
-export const EXTENSIONS_CONFIG_FILENAME = 'gemini-extension.json';
-export const INSTALL_METADATA_FILENAME = '.gemini-extension-install.json';
+export const EXTENSIONS_CONFIG_FILENAME = 'codey-extension.json';
+export const INSTALL_METADATA_FILENAME = '.codey-extension-install.json';
 
 export interface Extension {
   path: string;

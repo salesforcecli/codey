@@ -6,7 +6,11 @@
 .gemini/
 !gemini/config.yaml
 
+.codey/
+!codey/config.yaml
+
 # Note: .gemini-clipboard/ is NOT in gitignore so Gemini can access pasted images
+# Note: .codey-clipboard/ is NOT in gitignore so Codey can access pasted images
 
 # Dependency directory
 node_modules
@@ -40,7 +44,6 @@ packages/cli/src/generated/
 packages/core/src/generated/
 .integration-tests/
 packages/vscode-ide-companion/*.vsix
-.vercel
 
 # GHA credentials
 gha-creds-*.json

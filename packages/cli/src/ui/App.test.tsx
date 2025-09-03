@@ -338,7 +338,7 @@ describe('App UI', () => {
       settings: settings.user || {},
     };
     const workspaceSettingsFile: SettingsFile = {
-      path: '/workspace/.gemini/settings.json',
+      path: '/workspace/.codey/settings.json',
       settings: settings.workspace || {},
     };
     return new LoadedSettings(

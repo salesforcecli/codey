@@ -63,8 +63,8 @@ describe('FileDiscoveryService', () => {
       expect(service.shouldGitIgnoreFile('node_modules/foo.js')).toBe(false);
     });
 
-    it('should load .geminiignore patterns even when not in a git repo', async () => {
-      await createTestFile('.geminiignore', 'secrets.txt');
+    it('should load .codeyignore patterns even when not in a git repo', async () => {
+      await createTestFile('.codeyignore', 'secrets.txt');
       const service = new FileDiscoveryService(projectRoot);
 
       expect(service.shouldGeminiIgnoreFile('secrets.txt')).toBe(true);
@@ -76,10 +76,10 @@ describe('FileDiscoveryService', () => {
     beforeEach(async () => {
       await fs.mkdir(path.join(projectRoot, '.git'));
       await createTestFile('.gitignore', 'node_modules/\n.git/\ndist');
-      await createTestFile('.geminiignore', 'logs/');
+      await createTestFile('.codeyignore', 'logs/');
     });
 
-    it('should filter out git-ignored and gemini-ignored files by default', () => {
+    it('should filter out git-ignored and codey-ignored files by default', () => {
       const files = [
         'src/index.ts',
         'node_modules/package/index.js',
@@ -150,7 +150,7 @@ describe('FileDiscoveryService', () => {
     beforeEach(async () => {
       await fs.mkdir(path.join(projectRoot, '.git'));
       await createTestFile('.gitignore', 'node_modules/');
-      await createTestFile('.geminiignore', '*.log');
+      await createTestFile('.codeyignore', '*.log');
     });
 
     it('should return true for git-ignored files', () => {

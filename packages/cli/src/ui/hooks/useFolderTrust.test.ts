@@ -25,7 +25,7 @@ import * as process from 'node:process';
 
 import * as trustedFolders from '../../config/trustedFolders.js';
 
-vi.mock('process', () => ({
+vi.mock('node:process', () => ({
   cwd: vi.fn(),
   platform: 'linux',
 }));
