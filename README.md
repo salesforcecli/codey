@@ -1,17 +1,16 @@
-# Gemini CLI
+# Codey
 
-[![Gemini CLI CI](https://github.com/google-gemini/gemini-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/google-gemini/gemini-cli/actions/workflows/ci.yml)
+[![Codey CI](https://github.com/mdonnalley/gemini-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/mdonnalley/gemini-cli/actions/workflows/ci.yml)
 [![Version](https://img.shields.io/npm/v/@google/gemini-cli)](https://www.npmjs.com/package/@google/gemini-cli)
 [![License](https://img.shields.io/github/license/google-gemini/gemini-cli)](https://github.com/google-gemini/gemini-cli/blob/main/LICENSE)
 
-![Gemini CLI Screenshot](./docs/assets/gemini-screenshot.png)
+![Codey Screenshot](./docs/assets/codey.png)
 
-Gemini CLI is an open-source AI agent that brings the power of Gemini directly into your terminal. It provides lightweight access to Gemini, giving you the most direct path from your prompt to our model.
+Codey is an open-source AI agent that brings the power and trust of Salesforce's LLM Gateway directly into your terminal.
 
-## 🚀 Why Gemini CLI?
+## 🚀 Why Codey?
 
-- **🎯 Free tier**: 60 requests/min and 1,000 requests/day with personal Google account
-- **🧠 Powerful Gemini 2.5 Pro**: Access to 1M token context window
+- **🧠 Trusted Salesforce LLM Gateway**: Ensure your prompts are executed in a trusted environment.
 - **🔧 Built-in tools**: Google Search grounding, file operations, shell commands, web fetching
 - **🔌 Extensible**: MCP (Model Context Protocol) support for custom integrations
 - **💻 Terminal-first**: Designed for developers who live in the command line
@@ -25,19 +24,19 @@ Gemini CLI is an open-source AI agent that brings the power of Gemini directly i
 
 ```bash
 # Using npx (no installation required)
-npx https://github.com/google-gemini/gemini-cli
+npx https://github.com/salesforcecli/codey
 ```
 
 #### Install globally with npm
 
 ```bash
-npm install -g @google/gemini-cli
+npm install -g @salesforce/codey
 ```
 
 #### Install globally with Homebrew (macOS/Linux)
 
 ```bash
-brew install gemini-cli
+brew install codey
 ```
 
 #### System Requirements
@@ -54,7 +53,7 @@ See [Releases](./docs/releases.md) for more details.
 New preview releases will be published each week at UTC 2359 on Tuesdays. These releases will not have been fully vetted and may contain regressions or other outstanding issues. Please help us test and install with `preview` tag.
 
 ```bash
-npm install -g @google/gemini-cli@preview
+npm install -g @salesforce/codey@preview
 ```
 
 ### Stable
@@ -62,7 +61,7 @@ npm install -g @google/gemini-cli@preview
 - New stable releases will be published each week at UTC 2000 on Tuesdays, this will be the full promotion of last week's `preview` release + any bug fixes and validations. Use `latest` tag.
 
 ```bash
-npm install -g @google/gemini-cli@latest
+npm install -g @salesforce/codey@latest
 ```
 
 ### Nightly
@@ -70,7 +69,7 @@ npm install -g @google/gemini-cli@latest
 - New releases will be published each week at UTC 0000 each day, This will be all changes from the main branch as represented at time of release. It should be assumed there are pending validations and issues. Use `nightly` tag.
 
 ```bash
-npm install -g @google/gemini-cli@nightly
+npm install -g @salesforce/codey@nightly
 ```
 
 ## 📋 Key Features
@@ -101,70 +100,6 @@ Integrate Gemini CLI directly into your GitHub workflows with [**Gemini CLI GitH
 - **Issue Triage**: Automated labeling and prioritization of GitHub issues based on content analysis
 - **On-demand Assistance**: Mention `@gemini-cli` in issues and pull requests for help with debugging, explanations, or task delegation
 - **Custom Workflows**: Build automated, scheduled and on-demand workflows tailored to your team's needs
-
-## 🔐 Authentication Options
-
-Choose the authentication method that best fits your needs:
-
-### Option 1: OAuth login (Using your Google Account)
-
-**✨ Best for:** Individual developers as well as anyone who has a Gemini Code Assist License. (see [quota limits and terms of service](https://cloud.google.com/gemini/docs/quotas) for details)
-
-**Benefits:**
-
-- **Free tier**: 60 requests/min and 1,000 requests/day
-- **Gemini 2.5 Pro** with 1M token context window
-- **No API key management** - just sign in with your Google account
-- **Automatic updates** to latest models
-
-#### Start Gemini CLI, then choose OAuth and follow the browser authentication flow when prompted
-
-```bash
-gemini
-```
-
-#### If you are using a paid Code Assist License from your organization, remember to set the Google Cloud Project
-
-```bash
-# Set your Google Cloud Project
-export GOOGLE_CLOUD_PROJECT="YOUR_PROJECT_NAME"
-gemini
-```
-
-### Option 2: Gemini API Key
-
-**✨ Best for:** Developers who need specific model control or paid tier access
-
-**Benefits:**
-
-- **Free tier**: 100 requests/day with Gemini 2.5 Pro
-- **Model selection**: Choose specific Gemini models
-- **Usage-based billing**: Upgrade for higher limits when needed
-
-```bash
-# Get your key from https://aistudio.google.com/apikey
-export GEMINI_API_KEY="YOUR_API_KEY"
-gemini
-```
-
-### Option 3: Vertex AI
-
-**✨ Best for:** Enterprise teams and production workloads
-
-**Benefits:**
-
-- **Enterprise features**: Advanced security and compliance
-- **Scalable**: Higher rate limits with billing account
-- **Integration**: Works with existing Google Cloud infrastructure
-
-```bash
-# Get your key from Google Cloud Console
-export GOOGLE_API_KEY="YOUR_API_KEY"
-export GOOGLE_GENAI_USE_VERTEXAI=true
-gemini
-```
-
-For Google Workspace accounts and other authentication methods, see the [authentication guide](./docs/cli/authentication.md).
 
 ## 🚀 Getting Started
 
@@ -252,7 +187,7 @@ gemini
 
 - [**Settings Reference**](./docs/cli/configuration.md) - All configuration options
 - [**Theme Customization**](./docs/cli/themes.md) - Visual customization
-- [**.gemini Directory**](./docs/gemini-ignore.md) - Project-specific settings
+- [**.codey Directory**](./docs/gemini-ignore.md) - Project-specific settings
 - [**Environment Variables**](./docs/cli/configuration.md#environment-variables)
 
 ### Troubleshooting & Support
@@ -263,7 +198,7 @@ gemini
 
 ### Using MCP Servers
 
-Configure MCP servers in `~/.gemini/settings.json` to extend Gemini CLI with custom tools:
+Configure MCP servers in `~/.codey/settings.json` to extend Codey with custom tools:
 
 ```text
 > @github List my open pull requests
@@ -275,7 +210,7 @@ See the [MCP Server Integration guide](./docs/tools/mcp-server.md) for setup ins
 
 ## 🤝 Contributing
 
-We welcome contributions! Gemini CLI is fully open source (Apache 2.0), and we encourage the community to:
+We welcome contributions! Codey is fully open source (Apache 2.0), and we encourage the community to:
 
 - Report bugs and suggest features
 - Improve documentation
