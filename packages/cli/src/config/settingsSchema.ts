@@ -209,7 +209,7 @@ export const SETTINGS_SCHEMA = {
         requiresRestart: false,
         default: false,
         description:
-          'Hide the context summary (GEMINI.md, MCP servers) above the input.',
+          'Hide the context summary (CODEY.md, MCP servers) above the input.',
         showInDialog: true,
       },
       footer: {
