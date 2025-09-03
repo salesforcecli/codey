@@ -4,19 +4,19 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export class HostedError extends Error {
+export class ClientError extends Error {
   status: number;
   body?: unknown;
 
   constructor(message: string, status: number, body?: unknown) {
     super(message);
-    this.name = 'HostedError';
+    this.name = 'ClientError';
     this.status = status;
     this.body = body;
   }
 }
 
-export class HostedClient {
+export class Client {
   private readonly baseUrl: string;
   private readonly token: string;
 
@@ -42,7 +42,7 @@ export class HostedClient {
 
     const data = await this.safeJson(res);
     if (!res.ok) {
-      throw new HostedError(
+      throw new ClientError(
         `Failed to create session (status ${res.status})`,
         res.status,
         data,
@@ -67,7 +67,7 @@ export class HostedClient {
 
     const data = await this.safeJson(res);
     if (!res.ok) {
-      throw new HostedError(
+      throw new ClientError(
         `Failed to send message (status ${res.status})`,
         res.status,
         data,
@@ -83,16 +83,16 @@ export class HostedClient {
   ): AsyncGenerator<unknown, void, unknown> {
     const url = `${this.baseUrl}/api/sessions/${encodeURIComponent(
       sessionId,
-    )}/messages?stream=1`;
+    )}/messages/stream`;
     const res = await fetch(url, {
       method: 'POST',
-      headers: { ...this.headers(), Accept: 'application/x-ndjson' },
+      headers: this.headers(),
       body: JSON.stringify({ workspaceRoot, message }),
     });
 
     if (!res.ok || !res.body) {
       const data = await this.safeJson(res);
-      throw new HostedError(
+      throw new ClientError(
         `Failed to stream message (status ${res.status})`,
         res.status,
         data,
@@ -139,7 +139,7 @@ export class HostedClient {
 
     if (!res.ok) {
       const data = await this.safeJson(res);
-      throw new HostedError(
+      throw new ClientError(
         `Failed to send thread history message (status ${res.status})`,
         res.status,
         data,

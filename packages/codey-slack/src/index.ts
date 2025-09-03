@@ -97,7 +97,7 @@ interface SlackClient {
   };
 }
 
-interface HostedClient {
+interface Client {
   createSession: (workspaceRoot: string) => Promise<{ sessionId: string }>;
   sendMessage: (
     sessionId: string,
@@ -196,7 +196,7 @@ function getRandomLoadingPhrase(): string {
 // Session management functions
 class SessionManager {
   constructor(
-    private hosted: HostedClient,
+    private hosted: Client,
     private sessionStore: SessionStore,
     private defaultWorkspaceRoot: string,
   ) {}
@@ -1291,7 +1291,7 @@ class ErrorHandler {
     this.client = client;
   }
 
-  async handleHostedError(
+  async handleClientError(
     error: { status: number },
     channel: string,
     timestamp: string,
@@ -1396,12 +1396,12 @@ function createAppMentionHandler(deps: {
   sessionManager: SessionManager;
   messageStreamer: MessageStreamer;
   errorHandler: ErrorHandler;
-  hosted: HostedClient;
+  hosted: Client;
   sessionStore: SessionStore;
   threadHistory: ThreadHistory;
   defaultWorkspaceRoot: string;
   formatSlackMessage: FormatSlackMessage;
-  HostedError: new (...args: unknown[]) => { status: number };
+  ClientError: new (...args: unknown[]) => { status: number };
 }) {
   return async ({
     event,
@@ -1622,7 +1622,7 @@ async function updateThreadHistory(
 
 async function handleMessageStreaming(
   deps: {
-    hosted: HostedClient;
+    hosted: Client;
     sessionStore: SessionStore;
     threadHistory: ThreadHistory;
     messageStreamer: MessageStreamer;
@@ -1799,9 +1799,9 @@ async function handleStreamingError(
     threadHistory: ThreadHistory;
     messageStreamer: MessageStreamer;
     errorHandler: ErrorHandler;
-    hosted: HostedClient;
+    hosted: Client;
     defaultWorkspaceRoot: string;
-    HostedError: new (...args: unknown[]) => { status: number };
+    ClientError: new (...args: unknown[]) => { status: number };
   },
   err: unknown,
   params: {
@@ -1817,7 +1817,7 @@ async function handleStreamingError(
     channelInfo?: { id: string; name: string };
   },
 ): Promise<void> {
-  if (err instanceof deps.HostedError && err.status === 404) {
+  if (err instanceof deps.ClientError && err.status === 404) {
     // Recreate session and retry
     const mapping = deps.sessionStore.get(params.conversationKey);
     if (!mapping) {
@@ -1925,9 +1925,9 @@ async function handleStreamingError(
     return;
   }
 
-  if (err instanceof deps.HostedError && err.status === 401) {
+  if (err instanceof deps.ClientError && err.status === 401) {
     params.phraseCycler?.stop();
-    await deps.errorHandler.handleHostedError(
+    await deps.errorHandler.handleClientError(
       err,
       params.channel,
       params.timestamp,
@@ -1980,11 +1980,11 @@ async function main(): Promise<void> {
   });
 
   // Minimal hosted integration for POC
-  const { HostedClient, HostedError } = await import('./hosted-client');
+  const { Client, ClientError } = await import('./client');
   const { formatSlackMessage } = await import('./markdown-converter');
   const hostedBaseUrl = requireEnv('CODEY_HOSTED_BASE_URL');
   const hostedToken = requireEnv('CODEY_HOSTED_TOKEN');
-  const hosted = new HostedClient(hostedBaseUrl, hostedToken);
+  const hosted = new Client(hostedBaseUrl, hostedToken);
 
   // Default workspace root required for POC
   const defaultWorkspaceRoot = requireEnv('CODEY_DEFAULT_WORKSPACE_ROOT');
@@ -1996,7 +1996,7 @@ async function main(): Promise<void> {
 
   // Initialize service classes
   const sessionManager = new SessionManager(
-    hosted as HostedClient,
+    hosted as Client,
     sessionStore as SessionStore,
     defaultWorkspaceRoot,
   );
@@ -2014,12 +2014,12 @@ async function main(): Promise<void> {
     sessionManager,
     messageStreamer,
     errorHandler,
-    hosted: hosted as HostedClient,
+    hosted: hosted as Client,
     sessionStore: sessionStore as SessionStore,
     threadHistory: threadHistory as ThreadHistory,
     defaultWorkspaceRoot,
     formatSlackMessage: formatSlackMessage as FormatSlackMessage,
-    HostedError: HostedError as new (...args: unknown[]) => { status: number },
+    ClientError: ClientError as new (...args: unknown[]) => { status: number },
   });
 
   // Register the event handler
