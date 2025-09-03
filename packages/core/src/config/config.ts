@@ -902,12 +902,14 @@ export class Config {
     registerCoreTool(ShellTool, this);
     registerCoreTool(MemoryTool);
     registerCoreTool(WebSearchTool, this);
-    registerCoreTool(GetScaleCenterStatusTool);
-    registerCoreTool(CreateDevopsWorkItemTool);
-    registerCoreTool(SfDeployMetadataTool);
-    registerCoreTool(RunApexGuruTool);
-    registerCoreTool(SlackCanvasCreateTool, this);
-    registerCoreTool(SlackCanvasAppendTool, this);
+    if (process.env['CODEY_ENABLE_SLACK_DEMO_TOOLS']) {
+      registerCoreTool(GetScaleCenterStatusTool);
+      registerCoreTool(CreateDevopsWorkItemTool);
+      registerCoreTool(SfDeployMetadataTool);
+      registerCoreTool(RunApexGuruTool);
+      registerCoreTool(SlackCanvasCreateTool, this);
+      registerCoreTool(SlackCanvasAppendTool, this);
+    }
 
     await registry.discoverAllTools();
     return registry;
