@@ -61,8 +61,6 @@ interface MessageStreamState {
   toolArgsMap: Map<string, Record<string, unknown>>; // callId -> original args
   toolBlocks: Map<string, ToolBlockInfo>; // callId -> tool block info for atomic updates
   lastBuiltText: string;
-  messageTimestamps: string[]; // Track all message timestamps for multi-message responses
-  currentMessageIndex: number; // Index of the current message being updated (for future use)
   pendingUpdates: Map<string, NodeJS.Timeout>; // callId -> timeout for debouncing
   lastContentHash: string; // Hash of last sent content to detect meaningful changes
   batchUpdateTimeout?: NodeJS.Timeout; // Timeout for batching updates
@@ -172,10 +170,6 @@ const CONFIG = {
   minUpdateIntervalMs: 800, // Increased from 300ms to reduce choppiness
   phraseCycleIntervalMs: 15000, // Increased from 10s to 15s for less frequent phrase changes
   threadContextLimit: 50,
-  slackMessageLimit: 40000, // Slack's actual character limit
-  slackMessageSplitThreshold: 36000, // More conservative split to account for loading phrases, formatting, and tool blocks
-  toolBlockMarkerSafetyBuffer: 500, // Extra buffer around tool blocks to prevent splitting
-  maxMessagesPerResponse: 10, // Limit to prevent spam
   toolBlockTimeoutMs: 30000, // Timeout for tool block updates
   contentChangeThreshold: 50, // Minimum characters changed before updating
   toolStatusDebounceMs: 1000, // Debounce rapid tool status changes
@@ -350,86 +344,6 @@ class MessageStreamer {
   }
 
   /**
-   * Calculates safe split points that don't break tool blocks
-   */
-  private findSafeSplitPoints(text: string, maxLength: number): number[] {
-    const toolBlocks = this.extractToolBlocks(text);
-    const splitPoints: number[] = [];
-    const lines = text.split('\n');
-    let currentLength = 0;
-    let currentLineIndex = 0;
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      const potentialLength = currentLength + line.length + 1; // +1 for newline
-
-      // Check if this line would exceed the limit
-      if (potentialLength > maxLength && currentLength > 0) {
-        // Check if we're inside a tool block
-        const lineStart = text.indexOf(lines[currentLineIndex]);
-        const isInsideToolBlock = toolBlocks.some(
-          (block) =>
-            lineStart >= block.startIndex && lineStart < block.endIndex,
-        );
-
-        if (!isInsideToolBlock) {
-          // Safe to split here
-          splitPoints.push(currentLength);
-          currentLength = line.length + 1;
-          currentLineIndex = i;
-        } else {
-          // Find the end of the tool block and split after it
-          const containingBlock = toolBlocks.find(
-            (block) =>
-              lineStart >= block.startIndex && lineStart < block.endIndex,
-          );
-          if (containingBlock) {
-            // Skip to after the tool block
-            const blockEndLine =
-              text.substring(0, containingBlock.endIndex).split('\n').length -
-              1;
-            if (blockEndLine > i) {
-              i = blockEndLine;
-              currentLength = containingBlock.endIndex;
-              currentLineIndex = i + 1;
-              splitPoints.push(currentLength);
-            }
-          }
-        }
-      } else {
-        currentLength = potentialLength;
-      }
-    }
-
-    return splitPoints;
-  }
-
-  /**
-   * Formats tool parameters for display, truncating values if needed
-   */
-  private formatToolParams(args: Record<string, unknown> | undefined): string {
-    if (!args || Object.keys(args).length === 0) {
-      return '';
-    }
-
-    const paramLines = Object.entries(args).map(([key, value]) => {
-      let valueStr = '';
-      if (typeof value === 'string') {
-        valueStr = value.length > 100 ? `${value.substring(0, 100)}...` : value;
-      } else if (value !== null && value !== undefined) {
-        const jsonStr = JSON.stringify(value);
-        valueStr =
-          jsonStr.length > 100 ? `${jsonStr.substring(0, 100)}...` : jsonStr;
-      } else {
-        valueStr = String(value);
-      }
-      return `  - ${key}: ${valueStr}`;
-    });
-
-    return `\nparams:\n${paramLines.join('\n')}`;
-  }
-
-  /**
    * Creates a formatted tool message with Block Kit and interactive button:
    * Uses Block Kit blocks with a "View Parameters" button that opens a modal
    */
@@ -504,204 +418,6 @@ TOOL_ERROR:${errorMessage}`;
       ts: messageTs,
       ...updatePayload,
     });
-  }
-
-  async createNewMessage(
-    channel: string,
-    threadTs: string,
-    text: string,
-    say: (message: {
-      thread_ts: string;
-      text: string;
-    }) => Promise<{ ts?: string }>,
-    loadingPhrase?: string,
-  ): Promise<string> {
-    // Format loading phrase with emoji if provided
-    const formattedLoadingPhrase = loadingPhrase
-      ? `:${EMOJIS.loading}: ${loadingPhrase}`
-      : undefined;
-
-    // Use the enhanced formatSlackMessage for consistent formatting
-    const formattedMessage = this.formatSlackMessage(
-      text,
-      true,
-      formattedLoadingPhrase,
-    );
-    const messagePayload =
-      typeof formattedMessage === 'string'
-        ? { thread_ts: threadTs, text: formattedMessage }
-        : { thread_ts: threadTs, ...formattedMessage };
-
-    const result = await say(
-      messagePayload as unknown as {
-        thread_ts: string;
-        text: string;
-      },
-    );
-
-    if (!result.ts) {
-      throw new Error('Failed to create new message - no timestamp returned');
-    }
-
-    return result.ts;
-  }
-
-  /**
-   * Splits long text into multiple messages to avoid Slack's 40k character limit.
-   * Respects tool block boundaries and attempts to split at safe points.
-   */
-  splitTextForSlack(text: string): string[] {
-    const fullText = text.trim();
-
-    if (fullText.length <= CONFIG.slackMessageSplitThreshold) {
-      return [fullText];
-    }
-
-    try {
-      // Use safe splitting that respects tool block boundaries
-      const splitPoints = this.findSafeSplitPoints(
-        fullText,
-        CONFIG.slackMessageSplitThreshold,
-      );
-
-      if (splitPoints.length === 0) {
-        // Fallback to original logic if no safe split points found
-        return this.fallbackSplit(fullText);
-      }
-
-      const messages: string[] = [];
-      let lastIndex = 0;
-
-      for (const splitPoint of splitPoints) {
-        const chunk = fullText.substring(lastIndex, splitPoint).trim();
-        if (chunk) {
-          messages.push(chunk);
-        }
-        lastIndex = splitPoint;
-      }
-
-      // Add remaining text
-      if (lastIndex < fullText.length) {
-        const remaining = fullText.substring(lastIndex).trim();
-        if (remaining) {
-          if (remaining.length > CONFIG.slackMessageLimit) {
-            // Final safety truncation
-            const truncated = `${remaining.substring(0, CONFIG.slackMessageLimit - 150)}...\n\n_[Message truncated due to length]_`;
-            messages.push(truncated);
-          } else {
-            messages.push(remaining);
-          }
-        }
-      }
-
-      return messages.length > 0
-        ? messages
-        : [fullText.substring(0, CONFIG.slackMessageLimit - 100)];
-    } catch (error) {
-      console.warn(
-        'Error in safe text splitting, falling back to simple split:',
-        error,
-      );
-      return this.fallbackSplit(fullText);
-    }
-  }
-
-  /**
-   * Fallback splitting method when safe splitting fails
-   */
-  private fallbackSplit(text: string): string[] {
-    const messages: string[] = [];
-    let currentMessage = '';
-    const lines = text.split('\n');
-
-    for (const line of lines) {
-      const potentialMessage = currentMessage
-        ? `${currentMessage}\n${line}`
-        : line;
-
-      // Check if adding this line would exceed the threshold
-      if (potentialMessage.length > CONFIG.slackMessageSplitThreshold) {
-        if (currentMessage) {
-          // Save current message and start a new one
-          messages.push(currentMessage.trim());
-          currentMessage = line;
-        } else {
-          // Single line is too long, we need to split it
-          const chunks = this.splitLongLine(
-            line,
-            CONFIG.slackMessageSplitThreshold,
-          );
-          messages.push(...chunks.slice(0, -1));
-          currentMessage = chunks[chunks.length - 1];
-        }
-      } else {
-        currentMessage = potentialMessage;
-      }
-    }
-
-    if (currentMessage.trim()) {
-      // Final safety check - if the message is too long, truncate it
-      if (currentMessage.length > CONFIG.slackMessageLimit) {
-        const truncatedMessage =
-          `${currentMessage.substring(0, CONFIG.slackMessageLimit - 100)}...\n\n_[Message truncated]_`.trim();
-        messages.push(truncatedMessage);
-      } else {
-        messages.push(currentMessage.trim());
-      }
-    }
-
-    return messages.length > 0 ? messages : [''];
-  }
-
-  private splitLongLine(line: string, maxLength: number): string[] {
-    if (line.length <= maxLength) {
-      return [line];
-    }
-
-    const chunks: string[] = [];
-    let remaining = line;
-
-    while (remaining.length > maxLength) {
-      // Try to split at word boundaries
-      let splitIndex = maxLength;
-      const lastSpace = remaining.lastIndexOf(' ', maxLength);
-      if (lastSpace > maxLength * 0.7) {
-        // Don't split too early
-        splitIndex = lastSpace;
-      }
-
-      chunks.push(remaining.substring(0, splitIndex));
-      remaining = remaining.substring(splitIndex).trim();
-    }
-
-    if (remaining) {
-      chunks.push(remaining);
-    }
-
-    return chunks;
-  }
-
-  /**
-   * Debounces rapid tool status updates to reduce choppiness
-   */
-  private debounceToolUpdate(
-    state: MessageStreamState,
-    callId: string,
-    updateFn: () => void,
-  ): void {
-    // Clear existing timeout for this tool
-    const existingTimeout = state.pendingUpdates.get(callId);
-    if (existingTimeout) {
-      clearTimeout(existingTimeout);
-    }
-
-    // Set new timeout
-    const timeout = setTimeout(() => {
-      updateFn();
-      state.pendingUpdates.delete(callId);
-    }, CONFIG.toolStatusDebounceMs);
-
-    state.pendingUpdates.set(callId, timeout);
   }
 
   /**
@@ -1055,7 +771,6 @@ TOOL_ERROR:${errorMessage}`;
       }
 
       // Reset other state that's no longer needed
-      streamState.currentMessageIndex = 0;
       streamState.isUpdating = false;
       streamState.lastContentHash = '';
       streamState.contentBuffer = '';
@@ -1129,166 +844,6 @@ TOOL_ERROR:${errorMessage}`;
 
     // Tools are now displayed inline, so just return the accumulated content
     return state.accumulated.trim();
-  }
-
-  /**
-   * Comprehensive error handling for multi-message scenarios
-   */
-  async handleLongResponse(
-    content: string,
-    channel: string,
-    state: MessageStreamState,
-    threadTs: string,
-    loadingPhrase?: string,
-    say?: (message: {
-      thread_ts: string;
-      text: string;
-    }) => Promise<{ ts?: string }>,
-  ): Promise<void> {
-    try {
-      // Attempt multi-message approach
-      await this.updateMultipleMessages(
-        channel,
-        state,
-        threadTs,
-        loadingPhrase,
-        say,
-      );
-    } catch (error) {
-      console.error(
-        'Multi-message update failed, falling back to truncation:',
-        error,
-      );
-      // Graceful fallback with user notification
-      await this.fallbackToTruncation(content, channel, state, error as Error);
-    }
-  }
-
-  /**
-   * Fallback method when multi-message updates fail
-   */
-  private async fallbackToTruncation(
-    content: string,
-    channel: string,
-    state: MessageStreamState,
-    originalError: Error,
-  ): Promise<void> {
-    try {
-      const truncatedContent =
-        content.length > CONFIG.slackMessageSplitThreshold
-          ? `${content.substring(0, CONFIG.slackMessageSplitThreshold - 200)}\n\n_[Response truncated due to technical limitations. Original error: ${originalError.message}. Please ask for continuation if needed.]_`
-          : content;
-
-      if (state.messageTimestamps.length > 0) {
-        await this.updateSlackMessage(
-          channel,
-          state.messageTimestamps[0],
-          truncatedContent,
-        );
-      }
-    } catch (fallbackError) {
-      console.error('Even fallback truncation failed:', fallbackError);
-      // Last resort: try to update with minimal content
-      if (state.messageTimestamps.length > 0) {
-        try {
-          await this.updateSlackMessage(
-            channel,
-            state.messageTimestamps[0],
-            '_[Error displaying response. Please try again.]_',
-          );
-        } catch {
-          // If even this fails, we can't do much more
-          console.error('Complete failure to update Slack message');
-        }
-      }
-    }
-  }
-
-  /**
-   * Updates multiple Slack messages when content is too long for a single message.
-   * Creates new messages as needed and ensures loading phrases only appear on the newest message.
-   */
-  async updateMultipleMessages(
-    channel: string,
-    state: MessageStreamState,
-    threadTs: string,
-    loadingPhrase?: string,
-    say?: (message: {
-      thread_ts: string;
-      text: string;
-    }) => Promise<{ ts?: string }>,
-  ): Promise<void> {
-    try {
-      const messageParts = this.splitTextForSlack(state.accumulated);
-
-      // Limit the number of messages to prevent spam (Slack has rate limits)
-      const maxMessages = CONFIG.maxMessagesPerResponse;
-      const limitedMessageParts = messageParts.slice(0, maxMessages);
-
-      if (messageParts.length > maxMessages) {
-        // Add a note to the last message that content was truncated
-        const lastIndex = limitedMessageParts.length - 1;
-        limitedMessageParts[lastIndex] +=
-          `\n\n_[Response split into ${messageParts.length} parts, showing first ${maxMessages}. Ask for continuation if needed.]_`;
-      }
-
-      // Ensure we have enough message timestamps
-      while (state.messageTimestamps.length < limitedMessageParts.length) {
-        if (!say) {
-          throw new Error('Cannot create new messages without say function');
-        }
-
-        const newTs = await this.createNewMessage(
-          channel,
-          threadTs,
-          '',
-          say,
-          undefined,
-        );
-        state.messageTimestamps.push(newTs);
-      }
-
-      // Update all messages with better error handling
-      const updatePromises = limitedMessageParts.map(async (messageText, i) => {
-        const isLastMessage = i === limitedMessageParts.length - 1;
-        const shouldShowLoading = isLastMessage && loadingPhrase;
-
-        // Check message length before adding loading phrase
-        // Since loading phrase is now in a separate section, we don't need to account for it in length
-        if (messageText.length > CONFIG.slackMessageLimit - 200) {
-          // Leave buffer for loading section
-          console.warn(
-            `Message ${i} too long (${messageText.length} chars), truncating`,
-          );
-          const truncated =
-            messageText.substring(0, CONFIG.slackMessageLimit - 300) +
-            '\n\n_[Message truncated due to length]_';
-
-          return this.updateSlackMessage(
-            channel,
-            state.messageTimestamps[i],
-            truncated,
-            shouldShowLoading ? loadingPhrase : undefined,
-          );
-        } else {
-          return this.updateSlackMessage(
-            channel,
-            state.messageTimestamps[i],
-            messageText,
-            shouldShowLoading ? loadingPhrase : undefined,
-          );
-        }
-      });
-
-      // Wait for all updates to complete
-      await Promise.all(updatePromises);
-
-      // Update current message index
-      state.currentMessageIndex = limitedMessageParts.length - 1;
-    } catch (error) {
-      console.error('Error in updateMultipleMessages:', error);
-      throw error; // Re-throw to trigger fallback handling
-    }
   }
 }
 
@@ -1484,27 +1039,12 @@ function createAppMentionHandler(deps: {
               const shouldUpdateLoadingPhrase = Math.random() < 0.4; // 40% chance
 
               if (shouldUpdateLoadingPhrase) {
-                const messageParts = deps.messageStreamer.splitTextForSlack(
+                await deps.messageStreamer.updateSlackMessage(
+                  channel,
+                  loadingMsgTs,
                   state.lastBuiltText,
+                  currentLoadingPhrase,
                 );
-                if (messageParts.length === 1) {
-                  // Single message, use the original method
-                  await deps.messageStreamer.updateSlackMessage(
-                    channel,
-                    loadingMsgTs,
-                    state.lastBuiltText,
-                    currentLoadingPhrase,
-                  );
-                } else {
-                  // For multi-message responses, only update the loading phrase occasionally
-                  // to avoid too much visual churn
-                  await deps.messageStreamer.updateSlackMessage(
-                    channel,
-                    loadingMsgTs,
-                    messageParts[0],
-                    undefined,
-                  );
-                }
               }
             }
           } catch (err) {
@@ -1681,8 +1221,6 @@ async function handleMessageStreaming(
     toolArgsMap: new Map(),
     toolBlocks: new Map(), // Add the new toolBlocks map
     lastBuiltText: '',
-    messageTimestamps: [params.loadingMsgTs], // Start with the initial loading message
-    currentMessageIndex: 0,
     pendingUpdates: new Map(), // For debouncing tool updates
     lastContentHash: '', // For detecting significant changes
     isUpdating: false, // Prevent concurrent updates
@@ -1728,24 +1266,14 @@ async function handleMessageStreaming(
 
       const updateFn = async () => {
         try {
-          await deps.messageStreamer.updateMultipleMessages(
+          await deps.messageStreamer.updateSlackMessage(
             params.channel,
-            streamState,
-            params.threadTs,
+            params.loadingMsgTs,
+            displayText,
             loadingPhrase,
-            params.say,
           );
         } catch (error) {
           console.error('Error during message update:', error);
-          // Use comprehensive error handling
-          await deps.messageStreamer.handleLongResponse(
-            streamState.accumulated,
-            params.channel,
-            streamState,
-            params.threadTs,
-            loadingPhrase,
-            params.say,
-          );
         }
       };
 
@@ -1779,12 +1307,11 @@ async function handleMessageStreaming(
     }
     streamState.pendingUpdates.clear();
 
-    await deps.messageStreamer.updateMultipleMessages(
+    await deps.messageStreamer.updateSlackMessage(
       params.channel,
-      streamState,
-      params.threadTs,
+      params.loadingMsgTs,
+      streamState.accumulated,
       undefined, // No loading phrase for final message
-      params.say,
     );
   } finally {
     // Always clean up resources, even if final update fails
@@ -1860,68 +1387,18 @@ async function handleStreamingError(
 
     params.phraseCycler?.stop();
 
-    // Handle potentially long responses with improved error handling
+    // Update message with the response
     try {
-      const messageParts = deps.messageStreamer.splitTextForSlack(
+      await deps.messageStreamer.updateSlackMessage(
+        params.channel,
+        params.loadingMsgTs,
         result.response,
       );
-
-      if (messageParts.length === 1) {
-        // Single message, use the original method
-        await deps.messageStreamer.updateSlackMessage(
-          params.channel,
-          params.loadingMsgTs,
-          result.response,
-        );
-      } else {
-        // Create a temporary state for multi-message handling
-        const tempState: MessageStreamState = {
-          accumulated: result.response,
-          lastUpdate: Date.now(),
-          toolStatusLines: [],
-          toolCallMap: new Map(),
-          toolLineMap: new Map(),
-          toolArgsMap: new Map(),
-          toolBlocks: new Map(),
-          lastBuiltText: result.response,
-          messageTimestamps: [params.loadingMsgTs],
-          currentMessageIndex: 0,
-          pendingUpdates: new Map(),
-          lastContentHash: '',
-          isUpdating: false,
-          contentBuffer: '',
-          lastContentUpdate: Date.now(),
-        };
-
-        // Use comprehensive error handling for long responses
-        await deps.messageStreamer.handleLongResponse(
-          result.response,
-          params.channel,
-          tempState,
-          params.loadingMsgTs, // Use loadingMsgTs as threadTs for error recovery
-          undefined, // No loading phrase for error recovery
-        );
-      }
     } catch (updateError) {
       console.error(
         'Failed to update message during error recovery:',
         updateError,
       );
-      // Last resort: simple truncation
-      const truncatedResponse =
-        result.response.length > CONFIG.slackMessageSplitThreshold
-          ? `${result.response.substring(0, CONFIG.slackMessageSplitThreshold - 200)}\n\n_[Response truncated due to technical limitations. Please ask for continuation if needed.]_`
-          : result.response;
-
-      try {
-        await deps.messageStreamer.updateSlackMessage(
-          params.channel,
-          params.loadingMsgTs,
-          truncatedResponse,
-        );
-      } catch (finalError) {
-        console.error('Complete failure to update message:', finalError);
-      }
     }
 
     deps.sessionStore.addMessage(params.conversationKey, {
