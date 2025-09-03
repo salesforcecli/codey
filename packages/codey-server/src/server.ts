@@ -12,7 +12,12 @@ const app = new Hono();
 app.use('*', async (c: Context, next: () => Promise<void>) => {
   const started = Date.now();
   const method = c.req.method;
-  const path = new URL(c.req.url).pathname;
+  let path: string;
+  try {
+    path = new URL(c.req.url, 'http://localhost').pathname;
+  } catch {
+    path = c.req.path || '/';
+  }
   const requestId =
     c.req.header('x-request-id') ||
     `req_${Math.random().toString(36).slice(2, 11)}`;
@@ -26,11 +31,13 @@ app.use('*', async (c: Context, next: () => Promise<void>) => {
   } catch (err) {
     const duration = Date.now() - started;
     log.error({ requestId, method, path, duration, err }, 'Unhandled error');
-    return c.json({ error: 'Internal server error' }, 500);
+    // Ensure error is propagated to the error boundary
+    throw err;
   }
 
   const duration = Date.now() - started;
-  const statusCode = c.res.status;
+  // c.res may not always be set, fallback to 200 if undefined
+  const statusCode = c.res?.status ?? 200;
   log.info(
     { requestId, method, path, statusCode, duration },
     'Request completed',

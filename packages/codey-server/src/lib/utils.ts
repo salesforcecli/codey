@@ -1,5 +1,6 @@
 import type { Context } from 'hono';
 import { withContext, type LogContext } from './logger.js';
+import type { ContentfulStatusCode } from 'hono/utils/http-status';
 
 export function validateRequired(value: unknown, name: string): string | null {
   if (!value || typeof value !== 'string' || !value.trim()) {
@@ -28,7 +29,7 @@ export function validateMessage(body: Record<string, unknown>): string | null {
 export function createErrorResponse(
   c: Context,
   message: string,
-  status: number = 500,
+  status: ContentfulStatusCode = 500,
   context?: LogContext,
 ) {
   if (context) {
@@ -40,7 +41,7 @@ export function createErrorResponse(
 export function createSuccessResponse(
   c: Context,
   data: Record<string, unknown>,
-  status: number = 200,
+  status: ContentfulStatusCode = 200,
   headers?: Record<string, string>,
 ) {
   const response = c.json(data, status);

@@ -52,90 +52,78 @@ sessionsStream.post('/sessions/:id/messages/stream', async (c: Context) => {
     'Session message streaming started',
   );
 
-  return streamText(
-    c,
-    async (stream: {
-      write: (s: string) => Promise<void>;
-      close: () => Promise<void>;
-    }) => {
-      const write = async (obj: unknown) => {
-        await stream.write(JSON.stringify(obj) + '\n');
-      };
+  c.header('Content-Type', 'application/x-ndjson');
+  c.header('Cache-Control', 'no-cache');
+  c.header('Connection', 'keep-alive');
+  c.header('Transfer-Encoding', 'chunked');
 
+  return streamText(c, async (stream) => {
+    const write = async (obj: unknown) => {
+      await stream.write(JSON.stringify(obj) + '\n');
+    };
+
+    try {
+      await sendMessageToSessionStreaming(
+        sessionId,
+        message,
+        async (geminiEvent: ServerGeminiStreamEvent) => {
+          try {
+            log.debug(
+              {
+                requestId,
+                sessionId,
+                eventType: geminiEvent.type,
+                event: geminiEvent,
+                ...(geminiEvent.type === GeminiEventType.Thought
+                  ? { thoughtContent: geminiEvent.value }
+                  : {}),
+                ...(geminiEvent.type === GeminiEventType.ToolCallRequest
+                  ? {
+                      toolName: geminiEvent.value.name,
+                      toolArgs: geminiEvent.value.args,
+                    }
+                  : {}),
+                ...(geminiEvent.type === GeminiEventType.ToolCallResponse
+                  ? {
+                      toolCallId: geminiEvent.value.callId,
+                      toolSuccess: !geminiEvent.value.error,
+                      toolError: geminiEvent.value.error?.message,
+                    }
+                  : {}),
+                ...(geminiEvent.type === GeminiEventType.Content
+                  ? { contentDelta: (geminiEvent as any).value }
+                  : {}),
+              },
+              'ServerGeminiStreamEvent received',
+            );
+          } catch (logError) {
+            log.warn({ requestId, sessionId, logError }, 'Failed to log event');
+          }
+          await write(geminiEvent);
+        },
+      );
+    } catch (err) {
+      log.error({ requestId, sessionId, err }, 'Error during streaming');
+      const errorEvent: ServerGeminiStreamEvent = {
+        type: GeminiEventType.Error,
+        value: {
+          error: {
+            message: (err as Error)?.message || String(err),
+            status: 500,
+          },
+        },
+      } as ServerGeminiStreamEvent;
+      await write(errorEvent);
+    } finally {
+      log.info(
+        { requestId, sessionId, duration: Date.now() - start },
+        'Session message streaming finished',
+      );
       try {
-        await sendMessageToSessionStreaming(
-          sessionId,
-          message,
-          async (geminiEvent: ServerGeminiStreamEvent) => {
-            try {
-              log.debug(
-                {
-                  requestId,
-                  sessionId,
-                  eventType: geminiEvent.type,
-                  event: geminiEvent,
-                  ...(geminiEvent.type === GeminiEventType.Thought
-                    ? { thoughtContent: geminiEvent.value }
-                    : {}),
-                  ...(geminiEvent.type === GeminiEventType.ToolCallRequest
-                    ? {
-                        toolName: geminiEvent.value.name,
-                        toolArgs: geminiEvent.value.args,
-                      }
-                    : {}),
-                  ...(geminiEvent.type === GeminiEventType.ToolCallResponse
-                    ? {
-                        toolCallId: geminiEvent.value.callId,
-                        toolSuccess: !geminiEvent.value.error,
-                        toolError: geminiEvent.value.error?.message,
-                      }
-                    : {}),
-                  ...(geminiEvent.type === GeminiEventType.Content
-                    ? { contentDelta: (geminiEvent as any).value }
-                    : {}),
-                },
-                'ServerGeminiStreamEvent received',
-              );
-            } catch (logError) {
-              log.warn(
-                { requestId, sessionId, logError },
-                'Failed to log event',
-              );
-            }
-            await write(geminiEvent);
-          },
-        );
-      } catch (err) {
-        log.error({ requestId, sessionId, err }, 'Error during streaming');
-        const errorEvent: ServerGeminiStreamEvent = {
-          type: GeminiEventType.Error,
-          value: {
-            error: {
-              message: (err as Error)?.message || String(err),
-              status: 500,
-            },
-          },
-        } as ServerGeminiStreamEvent;
-        await write(errorEvent);
-      } finally {
-        log.info(
-          { requestId, sessionId, duration: Date.now() - start },
-          'Session message streaming finished',
-        );
-        try {
-          await stream.close();
-        } catch {
-          // ignore
-        }
+        await stream.close();
+      } catch {
+        // ignore
       }
-    },
-    {
-      headers: {
-        'Content-Type': 'application/x-ndjson',
-        'Cache-Control': 'no-cache',
-        Connection: 'keep-alive',
-        'Transfer-Encoding': 'chunked',
-      },
-    },
-  );
+    }
+  });
 });
