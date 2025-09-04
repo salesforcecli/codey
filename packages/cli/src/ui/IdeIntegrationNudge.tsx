@@ -97,7 +97,7 @@ export function IdeIntegrationNudge({
       <Box marginBottom={1} flexDirection="column">
         <Text>
           <Text color="yellow">{'> '}</Text>
-          {`Do you want to connect ${ideName ?? 'your editor'} to Gemini CLI?`}
+          {`Do you want to connect ${ideName ?? 'your editor'} to Codey?`}
         </Text>
         <Text dimColor>{installText}</Text>
       </Box>

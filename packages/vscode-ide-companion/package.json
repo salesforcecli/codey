@@ -48,11 +48,11 @@
         "icon": "$(close)"
       },
       {
-        "command": "codey-cli.runCodeyCLI",
+        "command": "codey.runCodeyCLI",
         "title": "Codey: Run"
       },
       {
-        "command": "codey-cli.showNotices",
+        "command": "codey.showNotices",
         "title": "Codey: View Third-Party Notices"
       }
     ],

@@ -69,7 +69,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   if (!context.globalState.get(INFO_MESSAGE_SHOWN_KEY)) {
     void vscode.window.showInformationMessage(
-      'Gemini CLI Companion extension successfully installed.',
+      'Codey extension successfully installed.',
     );
     context.globalState.update(INFO_MESSAGE_SHOWN_KEY, true);
   }
@@ -82,7 +82,7 @@ export async function activate(context: vscode.ExtensionContext) {
       const workspaceFolders = vscode.workspace.workspaceFolders;
       if (!workspaceFolders || workspaceFolders.length === 0) {
         vscode.window.showInformationMessage(
-          'No folder open. Please open a folder to run Gemini CLI.',
+          'No folder open. Please open a folder to run Codey.',
         );
         return;
       }
@@ -92,18 +92,18 @@ export async function activate(context: vscode.ExtensionContext) {
         selectedFolder = workspaceFolders[0];
       } else {
         selectedFolder = await vscode.window.showWorkspaceFolderPick({
-          placeHolder: 'Select a folder to run Gemini CLI in',
+          placeHolder: 'Select a folder to run Codey in',
         });
       }
 
       if (selectedFolder) {
-        const geminiCmd = 'gemini';
+        const codeyCmd = 'codey';
         const terminal = vscode.window.createTerminal({
-          name: `Gemini CLI (${selectedFolder.name})`,
+          name: `Codey (${selectedFolder.name})`,
           cwd: selectedFolder.uri.fsPath,
         });
         terminal.show();
-        terminal.sendText(geminiCmd);
+        terminal.sendText(codeyCmd);
       }
     }),
     vscode.commands.registerCommand('codey.showNotices', async () => {

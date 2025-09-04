@@ -14,4 +14,4 @@
  * limitations under the License.
  */
 
-export const GEMINI_CLI_COMPANION_EXTENSION_NAME = 'Gemini CLI Companion';
+export const GEMINI_CLI_COMPANION_EXTENSION_NAME = 'Codey';
