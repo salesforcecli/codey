@@ -32,7 +32,6 @@ import { Claude4Sonnet } from './models.js';
 
 // Mock external dependencies
 vi.mock('./client.js');
-vi.mock('./functionCallAccumulator.js');
 
 // Mock the GatewayClient
 const mockGatewayClient = {
@@ -41,22 +40,9 @@ const mockGatewayClient = {
   createEmbedding: vi.fn(),
 } as unknown as GatewayClient;
 
-// Mock the FunctionCallAccumulator
-const mockFunctionCallAccumulator = {
-  feed: vi.fn(),
-  flush: vi.fn(),
-  reset: vi.fn(),
-} as unknown as import('./functionCallAccumulator.js').FunctionCallAccumulator;
-
 const { GatewayClient: MockGatewayClient } = await import('./client.js');
-const { FunctionCallAccumulator } = await import(
-  './functionCallAccumulator.js'
-);
 
 vi.mocked(MockGatewayClient).mockImplementation(() => mockGatewayClient);
-vi.mocked(FunctionCallAccumulator).mockImplementation(
-  () => mockFunctionCallAccumulator,
-);
 
 describe('GatewayContentGenerator', () => {
   let generator: GatewayContentGenerator;
@@ -65,19 +51,6 @@ describe('GatewayContentGenerator', () => {
     vi.clearAllMocks();
     // Re-setup the constructor mocks after clearAllMocks
     vi.mocked(MockGatewayClient).mockImplementation(() => mockGatewayClient);
-    vi.mocked(FunctionCallAccumulator).mockImplementation(
-      () => mockFunctionCallAccumulator,
-    );
-    // Reset the function call accumulator mock default behavior
-    vi.mocked(mockFunctionCallAccumulator.feed).mockReturnValue({
-      text: '',
-      calls: [],
-    });
-    vi.mocked(mockFunctionCallAccumulator.flush).mockReturnValue({
-      text: '',
-      calls: [],
-    });
-    vi.mocked(mockFunctionCallAccumulator.reset).mockReturnValue();
     generator = new GatewayContentGenerator();
     // Replace the client instance with our mock
     (generator as unknown as { client: GatewayClient }).client =
@@ -486,22 +459,6 @@ describe('GatewayContentGenerator', () => {
         },
       ];
 
-      // Mock the accumulator to return text progressively
-      vi.mocked(mockFunctionCallAccumulator.feed)
-        .mockReturnValueOnce({
-          text: 'Hello',
-          calls: [],
-        })
-        .mockReturnValueOnce({
-          text: ' world!',
-          calls: [],
-        });
-
-      vi.mocked(mockFunctionCallAccumulator.flush).mockReturnValue({
-        text: '',
-        calls: [],
-      });
-
       async function* mockStreamGenerator() {
         for (const data of mockStreamData) {
           yield data;
@@ -620,74 +577,31 @@ describe('GatewayContentGenerator', () => {
       });
     });
 
-    it('should handle streaming with function call accumulation', async () => {
+    it('should handle streaming with text content', async () => {
       const mockStreamData = [
         {
-          id: 'stream-accum-1',
+          id: 'stream-text-1',
           generation_details: {
             generations: [
               {
-                content: '<function_calls>',
+                content: 'Let me help you with that.',
                 role: 'assistant' as const,
               },
             ],
           },
         },
         {
-          id: 'stream-accum-1',
+          id: 'stream-text-1',
           generation_details: {
             generations: [
               {
-                content: '\n<invoke name="test_func">',
-                role: 'assistant' as const,
-              },
-            ],
-          },
-        },
-        {
-          id: 'stream-accum-1',
-          generation_details: {
-            generations: [
-              {
-                content: '\n<parameter name="param1">value1</parameter>',
-                role: 'assistant' as const,
-              },
-            ],
-          },
-        },
-        {
-          id: 'stream-accum-1',
-          generation_details: {
-            generations: [
-              {
-                content: '\n</invoke>\n</function_calls>',
+                content: ' Here is the information.',
                 role: 'assistant' as const,
               },
             ],
           },
         },
       ];
-
-      // Mock the accumulator to simulate function call parsing
-      vi.mocked(mockFunctionCallAccumulator.feed)
-        .mockReturnValueOnce({ text: '', calls: [] })
-        .mockReturnValueOnce({ text: '', calls: [] })
-        .mockReturnValueOnce({ text: '', calls: [] })
-        .mockReturnValueOnce({
-          text: '',
-          calls: [
-            {
-              id: 'accumulated-call-1',
-              name: 'test_func',
-              args: { param1: 'value1' },
-            },
-          ],
-        });
-
-      vi.mocked(mockFunctionCallAccumulator.flush).mockReturnValue({
-        text: '',
-        calls: [],
-      });
 
       async function* mockStreamGenerator() {
         for (const data of mockStreamData) {
@@ -701,7 +615,7 @@ describe('GatewayContentGenerator', () => {
 
       const request: GenerateContentParameters = {
         model: 'test-model',
-        contents: 'Call test function',
+        contents: 'Help me with something',
       };
 
       const streamGenerator = await generator.generateContentStream(
@@ -714,15 +628,12 @@ describe('GatewayContentGenerator', () => {
         results.push(response);
       }
 
-      // Should have 4 responses, with the last one containing the function call
-      expect(results).toHaveLength(4);
-      const lastResult = results[3];
-      expect(lastResult?.candidates?.[0]?.content?.parts?.[0]).toEqual({
-        functionCall: {
-          name: 'test_func',
-          args: { param1: 'value1' },
-          id: 'accumulated-call-1',
-        },
+      expect(results).toHaveLength(2);
+      expect(results[0]?.candidates?.[0]?.content?.parts?.[0]).toEqual({
+        text: 'Let me help you with that.',
+      });
+      expect(results[1]?.candidates?.[0]?.content?.parts?.[0]).toEqual({
+        text: ' Here is the information.',
       });
     });
 
@@ -806,11 +717,6 @@ describe('GatewayContentGenerator', () => {
         mockGatewayClient.generateChatCompletionStream,
       ).mockResolvedValue(mockStreamGenerator());
 
-      vi.mocked(mockFunctionCallAccumulator.feed).mockReturnValue({
-        text: 'Before error',
-        calls: [],
-      });
-
       const request: GenerateContentParameters = {
         model: 'test-model',
         contents: 'Test error',
@@ -837,37 +743,20 @@ describe('GatewayContentGenerator', () => {
       expect(results).toHaveLength(1); // Should have processed one response before error
     });
 
-    it('should handle accumulator flush at end of stream', async () => {
+    it('should handle streaming with complete responses', async () => {
       const mockStreamData = [
         {
-          id: 'stream-flush-1',
+          id: 'stream-complete-1',
           generation_details: {
             generations: [
               {
-                content: 'Some text',
+                content: 'Complete response text',
                 role: 'assistant' as const,
               },
             ],
           },
         },
       ];
-
-      // Mock feed to return empty, but flush to return content
-      vi.mocked(mockFunctionCallAccumulator.feed).mockReturnValue({
-        text: '',
-        calls: [],
-      });
-
-      vi.mocked(mockFunctionCallAccumulator.flush).mockReturnValue({
-        text: 'Final accumulated text',
-        calls: [
-          {
-            id: 'flush-call-1',
-            name: 'final_func',
-            args: { data: 'final' },
-          },
-        ],
-      });
 
       async function* mockStreamGenerator() {
         for (const data of mockStreamData) {
@@ -881,7 +770,7 @@ describe('GatewayContentGenerator', () => {
 
       const request: GenerateContentParameters = {
         model: 'test-model',
-        contents: 'Test flush',
+        contents: 'Test complete response',
       };
 
       const streamGenerator = await generator.generateContentStream(
@@ -894,33 +783,16 @@ describe('GatewayContentGenerator', () => {
         results.push(response);
       }
 
-      // Should have 2 responses: one from the stream, one from flush
-      expect(results).toHaveLength(2);
-
-      // First response should be empty (since feed returned empty)
-      expect(results[0]?.candidates).toHaveLength(0);
-
-      // Second response should contain flush results
-      const flushResponse = results[1];
-      expect(flushResponse?.candidates).toHaveLength(2);
-
-      // Should have function call and text from flush
-      expect(flushResponse?.candidates?.[0]?.content?.parts?.[0]).toEqual({
-        functionCall: {
-          name: 'final_func',
-          args: { data: 'final' },
-          id: 'flush-call-1',
-        },
-      });
-      expect(flushResponse?.candidates?.[1]?.content?.parts?.[0]).toEqual({
-        text: 'Final accumulated text',
+      expect(results).toHaveLength(1);
+      expect(results[0]?.candidates?.[0]?.content?.parts?.[0]).toEqual({
+        text: 'Complete response text',
       });
     });
 
-    it('should reset accumulator for new generation sequences', async () => {
+    it('should handle different generation sequences', async () => {
       const mockStreamData = [
         {
-          id: 'stream-reset-1',
+          id: 'stream-seq-1',
           generation_details: {
             generations: [
               {
@@ -931,7 +803,7 @@ describe('GatewayContentGenerator', () => {
           },
         },
         {
-          id: 'stream-reset-2', // Different ID should trigger reset
+          id: 'stream-seq-2', // Different ID
           generation_details: {
             generations: [
               {
@@ -943,15 +815,6 @@ describe('GatewayContentGenerator', () => {
         },
       ];
 
-      vi.mocked(mockFunctionCallAccumulator.feed)
-        .mockReturnValueOnce({ text: 'First generation', calls: [] })
-        .mockReturnValueOnce({ text: 'Second generation', calls: [] });
-
-      vi.mocked(mockFunctionCallAccumulator.flush).mockReturnValue({
-        text: '',
-        calls: [],
-      });
-
       async function* mockStreamGenerator() {
         for (const data of mockStreamData) {
           yield data;
@@ -964,7 +827,7 @@ describe('GatewayContentGenerator', () => {
 
       const request: GenerateContentParameters = {
         model: 'test-model',
-        contents: 'Test reset',
+        contents: 'Test different sequences',
       };
 
       const streamGenerator = await generator.generateContentStream(
@@ -977,9 +840,13 @@ describe('GatewayContentGenerator', () => {
         results.push(response);
       }
 
-      // Should call reset when ID changes (at least once)
-      expect(mockFunctionCallAccumulator.reset).toHaveBeenCalled();
       expect(results).toHaveLength(2);
+      expect(results[0]?.candidates?.[0]?.content?.parts?.[0]).toEqual({
+        text: 'First generation',
+      });
+      expect(results[1]?.candidates?.[0]?.content?.parts?.[0]).toEqual({
+        text: 'Second generation',
+      });
     });
   });
 

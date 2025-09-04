@@ -27,6 +27,7 @@ import {
   type ContentListUnion,
   type ContentUnion,
   type ToolListUnion,
+  type FinishReason,
 } from '@google/genai';
 import {
   GatewayClient,
@@ -37,7 +38,6 @@ import {
 } from './client.js';
 import { type ContentGenerator } from '../core/contentGenerator.js';
 import { Claude4Sonnet } from './models.js';
-import { FunctionCallAccumulator } from './functionCallAccumulator.js';
 
 const isString = (content: ContentUnion): content is string =>
   typeof content === 'string';
@@ -89,7 +89,6 @@ const convertGenerationToCandidate = (
   >['generations'][number],
 ): Candidate => {
   const parts: Part[] = [];
-
   // Add tool calls if present
   if (generation.tool_invocations && generation.tool_invocations.length > 0) {
     for (const toolInvocation of generation.tool_invocations) {
@@ -119,42 +118,7 @@ const convertGenerationToCandidate = (
       }
     }
   } else if (generation.content) {
-    // Use the accumulator to parse function calls from content
-    const accumulator = new FunctionCallAccumulator();
-    const feedResult = accumulator.feed(generation.content);
-    const flushResult = accumulator.flush();
-
-    // Combine text from both feed and flush results
-    const combinedText = (feedResult.text + flushResult.text).trim();
-
-    // Add any parsed function calls from feed
-    for (const call of feedResult.calls) {
-      const mappedArgs = mapToolParameters(call.name, call.args || {});
-      parts.push({
-        functionCall: {
-          name: call.name,
-          args: mappedArgs,
-          id: call.id,
-        },
-      });
-    }
-
-    // Add any parsed function calls from flush
-    for (const call of flushResult.calls) {
-      const mappedArgs = mapToolParameters(call.name, call.args || {});
-      parts.push({
-        functionCall: {
-          name: call.name,
-          args: mappedArgs,
-          id: call.id,
-        },
-      });
-    }
-
-    // Add combined text content if there's any
-    if (combinedText) {
-      parts.push({ text: combinedText });
-    }
+    parts.push({ text: generation.content });
   }
 
   return {
@@ -528,9 +492,6 @@ FINAL WARNING: Any non-JSON content will cause system failure. Respond with JSON
   private async *convertStreamGeneratorToGemini(
     streamGenerator: AsyncGenerator<ChatGenerations>,
   ): AsyncGenerator<GenerateContentResponse> {
-    const accumulator = new FunctionCallAccumulator();
-    let lastGenerationId = '';
-
     for await (const data of streamGenerator) {
       const generations = data.generation_details?.generations;
       const usage = data.generation_details?.parameters?.usage;
@@ -552,6 +513,10 @@ FINAL WARNING: Any non-JSON content will cause system failure. Respond with JSON
       };
       response.modelVersion = this.model.model;
 
+      // Check if this is a usage-only chunk (no generations, only usage metadata)
+      const isUsageOnlyChunk =
+        (!generations || generations.length === 0) && usage;
+
       for (const generation of generations || []) {
         // If this generation has tool invocations, handle them directly
         if (
@@ -560,112 +525,45 @@ FINAL WARNING: Any non-JSON content will cause system failure. Respond with JSON
         ) {
           const candidate = convertGenerationToCandidate(generation);
           response.candidates.push(candidate);
-        }
-        // Otherwise, use accumulator to process content
-        else if (generation?.content) {
-          // Reset accumulator if we're starting a new generation sequence
-          if (data.id && data.id !== lastGenerationId) {
-            accumulator.reset();
-            lastGenerationId = data.id;
-          }
-
-          const result = accumulator.feed(generation.content);
-
-          // Add any complete function calls found
-          for (const call of result.calls) {
-            const mappedArgs = mapToolParameters(call.name, call.args || {});
-            const functionCallPart: Part = {
-              functionCall: {
-                name: call.name,
-                args: mappedArgs,
-                id: call.id,
-              },
-            };
-
-            const candidate: Candidate = {
-              content: {
-                parts: [functionCallPart],
-                role: 'model',
-              },
-              index: 0,
-              safetyRatings: [],
-            };
-
-            response.candidates.push(candidate);
-          }
-
+        } else if (generation?.content?.trim()) {
           // Add any text content that's ready to be displayed
-          if (result.text.trim()) {
-            const textPart: Part = { text: result.text };
-            const candidate: Candidate = {
-              content: {
-                parts: [textPart],
-                role: 'model',
-              },
-              index: 0,
-              safetyRatings: [],
-            };
+          const textPart: Part = { text: generation.content };
+          const candidate: Candidate = {
+            content: {
+              parts: [textPart],
+              role: 'model',
+            },
+            index: 0,
+            safetyRatings: [],
+          };
 
-            response.candidates.push(candidate);
-          }
+          response.candidates.push(candidate);
         }
       }
 
-      yield response;
-    }
-
-    // Handle any remaining content at the end
-    const flushResult = accumulator.flush();
-
-    if (flushResult.calls.length > 0 || flushResult.text.trim()) {
-      const finalResponse = new GenerateContentResponse();
-      finalResponse.candidates = [];
-      finalResponse.usageMetadata = {
-        promptTokenCount: this.usage.inputTokens,
-        candidatesTokenCount: this.usage.outputTokens,
-        totalTokenCount: this.usage.totalTokens,
-      };
-      finalResponse.modelVersion = this.model.model;
-
-      // Add any final function calls
-      for (const call of flushResult.calls) {
-        const mappedArgs = mapToolParameters(call.name, call.args || {});
-        const functionCallPart: Part = {
-          functionCall: {
-            name: call.name,
-            args: mappedArgs,
-            id: call.id,
-          },
-        };
-
-        const candidate: Candidate = {
+      // If this is a usage-only chunk (final chunk with no content), transform it to have proper finish reason
+      if (isUsageOnlyChunk) {
+        // Create a final chunk with proper Gemini format and finish reason
+        const finalCandidate: Candidate = {
           content: {
-            parts: [functionCallPart],
+            parts: [], // Empty parts since this is just usage metadata
             role: 'model',
           },
           index: 0,
           safetyRatings: [],
+          finishReason: 'STOP' as FinishReason, // Add proper finish reason for successful completion
         };
 
-        finalResponse.candidates.push(candidate);
+        response.candidates = [finalCandidate];
+        console.log(
+          '🔧 Gateway: Transformed usage-only chunk to proper Gemini format with finishReason=STOP',
+        );
       }
 
-      // Add any final text content
-      if (flushResult.text.trim()) {
-        const textPart: Part = { text: flushResult.text };
-        const candidate: Candidate = {
-          content: {
-            parts: [textPart],
-            role: 'model',
-          },
-          index: 0,
-          safetyRatings: [],
-        };
-
-        finalResponse.candidates.push(candidate);
+      // Only yield responses that have candidates
+      if (response.candidates.length > 0) {
+        yield response;
       }
-
-      yield finalResponse;
     }
   }
 }
