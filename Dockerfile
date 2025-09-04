@@ -40,8 +40,8 @@ ENV PATH=$PATH:/usr/local/share/npm-global/bin
 USER node
 
 # install gemini-cli and clean up
-COPY packages/cli/dist/salesforce-codey-*.tgz /usr/local/share/npm-global/gemini-cli.tgz
-COPY packages/core/dist/salesforce-codey-core-*.tgz /usr/local/share/npm-global/gemini-core.tgz
+COPY packages/cli/dist/salesforce-codey-*.tgz /usr/local/share/npm-global/codey.tgz
+COPY packages/core/dist/salesforce-codey-core-*.tgz /usr/local/share/npm-global/codey-core.tgz
 RUN npm install -g /usr/local/share/npm-global/codey-cli.tgz /usr/local/share/npm-global/codey-core.tgz \
   && npm cache clean --force \
   && rm -f /usr/local/share/npm-global/codey-{cli,core}.tgz
