@@ -60,7 +60,7 @@ export class RunCodeAnalyzerTool extends BaseDeclarativeTool<
   RunCodeAnalyzerParams,
   ToolResult
 > {
-  static readonly Name = 'sf_code_analyzer_run';
+  static readonly Name = 'sf_run_code_analyzer';
 
   constructor() {
     super(

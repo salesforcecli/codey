@@ -39,7 +39,7 @@ import { WebSearchTool } from '../tools/web-search.js';
 import { GetScaleCenterStatusTool } from '../tools/scaleCenterStatus.js';
 import { CreateDevopsWorkItemTool } from '../tools/createDevopsWorkItem.js';
 import { SfDeployMetadataTool } from '../tools/sfDeployMetadata.js';
-import { RunCodeAnalyzerTool } from '../tools/runCodeyAnalyzer.js';
+import { RunCodeAnalyzerTool } from '../tools/runCodeAnalyzer.js';
 import {
   SlackCanvasAppendTool,
   SlackCanvasCreateTool,
