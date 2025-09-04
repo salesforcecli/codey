@@ -17,11 +17,11 @@
 import { useState, useCallback } from 'react';
 import type { LoadedSettings, SettingScope } from '../../config/settings.js';
 import { type HistoryItem, MessageType } from '../types.js';
-import type { EditorType } from '@google/gemini-cli-core';
+import type { EditorType } from '@salesforce/codey-core';
 import {
   allowEditorTypeInSandbox,
   checkHasEditorType,
-} from '@google/gemini-cli-core';
+} from '@salesforce/codey-core';
 
 interface UseEditorSettingsReturn {
   isEditorDialogOpen: boolean;

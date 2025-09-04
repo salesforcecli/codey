@@ -24,8 +24,8 @@ import {
   useEffect,
 } from 'react';
 
-import type { SessionMetrics, ModelMetrics } from '@google/gemini-cli-core';
-import { uiTelemetryService, sessionId } from '@google/gemini-cli-core';
+import type { SessionMetrics, ModelMetrics } from '@salesforce/codey-core';
+import { uiTelemetryService, sessionId } from '@salesforce/codey-core';
 
 // --- Interface Definitions ---
 

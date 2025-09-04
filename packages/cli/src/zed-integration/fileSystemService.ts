@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import type { FileSystemService } from '@google/gemini-cli-core';
+import type { FileSystemService } from '@salesforce/codey-core';
 import type * as acp from './acp.js';
 
 /**

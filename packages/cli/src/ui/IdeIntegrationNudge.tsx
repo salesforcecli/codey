@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import type { DetectedIde } from '@google/gemini-cli-core';
-import { getIdeInfo } from '@google/gemini-cli-core';
+import type { DetectedIde } from '@salesforce/codey-core';
+import { getIdeInfo } from '@salesforce/codey-core';
 import { Box, Text } from 'ink';
 import type { RadioSelectItem } from './components/shared/RadioButtonSelect.js';
 import { RadioButtonSelect } from './components/shared/RadioButtonSelect.js';

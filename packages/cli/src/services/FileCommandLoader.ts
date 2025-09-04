@@ -19,8 +19,8 @@ import path from 'node:path';
 import toml from '@iarna/toml';
 import { glob } from 'glob';
 import { z } from 'zod';
-import type { Config } from '@google/gemini-cli-core';
-import { Storage } from '@google/gemini-cli-core';
+import type { Config } from '@salesforce/codey-core';
+import { Storage } from '@salesforce/codey-core';
 import type { ICommandLoader } from './types.js';
 import type {
   CommandContext,

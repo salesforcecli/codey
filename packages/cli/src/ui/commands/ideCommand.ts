@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-import type { Config, IdeClient, File } from '@google/gemini-cli-core';
+import type { Config, IdeClient, File } from '@salesforce/codey-core';
 import {
   getIdeInstaller,
   IDEConnectionStatus,
   ideContext,
   GEMINI_CLI_COMPANION_EXTENSION_NAME,
-} from '@google/gemini-cli-core';
+} from '@salesforce/codey-core';
 import path from 'node:path';
 import type {
   CommandContext,

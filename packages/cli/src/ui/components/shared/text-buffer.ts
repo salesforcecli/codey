@@ -20,7 +20,7 @@ import os from 'node:os';
 import pathMod from 'node:path';
 import { useState, useCallback, useEffect, useMemo, useReducer } from 'react';
 import stringWidth from 'string-width';
-import { unescapePath } from '@google/gemini-cli-core';
+import { unescapePath } from '@salesforce/codey-core';
 import {
   toCodePoints,
   cpLen,

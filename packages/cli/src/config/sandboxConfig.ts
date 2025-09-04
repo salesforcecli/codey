@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import type { SandboxConfig } from '@google/gemini-cli-core';
-import { FatalSandboxError } from '@google/gemini-cli-core';
+import type { SandboxConfig } from '@salesforce/codey-core';
+import { FatalSandboxError } from '@salesforce/codey-core';
 import commandExists from 'command-exists';
 import * as os from 'node:os';
 import { getPackageJson } from '../utils/package.js';

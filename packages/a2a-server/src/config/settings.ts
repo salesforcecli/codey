@@ -18,11 +18,11 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { homedir } from 'node:os';
 
-import type { MCPServerConfig } from '@google/gemini-cli-core';
+import type { MCPServerConfig } from '@salesforce/codey-core';
 import {
   getErrorMessage,
   type TelemetrySettings,
-} from '@google/gemini-cli-core';
+} from '@salesforce/codey-core';
 import stripJsonComments from 'strip-json-comments';
 
 export const SETTINGS_DIRECTORY_NAME = '.codey';

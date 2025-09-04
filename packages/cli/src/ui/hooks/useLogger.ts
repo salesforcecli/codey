@@ -15,8 +15,8 @@
  */
 
 import { useState, useEffect } from 'react';
-import type { Storage } from '@google/gemini-cli-core';
-import { sessionId, Logger } from '@google/gemini-cli-core';
+import type { Storage } from '@salesforce/codey-core';
+import { sessionId, Logger } from '@salesforce/codey-core';
 
 /**
  * Hook to manage the logger instance.

@@ -27,7 +27,7 @@ import {
 
 const mockIsBinary = vi.hoisted(() => vi.fn());
 const mockShellExecutionService = vi.hoisted(() => vi.fn());
-vi.mock('@google/gemini-cli-core', () => ({
+vi.mock('@salesforce/codey-core', () => ({
   ShellExecutionService: { execute: mockShellExecutionService },
   isBinary: mockIsBinary,
 }));
@@ -45,7 +45,7 @@ import {
   type GeminiClient,
   type ShellExecutionResult,
   type ShellOutputEvent,
-} from '@google/gemini-cli-core';
+} from '@salesforce/codey-core';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';

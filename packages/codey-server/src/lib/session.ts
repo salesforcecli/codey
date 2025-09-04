@@ -19,12 +19,12 @@ import {
   type Config,
   type GeminiClient,
   type ServerGeminiStreamEvent,
-} from '@google/gemini-cli-core';
+} from '@salesforce/codey-core';
 import {
   initClient,
   sendMessage,
   sendMessageStreaming,
-} from '@google/gemini-cli/headless-chat';
+} from '@salesforce/codey/headless-chat';
 
 type SessionId = string;
 

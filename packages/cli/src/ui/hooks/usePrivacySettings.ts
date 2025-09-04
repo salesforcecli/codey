@@ -20,7 +20,7 @@ import {
   type CodeAssistServer,
   UserTierId,
   getCodeAssistServer,
-} from '@google/gemini-cli-core';
+} from '@salesforce/codey-core';
 
 export interface PrivacyState {
   isLoading: boolean;

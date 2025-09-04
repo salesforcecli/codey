@@ -15,7 +15,7 @@
  */
 
 import { McpPromptLoader } from './McpPromptLoader.js';
-import type { Config } from '@google/gemini-cli-core';
+import type { Config } from '@salesforce/codey-core';
 import type { PromptArgument } from '@modelcontextprotocol/sdk/types.js';
 import { describe, it, expect } from 'vitest';
 

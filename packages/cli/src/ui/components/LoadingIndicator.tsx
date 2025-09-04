@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import type { ThoughtSummary } from '@google/gemini-cli-core';
+import type { ThoughtSummary } from '@salesforce/codey-core';
 import type React from 'react';
 import { Box, Text } from 'ink';
 import { Colors } from '../colors.js';

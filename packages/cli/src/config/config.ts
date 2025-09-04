@@ -25,7 +25,7 @@ import type {
   TelemetryTarget,
   FileFilteringOptions,
   MCPServerConfig,
-} from '@google/gemini-cli-core';
+} from '@salesforce/codey-core';
 import { extensionsCommand } from '../commands/extensions.js';
 import {
   Config,
@@ -40,7 +40,7 @@ import {
   ShellTool,
   EditTool,
   WriteFileTool,
-} from '@google/gemini-cli-core';
+} from '@salesforce/codey-core';
 import type { Settings } from './settings.js';
 
 import type { Extension } from './extension.js';

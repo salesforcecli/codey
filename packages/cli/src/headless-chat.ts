@@ -27,7 +27,7 @@ import {
   type ServerGeminiStreamEvent,
   type ToolCallRequestInfo,
   ToolErrorType,
-} from '@google/gemini-cli-core';
+} from '@salesforce/codey-core';
 import { type Content, type FunctionCall, type Part } from '@google/genai';
 
 export async function initClient(

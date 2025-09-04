@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { uiTelemetryService } from '@google/gemini-cli-core';
+import { uiTelemetryService } from '@salesforce/codey-core';
 import type { SlashCommand } from './types.js';
 import { CommandKind } from './types.js';
 

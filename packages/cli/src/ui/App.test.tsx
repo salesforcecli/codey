@@ -26,12 +26,12 @@ import type {
   SandboxConfig,
   GeminiClient,
   AuthType,
-} from '@google/gemini-cli-core';
+} from '@salesforce/codey-core';
 import {
   ApprovalMode,
   ideContext,
   Config as ServerConfig,
-} from '@google/gemini-cli-core';
+} from '@salesforce/codey-core';
 import type { SettingsFile, Settings } from '../config/settings.js';
 import { LoadedSettings } from '../config/settings.js';
 import process from 'node:process';
@@ -107,10 +107,10 @@ interface MockServerConfig {
   getScreenReader: Mock<() => boolean>;
 }
 
-// Mock @google/gemini-cli-core and its Config class
-vi.mock('@google/gemini-cli-core', async (importOriginal) => {
+// Mock @salesforce/codey-core and its Config class
+vi.mock('@salesforce/codey-core', async (importOriginal) => {
   const actualCore =
-    await importOriginal<typeof import('@google/gemini-cli-core')>();
+    await importOriginal<typeof import('@salesforce/codey-core')>();
   const ConfigClassMock = vi
     .fn()
     .mockImplementation((optionsPassedToConstructor) => {
@@ -307,7 +307,7 @@ vi.mock('../hooks/useTerminalSize.js', () => ({
 
 const mockedCheckForUpdates = vi.mocked(checkForUpdates);
 const { isGitRepository: mockedIsGitRepository } = vi.mocked(
-  await import('@google/gemini-cli-core'),
+  await import('@salesforce/codey-core'),
 );
 
 vi.mock('node:child_process');
@@ -418,7 +418,7 @@ describe('App UI', () => {
       mockedIsGitRepository.mockResolvedValue(true);
       const info: UpdateObject = {
         update: {
-          name: '@google/gemini-cli',
+          name: '@salesforce/codey',
           latest: '1.1.0',
           current: '1.0.0',
         },
@@ -446,7 +446,7 @@ describe('App UI', () => {
       mockedIsGitRepository.mockResolvedValue(false);
       const info: UpdateObject = {
         update: {
-          name: '@google/gemini-cli',
+          name: '@salesforce/codey',
           latest: '1.1.0',
           current: '1.0.0',
         },
@@ -477,7 +477,7 @@ describe('App UI', () => {
       mockedIsGitRepository.mockResolvedValue(false);
       const info: UpdateObject = {
         update: {
-          name: '@google/gemini-cli',
+          name: '@salesforce/codey',
           latest: '1.1.0',
           current: '1.0.0',
         },
@@ -508,7 +508,7 @@ describe('App UI', () => {
       mockedIsGitRepository.mockResolvedValue(false);
       const info: UpdateObject = {
         update: {
-          name: '@google/gemini-cli',
+          name: '@salesforce/codey',
           latest: '1.1.0',
           current: '1.0.0',
         },
@@ -542,7 +542,7 @@ describe('App UI', () => {
       process.env.GEMINI_CLI_DISABLE_AUTOUPDATER = 'true';
       const info: UpdateObject = {
         update: {
-          name: '@google/gemini-cli',
+          name: '@salesforce/codey',
           latest: '1.1.0',
           current: '1.0.0',
         },

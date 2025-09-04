@@ -19,10 +19,10 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { useAtCompletion } from './useAtCompletion.js';
-import type { Config, FileSearch } from '@google/gemini-cli-core';
-import { FileSearchFactory } from '@google/gemini-cli-core';
-import type { FileSystemStructure } from '@google/gemini-cli-test-utils';
-import { createTmpDir, cleanupTmpDir } from '@google/gemini-cli-test-utils';
+import type { Config, FileSearch } from '@salesforce/codey-core';
+import { FileSearchFactory } from '@salesforce/codey-core';
+import type { FileSystemStructure } from '@salesforce/codey-test-utils';
+import { createTmpDir, cleanupTmpDir } from '@salesforce/codey-test-utils';
 import { useState } from 'react';
 import type { Suggestion } from '../components/SuggestionsDisplay.js';
 

@@ -22,7 +22,7 @@ import { type IndividualToolCallDisplay, ToolCallStatus } from '../../types.js';
 import type {
   Config,
   ToolCallConfirmationDetails,
-} from '@google/gemini-cli-core';
+} from '@salesforce/codey-core';
 import { TOOL_STATUS } from '../../constants.js';
 
 // Mock child components to isolate ToolGroupMessage behavior

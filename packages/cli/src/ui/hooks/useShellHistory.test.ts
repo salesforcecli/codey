@@ -35,7 +35,7 @@ vi.mock('fs', async (importOriginal) => {
     mkdirSync: vi.fn(),
   };
 });
-vi.mock('@google/gemini-cli-core', () => {
+vi.mock('@salesforce/codey-core', () => {
   class Storage {
     getProjectTempDir(): string {
       return path.join('/test/home/', '.codey', 'tmp', 'mocked_hash');

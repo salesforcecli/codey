@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ToolConfirmationOutcome } from '@google/gemini-cli-core';
+import { ToolConfirmationOutcome } from '@salesforce/codey-core';
 import { Box, Text } from 'ink';
 import type React from 'react';
 import { Colors } from '../colors.js';

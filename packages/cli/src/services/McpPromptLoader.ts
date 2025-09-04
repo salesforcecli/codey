@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import type { Config } from '@google/gemini-cli-core';
-import { getErrorMessage, getMCPServerPrompts } from '@google/gemini-cli-core';
+import type { Config } from '@salesforce/codey-core';
+import { getErrorMessage, getMCPServerPrompts } from '@salesforce/codey-core';
 import type {
   CommandContext,
   SlashCommand,

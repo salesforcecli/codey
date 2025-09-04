@@ -27,7 +27,7 @@ import { withContext } from '../lib/logger.js';
 import {
   GeminiEventType,
   type ServerGeminiStreamEvent,
-} from '@google/gemini-cli-core';
+} from '@salesforce/codey-core';
 
 export const sessionsStream = new Hono();
 

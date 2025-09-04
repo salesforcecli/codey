@@ -19,8 +19,8 @@ import type {
   TaskStatusUpdateEvent,
   SendStreamingMessageSuccessResponse,
 } from '@a2a-js/sdk';
-import { ApprovalMode } from '@google/gemini-cli-core';
-import type { Config } from '@google/gemini-cli-core';
+import { ApprovalMode } from '@salesforce/codey-core';
+import type { Config } from '@salesforce/codey-core';
 import { expect, vi } from 'vitest';
 
 export function createMockConfig(

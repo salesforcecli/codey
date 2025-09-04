@@ -19,7 +19,7 @@ import { PhraseCycler } from './phrase-cycler';
 import {
   type ServerGeminiStreamEvent,
   GeminiEventType,
-} from '@google/gemini-cli-core';
+} from '@salesforce/codey-core';
 
 process.on('SIGINT', () => {
   process.exit(0);

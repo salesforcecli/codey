@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import type { Config } from '@google/gemini-cli-core';
-import { AuthType } from '@google/gemini-cli-core';
+import type { Config } from '@salesforce/codey-core';
+import { AuthType } from '@salesforce/codey-core';
 import { USER_SETTINGS_PATH } from './config/settings.js';
 import { validateAuthMethod } from './config/auth.js';
 

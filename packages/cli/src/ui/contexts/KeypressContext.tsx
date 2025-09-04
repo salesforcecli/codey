@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import type { Config } from '@google/gemini-cli-core';
+import type { Config } from '@salesforce/codey-core';
 import {
   KittySequenceOverflowEvent,
   logKittySequenceOverflow,
-} from '@google/gemini-cli-core';
+} from '@salesforce/codey-core';
 import { useStdin } from 'ink';
 import type React from 'react';
 import {

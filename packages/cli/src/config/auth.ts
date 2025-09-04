@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { AuthType } from '@google/gemini-cli-core';
+import { AuthType } from '@salesforce/codey-core';
 import { loadEnvironment, loadSettings } from './settings.js';
 
 export function validateAuthMethod(authMethod: string): string | null {

@@ -1,10 +1,10 @@
 {
-  "name": "@google/gemini-cli-core",
-  "version": "0.2.2",
-  "description": "Gemini CLI Core",
+  "name": "@salesforce/codey-core",
+  "version": "0.0.1-alpha.0",
+  "description": "Codey Core",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/google-gemini/gemini-cli.git"
+    "url": "git+https://github.com/salesforcecli/codey.git"
   },
   "type": "module",
   "main": "dist/index.js",
@@ -70,7 +70,7 @@
     "node-pty": "^1.0.0"
   },
   "devDependencies": {
-    "@google/gemini-cli-test-utils": "file:../test-utils",
+    "@salesforce/codey-test-utils": "file:../test-utils",
     "@types/diff": "^7.0.2",
     "@types/dotenv": "^6.1.1",
     "@types/fast-levenshtein": "^0.0.4",

@@ -32,7 +32,7 @@ import type { Key } from '../hooks/useKeypress.js';
 import { useKeypress } from '../hooks/useKeypress.js';
 import { keyMatchers, Command } from '../keyMatchers.js';
 import type { CommandContext, SlashCommand } from '../commands/types.js';
-import type { Config } from '@google/gemini-cli-core';
+import type { Config } from '@salesforce/codey-core';
 import { parseInputForHighlighting } from '../utils/highlight.js';
 import {
   clipboardHasImage,

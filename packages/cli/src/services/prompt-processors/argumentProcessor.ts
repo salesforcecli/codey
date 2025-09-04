@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { appendToLastTextPart } from '@google/gemini-cli-core';
+import { appendToLastTextPart } from '@salesforce/codey-core';
 import type { IPromptProcessor, PromptPipelineContent } from './types.js';
 import type { CommandContext } from '../../ui/commands/types.js';
 

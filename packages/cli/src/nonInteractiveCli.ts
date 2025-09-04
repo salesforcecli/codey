@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import type { Config, ToolCallRequestInfo } from '@google/gemini-cli-core';
+import type { Config, ToolCallRequestInfo } from '@salesforce/codey-core';
 import {
   executeToolCall,
   shutdownTelemetry,
@@ -23,7 +23,7 @@ import {
   parseAndFormatApiError,
   FatalInputError,
   FatalTurnLimitedError,
-} from '@google/gemini-cli-core';
+} from '@salesforce/codey-core';
 import type { Content, Part } from '@google/genai';
 
 import { ConsolePatcher } from './ui/utils/ConsolePatcher.js';

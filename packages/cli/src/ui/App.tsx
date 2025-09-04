@@ -68,7 +68,7 @@ import { ContextSummaryDisplay } from './components/ContextSummaryDisplay.js';
 import { useHistory } from './hooks/useHistoryManager.js';
 import { useInputHistoryStore } from './hooks/useInputHistoryStore.js';
 import process from 'node:process';
-import type { EditorType, Config, IdeContext } from '@google/gemini-cli-core';
+import type { EditorType, Config, IdeContext } from '@salesforce/codey-core';
 import {
   ApprovalMode,
   getAllGeminiMdFilenames,
@@ -82,7 +82,7 @@ import {
   isGenericQuotaExceededError,
   UserTierId,
   DEFAULT_GEMINI_FLASH_MODEL,
-} from '@google/gemini-cli-core';
+} from '@salesforce/codey-core';
 import type { IdeIntegrationNudgeResult } from './IdeIntegrationNudge.js';
 import { IdeIntegrationNudge } from './IdeIntegrationNudge.js';
 import { validateAuthMethod } from '../config/auth.js';

@@ -17,7 +17,7 @@
 import type React from 'react';
 import { Box, Text } from 'ink';
 import { Colors } from '../colors.js';
-import { ApprovalMode } from '@google/gemini-cli-core';
+import { ApprovalMode } from '@salesforce/codey-core';
 
 interface AutoAcceptIndicatorProps {
   approvalMode: ApprovalMode;

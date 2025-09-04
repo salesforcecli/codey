@@ -1,15 +1,15 @@
 {
-  "name": "@google/gemini-cli",
-  "version": "0.2.2",
-  "description": "Gemini CLI",
+  "name": "@salesforce/codey",
+  "version": "0.0.1-alpha.0",
+  "description": "Codey CLI",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/google-gemini/gemini-cli.git"
+    "url": "git+https://github.com/salesforcecli/codey.git"
   },
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "gemini": "dist/index.js"
+    "codey": "dist/index.js"
   },
   "exports": {
     ".": "./dist/index.js",
@@ -32,7 +32,7 @@
     "sandboxImageUri": "us-docker.pkg.dev/gemini-code-dev/gemini-cli/sandbox:0.2.2"
   },
   "dependencies": {
-    "@google/gemini-cli-core": "file:../core",
+    "@salesforce/codey-core": "file:../core",
     "@google/genai": "1.16.0",
     "@iarna/toml": "^2.2.5",
     "@modelcontextprotocol/sdk": "^1.15.1",
@@ -64,7 +64,7 @@
   },
   "devDependencies": {
     "@babel/runtime": "^7.27.6",
-    "@google/gemini-cli-test-utils": "file:../test-utils",
+    "@salesforce/codey-test-utils": "file:../test-utils",
     "@testing-library/react": "^16.3.0",
     "@types/command-exists": "^1.2.3",
     "@types/diff": "^7.0.2",

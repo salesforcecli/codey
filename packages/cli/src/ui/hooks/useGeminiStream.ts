@@ -26,7 +26,7 @@ import type {
   ThoughtSummary,
   ToolCallRequestInfo,
   GeminiErrorEventValue,
-} from '@google/gemini-cli-core';
+} from '@salesforce/codey-core';
 import {
   GeminiEventType as ServerGeminiEventType,
   getErrorMessage,
@@ -43,7 +43,7 @@ import {
   parseAndFormatApiError,
   getCodeAssistServer,
   UserTierId,
-} from '@google/gemini-cli-core';
+} from '@salesforce/codey-core';
 import { type Part, type PartListUnion, FinishReason } from '@google/genai';
 import type {
   HistoryItem,

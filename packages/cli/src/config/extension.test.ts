@@ -36,7 +36,7 @@ import {
   GEMINI_DIR,
   type GeminiCLIExtension,
   type MCPServerConfig,
-} from '@google/gemini-cli-core';
+} from '@salesforce/codey-core';
 import { execSync } from 'node:child_process';
 import { SettingScope, loadSettings } from './settings.js';
 import { type SimpleGit, simpleGit } from 'simple-git';

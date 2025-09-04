@@ -18,7 +18,7 @@ import type {
   CompressionStatus,
   ToolCallConfirmationDetails,
   ToolResultDisplay,
-} from '@google/gemini-cli-core';
+} from '@salesforce/codey-core';
 import type { PartListUnion } from '@google/genai';
 
 // Only defining the state enum needed by the UI
