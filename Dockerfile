@@ -1,6 +1,6 @@
 FROM docker.io/library/node:20-slim
 
-ARG SANDBOX_NAME="gemini-cli-sandbox"
+ARG SANDBOX_NAME="codey-sandbox"
 ARG CLI_VERSION_ARG
 ENV SANDBOX="$SANDBOX_NAME"
 ENV CLI_VERSION=$CLI_VERSION_ARG
@@ -40,11 +40,11 @@ ENV PATH=$PATH:/usr/local/share/npm-global/bin
 USER node
 
 # install gemini-cli and clean up
-COPY packages/cli/dist/google-gemini-cli-*.tgz /usr/local/share/npm-global/gemini-cli.tgz
-COPY packages/core/dist/google-gemini-cli-core-*.tgz /usr/local/share/npm-global/gemini-core.tgz
-RUN npm install -g /usr/local/share/npm-global/gemini-cli.tgz /usr/local/share/npm-global/gemini-core.tgz \
+COPY packages/cli/dist/salesforce-codey-*.tgz /usr/local/share/npm-global/gemini-cli.tgz
+COPY packages/core/dist/salesforce-codey-core-*.tgz /usr/local/share/npm-global/gemini-core.tgz
+RUN npm install -g /usr/local/share/npm-global/codey-cli.tgz /usr/local/share/npm-global/codey-core.tgz \
   && npm cache clean --force \
-  && rm -f /usr/local/share/npm-global/gemini-{cli,core}.tgz
+  && rm -f /usr/local/share/npm-global/codey-{cli,core}.tgz
 
 # default entrypoint when none specified
-CMD ["gemini"]
+CMD ["codey"]
