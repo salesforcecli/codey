@@ -39,7 +39,7 @@ import { WebSearchTool } from '../tools/web-search.js';
 import { GetScaleCenterStatusTool } from '../tools/scaleCenterStatus.js';
 import { CreateDevopsWorkItemTool } from '../tools/createDevopsWorkItem.js';
 import { SfDeployMetadataTool } from '../tools/sfDeployMetadata.js';
-import { RunApexGuruTool } from '../tools/runApexGuru.js';
+import { RunCodeAnalyzerTool } from '../tools/runCodeyAnalyzer.js';
 import {
   SlackCanvasAppendTool,
   SlackCanvasCreateTool,
@@ -906,7 +906,7 @@ export class Config {
       registerCoreTool(GetScaleCenterStatusTool);
       registerCoreTool(CreateDevopsWorkItemTool);
       registerCoreTool(SfDeployMetadataTool);
-      registerCoreTool(RunApexGuruTool);
+      registerCoreTool(RunCodeAnalyzerTool);
       registerCoreTool(SlackCanvasCreateTool, this);
       registerCoreTool(SlackCanvasAppendTool, this);
     }

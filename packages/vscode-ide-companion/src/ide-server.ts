@@ -326,7 +326,7 @@ export class IDEServer {
 const createMcpServer = (diffManager: DiffManager) => {
   const server = new McpServer(
     {
-      name: 'gemini-cli-companion-mcp-server',
+      name: '@salesforce/codey-companion-mcp-server',
       version: '1.0.0',
     },
     { capabilities: { logging: {} } },

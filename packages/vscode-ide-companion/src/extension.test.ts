@@ -111,7 +111,7 @@ describe('activate', () => {
     await new Promise(process.nextTick); // Wait for the promise to resolve
     const commandCallback = vi
       .mocked(vscode.commands.registerCommand)
-      .mock.calls.find((call) => call[0] === 'gemini-cli.runCodeyCLI')?.[1];
+      .mock.calls.find((call) => call[0] === 'codey.runCodeyCLI')?.[1];
 
     expect(commandCallback).toBeDefined();
   });

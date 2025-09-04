@@ -23,20 +23,18 @@ import {
 } from './tools.js';
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-interface RunApexGuruParams {}
+interface RunCodeAnalyzerParams {}
 
-class RunApexGuruInvocation extends BaseToolInvocation<
-  RunApexGuruParams,
+class RunCodeAnalyzerInvocation extends BaseToolInvocation<
+  RunCodeAnalyzerParams,
   ToolResult
 > {
   getDescription(): string {
-    return 'Analyze an Apex class with Apex Guru for performance issues.';
+    return 'Analyze an Apex class with Code Analyzer for performance issues.';
   }
 
   async execute(): Promise<ToolResult> {
-    const message =
-      // 'The apex class contains an inefficient SOQL query. Suggestion: add LIMIT to query to reduce the number of records returned.';
-      `Apex Guru Report: Below are the key findings and recommendations for the Apex class. Summarize the findings and recommendations in a helpful manner to the user.
+    const message = `Code Analyzer Report: Below are the key findings and recommendations for the Apex class. Summarize the findings and recommendations in a helpful manner to the user.
 
 <findings>
 1.  Inefficient Total Item Count: The Database.countQuery('SELECT count() FROM Product__c ' + whereClause) can be very slow on objects with many records. It has to scan a large portion of the database table just to get the total count, which is a common cause of timeouts in pagination logic.
@@ -58,17 +56,17 @@ class RunApexGuruInvocation extends BaseToolInvocation<
   }
 }
 
-export class RunApexGuruTool extends BaseDeclarativeTool<
-  RunApexGuruParams,
+export class RunCodeAnalyzerTool extends BaseDeclarativeTool<
+  RunCodeAnalyzerParams,
   ToolResult
 > {
-  static readonly Name = 'run_apex_guru';
+  static readonly Name = 'sf_code_analyzer_run';
 
   constructor() {
     super(
-      RunApexGuruTool.Name,
-      'Run Apex Guru',
-      'Use Apex Guru to analyze an Apex class for performance issues.',
+      RunCodeAnalyzerTool.Name,
+      'Run Code Analyzer',
+      'Use Code Analyzer to analyze an Apex class for performance issues.',
       Kind.Other,
       {
         type: 'object',
@@ -81,8 +79,8 @@ export class RunApexGuruTool extends BaseDeclarativeTool<
   }
 
   protected createInvocation(
-    params: RunApexGuruParams,
-  ): ToolInvocation<RunApexGuruParams, ToolResult> {
-    return new RunApexGuruInvocation(params);
+    params: RunCodeAnalyzerParams,
+  ): ToolInvocation<RunCodeAnalyzerParams, ToolResult> {
+    return new RunCodeAnalyzerInvocation(params);
   }
 }

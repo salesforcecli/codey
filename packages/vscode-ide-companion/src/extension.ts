@@ -45,24 +45,18 @@ export async function activate(context: vscode.ExtensionContext) {
       DIFF_SCHEME,
       diffContentProvider,
     ),
-    vscode.commands.registerCommand(
-      'gemini.diff.accept',
-      (uri?: vscode.Uri) => {
-        const docUri = uri ?? vscode.window.activeTextEditor?.document.uri;
-        if (docUri && docUri.scheme === DIFF_SCHEME) {
-          diffManager.acceptDiff(docUri);
-        }
-      },
-    ),
-    vscode.commands.registerCommand(
-      'gemini.diff.cancel',
-      (uri?: vscode.Uri) => {
-        const docUri = uri ?? vscode.window.activeTextEditor?.document.uri;
-        if (docUri && docUri.scheme === DIFF_SCHEME) {
-          diffManager.cancelDiff(docUri);
-        }
-      },
-    ),
+    vscode.commands.registerCommand('codey.diff.accept', (uri?: vscode.Uri) => {
+      const docUri = uri ?? vscode.window.activeTextEditor?.document.uri;
+      if (docUri && docUri.scheme === DIFF_SCHEME) {
+        diffManager.acceptDiff(docUri);
+      }
+    }),
+    vscode.commands.registerCommand('codey.diff.cancel', (uri?: vscode.Uri) => {
+      const docUri = uri ?? vscode.window.activeTextEditor?.document.uri;
+      if (docUri && docUri.scheme === DIFF_SCHEME) {
+        diffManager.cancelDiff(docUri);
+      }
+    }),
   );
 
   ideServer = new IDEServer(log, diffManager);
@@ -84,7 +78,7 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.workspace.onDidChangeWorkspaceFolders(() => {
       ideServer.updateWorkspacePath();
     }),
-    vscode.commands.registerCommand('gemini-cli.runCodeyCLI', async () => {
+    vscode.commands.registerCommand('codey.runCodeyCLI', async () => {
       const workspaceFolders = vscode.workspace.workspaceFolders;
       if (!workspaceFolders || workspaceFolders.length === 0) {
         vscode.window.showInformationMessage(
@@ -112,7 +106,7 @@ export async function activate(context: vscode.ExtensionContext) {
         terminal.sendText(geminiCmd);
       }
     }),
-    vscode.commands.registerCommand('gemini-cli.showNotices', async () => {
+    vscode.commands.registerCommand('codey.showNotices', async () => {
       const noticePath = vscode.Uri.joinPath(
         context.extensionUri,
         'NOTICES.txt',
