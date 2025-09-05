@@ -86,7 +86,7 @@ async function main(): Promise<void> {
       const defaultMessage = `:rotating_light:Performance Degradation in Production :rotating_light:
 
 _Source_: \`ProductController.cls\`
-_Details_: High CPU Event detected in \`ProductController.getProducts\` entrypoint
+_Details_: High dBCPU Event detected in \`ProductController.getProducts\` entrypoint
 `;
       const posted = await client.chat.postMessage({
         channel: command.channel_id,
