@@ -20,8 +20,20 @@ import { type CommandContext } from './types.js';
 import { createMockCommandContext } from '../../test-utils/mockCommandContext.js';
 import * as versionUtils from '../../utils/version.js';
 import { MessageType } from '../types.js';
+import { IdeClient } from '@salesforce/codey-core';
 
-import type { IdeClient } from '../../../../core/src/ide/ide-client.js';
+vi.mock('@salesforce/codey-core', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@salesforce/codey-core')>();
+  return {
+    ...actual,
+    IdeClient: {
+      getInstance: vi.fn().mockResolvedValue({
+        getDetectedIdeDisplayName: vi.fn().mockReturnValue('test-ide'),
+      }),
+    },
+  };
+});
 
 vi.mock('../../utils/version.js', () => ({
   getCliVersion: vi.fn(),
@@ -37,7 +49,6 @@ describe('aboutCommand', () => {
       services: {
         config: {
           getModel: vi.fn(),
-          getIdeClient: vi.fn(),
           getIdeMode: vi.fn().mockReturnValue(true),
         },
         settings: {
@@ -63,9 +74,6 @@ describe('aboutCommand', () => {
     Object.defineProperty(process, 'platform', {
       value: 'test-os',
     });
-    vi.spyOn(mockContext.services.config!, 'getIdeClient').mockReturnValue({
-      getDetectedIdeDisplayName: vi.fn().mockReturnValue('test-ide'),
-    } as Partial<IdeClient> as IdeClient);
   });
 
   afterEach(() => {
@@ -139,11 +147,11 @@ describe('aboutCommand', () => {
   });
 
   it('should not show ide client when it is not detected', async () => {
-    vi.spyOn(mockContext.services.config!, 'getIdeClient').mockReturnValue({
+    vi.mocked(IdeClient.getInstance).mockResolvedValue({
       getDetectedIdeDisplayName: vi.fn().mockReturnValue(undefined),
-    } as Partial<IdeClient> as IdeClient);
+    } as unknown as IdeClient);
 
-    process.env.SANDBOX = '';
+    process.env['SANDBOX'] = '';
     if (!aboutCommand.action) {
       throw new Error('The about command must have an action.');
     }

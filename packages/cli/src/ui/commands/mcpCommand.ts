@@ -30,6 +30,7 @@ import {
   MCPServerStatus,
   mcpServerRequiresOAuth,
   getErrorMessage,
+  MCPOAuthTokenStorage,
 } from '@salesforce/codey-core';
 
 const COLOR_GREEN = '\u001b[32m';
@@ -149,9 +150,10 @@ const getMcpStatus = async (
       needsAuthHint = true;
       try {
         const { MCPOAuthTokenStorage } = await import('@salesforce/codey-core');
-        const hasToken = await MCPOAuthTokenStorage.getToken(serverName);
+        const tokenStorage = new MCPOAuthTokenStorage();
+        const hasToken = await tokenStorage.getCredentials(serverName);
         if (hasToken) {
-          const isExpired = MCPOAuthTokenStorage.isTokenExpired(hasToken.token);
+          const isExpired = tokenStorage.isTokenExpired(hasToken.token);
           if (isExpired) {
             message += ` ${COLOR_YELLOW}(OAuth token expired)${RESET_COLOR}`;
           } else {
@@ -393,11 +395,8 @@ const authCommand: SlashCommand = {
 
       // Pass the MCP server URL for OAuth discovery
       const mcpServerUrl = server.httpUrl || server.url;
-      await MCPOAuthProvider.authenticate(
-        serverName,
-        oauthConfig,
-        mcpServerUrl,
-      );
+      const authProvider = new MCPOAuthProvider(new MCPOAuthTokenStorage());
+      await authProvider.authenticate(serverName, oauthConfig, mcpServerUrl);
 
       context.ui.addItem(
         {

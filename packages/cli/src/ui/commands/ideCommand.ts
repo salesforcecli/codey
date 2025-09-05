@@ -14,7 +14,14 @@
  * limitations under the License.
  */
 
-import type { Config, IdeClient, File } from '@salesforce/codey-core';
+import {
+  type Config,
+  IdeClient,
+  type File,
+  logIdeConnection,
+  IdeConnectionEvent,
+  IdeConnectionType,
+} from '@salesforce/codey-core';
 import {
   getIdeInstaller,
   IDEConnectionStatus,
@@ -121,11 +128,22 @@ async function getIdeStatusMessageWithFiles(ideClient: IdeClient): Promise<{
   }
 }
 
-export const ideCommand = (config: Config | null): SlashCommand | null => {
-  if (!config) {
-    return null;
+async function setIdeModeAndSyncConnection(
+  config: Config,
+  value: boolean,
+): Promise<void> {
+  config.setIdeMode(value);
+  const ideClient = await IdeClient.getInstance();
+  if (value) {
+    await ideClient.connect();
+    logIdeConnection(config, new IdeConnectionEvent(IdeConnectionType.SESSION));
+  } else {
+    await ideClient.disconnect();
   }
-  const ideClient = config.getIdeClient();
+}
+
+export const ideCommand = async (): Promise<SlashCommand> => {
+  const ideClient = await IdeClient.getInstance();
   const currentIDE = ideClient.getCurrentIde();
   if (!currentIDE || !ideClient.getDetectedIdeDisplayName()) {
     return {
@@ -204,7 +222,7 @@ export const ideCommand = (config: Config | null): SlashCommand | null => {
         );
         // Poll for up to 5 seconds for the extension to activate.
         for (let i = 0; i < 10; i++) {
-          await config.setIdeModeAndSyncConnection(true);
+          await setIdeModeAndSyncConnection(context.services.config!, true);
           if (
             ideClient.getConnectionStatus().status ===
             IDEConnectionStatus.Connected
@@ -246,7 +264,7 @@ export const ideCommand = (config: Config | null): SlashCommand | null => {
         'ide.enabled',
         true,
       );
-      await config.setIdeModeAndSyncConnection(true);
+      await setIdeModeAndSyncConnection(context.services.config!, true);
       const { messageType, content } = getIdeStatusMessage(ideClient);
       context.ui.addItem(
         {
@@ -268,7 +286,7 @@ export const ideCommand = (config: Config | null): SlashCommand | null => {
         'ide.enabled',
         false,
       );
-      await config.setIdeModeAndSyncConnection(false);
+      await setIdeModeAndSyncConnection(context.services.config!, false);
       const { messageType, content } = getIdeStatusMessage(ideClient);
       context.ui.addItem(
         {

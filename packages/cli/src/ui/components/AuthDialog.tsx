@@ -72,7 +72,7 @@ export function AuthDialog({
     }
     return null;
   });
-  const items = [
+  let items = [
     {
       label: 'Login with Google',
       value: AuthType.LOGIN_WITH_GOOGLE,
@@ -96,7 +96,13 @@ export function AuthDialog({
     },
   ];
 
-  const initialAuthIndex = items.findIndex((item) => {
+  if (settings.merged.security?.auth?.enforcedType) {
+    items = items.filter(
+      (item) => item.value === settings.merged.security?.auth?.enforcedType,
+    );
+  }
+
+  let initialAuthIndex = items.findIndex((item) => {
     if (settings.merged.security?.auth?.selectedType) {
       return item.value === settings.merged.security.auth.selectedType;
     }
@@ -114,6 +120,9 @@ export function AuthDialog({
 
     return item.value === AuthType.LOGIN_WITH_GOOGLE;
   });
+  if (settings.merged.security?.auth?.enforcedType) {
+    initialAuthIndex = 0;
+  }
 
   const handleAuthSelect = (authMethod: AuthType) => {
     const error = validateAuthMethod(authMethod);

@@ -25,7 +25,7 @@ import { MessageType } from '../types.js';
 import { GIT_COMMIT_INFO } from '../../generated/git-commit.js';
 import { formatMemoryUsage } from '../utils/formatters.js';
 import { getCliVersion } from '../../utils/version.js';
-import { sessionId } from '@salesforce/codey-core';
+import { IdeClient, sessionId } from '@salesforce/codey-core';
 
 export const bugCommand: SlashCommand = {
   name: 'bug',
@@ -47,10 +47,7 @@ export const bugCommand: SlashCommand = {
     const modelVersion = config?.getModel() || 'Unknown';
     const cliVersion = await getCliVersion();
     const memoryUsage = formatMemoryUsage(process.memoryUsage().rss);
-    const ideClient =
-      (context.services.config?.getIdeMode() &&
-        context.services.config?.getIdeClient()?.getDetectedIdeDisplayName()) ||
-      '';
+    const ideClient = await getIdeClientName(context);
 
     let info = `
 * **CLI Version:** ${cliVersion}
@@ -100,3 +97,11 @@ export const bugCommand: SlashCommand = {
     }
   },
 };
+
+async function getIdeClientName(context: CommandContext) {
+  if (!context.services.config?.getIdeMode()) {
+    return '';
+  }
+  const ideClient = await IdeClient.getInstance();
+  return ideClient.getDetectedIdeDisplayName() ?? '';
+}

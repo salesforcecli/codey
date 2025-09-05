@@ -142,6 +142,7 @@ class ShellToolInvocation extends BaseToolInvocation<
       );
 
       let cumulativeOutput = '';
+      let outputChunks: string[] = [cumulativeOutput];
       let lastUpdateTime = Date.now();
       let isBinaryStream = false;
 
@@ -159,9 +160,11 @@ class ShellToolInvocation extends BaseToolInvocation<
           switch (event.type) {
             case 'data':
               if (isBinaryStream) break;
-              cumulativeOutput = event.chunk;
-              currentDisplayOutput = cumulativeOutput;
+              outputChunks.push(event.chunk);
               if (Date.now() - lastUpdateTime > OUTPUT_UPDATE_INTERVAL_MS) {
+                cumulativeOutput = outputChunks.join('');
+                outputChunks = [cumulativeOutput];
+                currentDisplayOutput = cumulativeOutput;
                 shouldUpdate = true;
               }
               break;

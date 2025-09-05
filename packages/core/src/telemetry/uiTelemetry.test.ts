@@ -656,8 +656,8 @@ describe('UiTelemetryService', () => {
         ...structuredClone(new ToolCallEvent(toolCall)),
         'event.name': EVENT_TOOL_CALL,
         metadata: {
-          ai_added_lines: 10,
-          ai_removed_lines: 5,
+          model_added_lines: 10,
+          model_removed_lines: 5,
         },
       } as ToolCallEvent & { 'event.name': typeof EVENT_TOOL_CALL };
 
@@ -674,8 +674,8 @@ describe('UiTelemetryService', () => {
         ...structuredClone(new ToolCallEvent(toolCall)),
         'event.name': EVENT_TOOL_CALL,
         metadata: {
-          ai_added_lines: null,
-          ai_removed_lines: undefined,
+          model_added_lines: null,
+          model_removed_lines: undefined,
         },
       } as ToolCallEvent & { 'event.name': typeof EVENT_TOOL_CALL };
 

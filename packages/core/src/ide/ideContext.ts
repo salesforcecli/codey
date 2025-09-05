@@ -37,6 +37,7 @@ export const IdeContextSchema = z.object({
   workspaceState: z
     .object({
       openFiles: z.array(FileSchema).optional(),
+      isTrusted: z.boolean().optional(),
     })
     .optional(),
 });

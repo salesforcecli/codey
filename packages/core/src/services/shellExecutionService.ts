@@ -358,7 +358,6 @@ export class ShellExecutionService {
         });
         let processingChain = Promise.resolve();
         let decoder: TextDecoder | null = null;
-        let output = '';
         const outputChunks: Buffer[] = [];
         const error: Error | null = null;
         let exited = false;
@@ -395,9 +394,10 @@ export class ShellExecutionService {
                 if (isStreamingRawContent) {
                   const decodedChunk = decoder.decode(data, { stream: true });
                   headlessTerminal.write(decodedChunk, () => {
-                    const newStrippedOutput = getFullText(headlessTerminal);
-                    output = newStrippedOutput;
-                    onOutputEvent({ type: 'data', chunk: newStrippedOutput });
+                    onOutputEvent({
+                      type: 'data',
+                      chunk: stripAnsi(decodedChunk),
+                    });
                     resolve();
                   });
                 } else {
@@ -430,7 +430,7 @@ export class ShellExecutionService {
 
               resolve({
                 rawOutput: finalBuffer,
-                output,
+                output: getFullText(headlessTerminal),
                 exitCode,
                 signal: signal ?? null,
                 error,
