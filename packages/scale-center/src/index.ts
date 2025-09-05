@@ -23,7 +23,7 @@ function requireEnv(name: string): string {
 }
 
 async function main(): Promise<void> {
-  console.log('🚀 Starting scale-center Slack app...');
+  console.log('🚀 Starting scale-agent Slack app...');
 
   // Required for Socket Mode
   const botToken = requireEnv('SLACK_BOT_TOKEN');
@@ -57,7 +57,7 @@ async function main(): Promise<void> {
   });
 
   // Slash command -> open modal to collect alert text or send directly
-  const SLASH_COMMAND = '/scale-center';
+  const SLASH_COMMAND = '/scale-agent';
 
   app.command(SLASH_COMMAND, async ({ command, ack, client, logger }) => {
     await ack();
@@ -86,7 +86,7 @@ async function main(): Promise<void> {
       const defaultMessage = `:rotating_light:Performance Degradation in Production :rotating_light:
 
 _Source_: \`ProductController.cls\`
-_Details_: Average page load time has exceeded threshold.
+_Details_: High CPU Event detected in \`ProductController.getProducts\` entrypoint
 `;
       const posted = await client.chat.postMessage({
         channel: command.channel_id,
@@ -106,7 +106,7 @@ _Details_: Average page load time has exceeded threshold.
   const port = Number(process.env.PORT ?? 3012);
   console.log(`🔌 Starting app (Socket Mode) on port ${port}...`);
   await app.start(port);
-  console.log(`⚡️ scale-center app running (Socket Mode) on port ${port}`);
+  console.log(`⚡️ scale-agent app running (Socket Mode) on port ${port}`);
 }
 
 main().catch((err) => {
