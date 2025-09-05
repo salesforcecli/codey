@@ -152,7 +152,7 @@ function createToolBlocks(toolData: ToolBlockData): SlackBlock[] {
     type: 'section',
     text: {
       type: 'mrkdwn',
-      text: `:wrench: ${toolData.status} *${toolData.name}*`,
+      text: `${toolData.status} :sparkling-tools: *${toolData.name}*`,
     },
   };
 
