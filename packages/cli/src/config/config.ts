@@ -102,12 +102,13 @@ export async function parseArguments(settings: Settings): Promise<CliArgs> {
     )
     .command('$0 [promptWords...]', 'Launch Gemini CLI', (yargsInstance) =>
       yargsInstance
-        .option('model', {
-          alias: 'm',
-          type: 'string',
-          description: `Model`,
-          default: process.env['GEMINI_MODEL'],
-        })
+        // Current product direction is to prevent users from switching models
+        // .option('model', {
+        //   alias: 'm',
+        //   type: 'string',
+        //   description: `Model`,
+        //   default: process.env['GEMINI_MODEL'],
+        // })
         .option('prompt', {
           alias: 'p',
           type: 'string',
