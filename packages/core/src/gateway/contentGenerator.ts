@@ -167,7 +167,7 @@ const convertGenerationToCandidate = (
     parts.push({ text: generation.content });
   }
 
-  return {
+  const candidate = {
     content: {
       parts,
       role: 'model',
@@ -175,6 +175,8 @@ const convertGenerationToCandidate = (
     index: 0,
     safetyRatings: [],
   };
+
+  return candidate;
 };
 
 /**
@@ -567,6 +569,7 @@ export class GatewayContentGenerator implements ContentGenerator {
       const generations = data.generation_details?.generations || [];
 
       let shouldYieldResponse = false;
+      let candidateToYield: Candidate | null = null;
 
       // Handle completed streaming tool calls
       if (useStreamingToolCalls) {
@@ -575,34 +578,40 @@ export class GatewayContentGenerator implements ContentGenerator {
           generations,
         );
         if (completedCandidate) {
-          response.candidates!.push(completedCandidate);
+          candidateToYield = completedCandidate;
           shouldYieldResponse = true;
           activeToolCall = null;
         }
       }
 
-      // Process current generation chunks
-      const processResult = this.processGenerationChunks(
-        generations,
-        useStreamingToolCalls,
-        activeToolCall,
-      );
+      // Process current generation chunks (only if we don't already have a completed tool call)
+      if (!candidateToYield) {
+        const processResult = this.processGenerationChunks(
+          generations,
+          useStreamingToolCalls,
+          activeToolCall,
+        );
 
-      if (processResult.candidates.length > 0) {
-        response.candidates!.push(...processResult.candidates);
-        shouldYieldResponse = true;
+        if (processResult.candidate) {
+          candidateToYield = processResult.candidate;
+          shouldYieldResponse = true;
+        }
+
+        activeToolCall = processResult.updatedActiveToolCall;
       }
 
-      activeToolCall = processResult.updatedActiveToolCall;
-
-      // Handle final usage-only chunks
-      const finalCandidate = this.handleUsageOnlyChunk(data, generations);
-      if (finalCandidate) {
-        response.candidates = [finalCandidate];
-        shouldYieldResponse = true;
+      // Handle final usage-only chunks (only if we don't already have a candidate)
+      if (!candidateToYield) {
+        const finalCandidate = this.handleUsageOnlyChunk(data, generations);
+        if (finalCandidate) {
+          candidateToYield = finalCandidate;
+          shouldYieldResponse = true;
+        }
       }
 
-      if (shouldYieldResponse) {
+      // Yield exactly one candidate per response
+      if (shouldYieldResponse && candidateToYield) {
+        response.candidates = [candidateToYield];
         yield response;
       }
     }
@@ -686,7 +695,7 @@ export class GatewayContentGenerator implements ContentGenerator {
   }
 
   /**
-   * Process generation chunks and return candidates and updated tool call state
+   * Process generation chunks and return a single merged candidate and updated tool call state
    */
   private processGenerationChunks(
     generations: NonNullable<
@@ -695,7 +704,7 @@ export class GatewayContentGenerator implements ContentGenerator {
     useStreamingToolCalls: boolean,
     activeToolCall: StreamingToolCall | null,
   ): {
-    candidates: Candidate[];
+    candidate: Candidate | null;
     updatedActiveToolCall: StreamingToolCall | null;
   } {
     const candidates: Candidate[] = [];
@@ -723,7 +732,24 @@ export class GatewayContentGenerator implements ContentGenerator {
       }
     }
 
-    return { candidates, updatedActiveToolCall };
+    // Merge multiple candidates into a single candidate for streaming consistency
+    if (candidates.length === 0) {
+      return { candidate: null, updatedActiveToolCall };
+    } else if (candidates.length === 1) {
+      return { candidate: candidates[0], updatedActiveToolCall };
+    } else {
+      // Merge multiple candidates into one
+      const mergedParts = candidates.flatMap((c) => c.content?.parts || []);
+      const mergedCandidate: Candidate = {
+        content: {
+          parts: mergedParts,
+          role: 'model',
+        },
+        index: 0,
+        safetyRatings: [],
+      };
+      return { candidate: mergedCandidate, updatedActiveToolCall };
+    }
   }
 
   /**
