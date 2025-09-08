@@ -30,12 +30,11 @@ import {
   IdeClient,
 } from '@salesforce/codey-core';
 import { useSessionStats } from '../contexts/SessionContext.js';
-import { runExitCleanup } from '../../utils/cleanup.js';
 import type {
   Message,
   HistoryItemWithoutId,
-  HistoryItem,
   SlashCommandProcessorResult,
+  HistoryItem,
 } from '../types.js';
 import { MessageType } from '../types.js';
 import type { LoadedSettings } from '../../config/settings.js';
@@ -44,6 +43,17 @@ import { CommandService } from '../../services/CommandService.js';
 import { BuiltinCommandLoader } from '../../services/BuiltinCommandLoader.js';
 import { FileCommandLoader } from '../../services/FileCommandLoader.js';
 import { McpPromptLoader } from '../../services/McpPromptLoader.js';
+
+interface SlashCommandProcessorActions {
+  openAuthDialog: () => void;
+  openThemeDialog: () => void;
+  openEditorDialog: () => void;
+  openPrivacyNotice: () => void;
+  openSettingsDialog: () => void;
+  quit: (messages: HistoryItem[]) => void;
+  setDebugMessage: (message: string) => void;
+  toggleCorgiMode: () => void;
+}
 
 /**
  * Hook to define and process slash commands (e.g., /help, /clear).
@@ -55,17 +65,10 @@ export const useSlashCommandProcessor = (
   clearItems: UseHistoryManagerReturn['clearItems'],
   loadHistory: UseHistoryManagerReturn['loadHistory'],
   refreshStatic: () => void,
-  onDebugMessage: (message: string) => void,
-  openThemeDialog: () => void,
-  openAuthDialog: () => void,
-  openEditorDialog: () => void,
-  toggleCorgiMode: () => void,
-  setQuittingMessages: (message: HistoryItem[]) => void,
-  openPrivacyNotice: () => void,
-  openSettingsDialog: () => void,
   toggleVimEnabled: () => Promise<boolean>,
   setIsProcessing: (isProcessing: boolean) => void,
   setGeminiMdFileCount: (count: number) => void,
+  actions: SlashCommandProcessorActions,
 ) => {
   const session = useSessionStats();
   const [commands, setCommands] = useState<readonly SlashCommand[]>([]);
@@ -187,10 +190,10 @@ export const useSlashCommandProcessor = (
           refreshStatic();
         },
         loadHistory,
-        setDebugMessage: onDebugMessage,
+        setDebugMessage: actions.setDebugMessage,
         pendingItem: pendingCompressionItem,
         setPendingItem: setPendingCompressionItem,
-        toggleCorgiMode,
+        toggleCorgiMode: actions.toggleCorgiMode,
         toggleVimEnabled,
         setGeminiMdFileCount,
         reloadCommands,
@@ -210,10 +213,9 @@ export const useSlashCommandProcessor = (
       clearItems,
       refreshStatic,
       session.stats,
-      onDebugMessage,
+      actions,
       pendingCompressionItem,
       setPendingCompressionItem,
-      toggleCorgiMode,
       toggleVimEnabled,
       sessionShellAllowlist,
       setGeminiMdFileCount,
@@ -385,19 +387,19 @@ export const useSlashCommandProcessor = (
                 case 'dialog':
                   switch (result.dialog) {
                     case 'auth':
-                      openAuthDialog();
+                      actions.openAuthDialog();
                       return { type: 'handled' };
                     case 'theme':
-                      openThemeDialog();
+                      actions.openThemeDialog();
                       return { type: 'handled' };
                     case 'editor':
-                      openEditorDialog();
+                      actions.openEditorDialog();
                       return { type: 'handled' };
                     case 'privacy':
-                      openPrivacyNotice();
+                      actions.openPrivacyNotice();
                       return { type: 'handled' };
                     case 'settings':
-                      openSettingsDialog();
+                      actions.openSettingsDialog();
                       return { type: 'handled' };
                     case 'help':
                       return { type: 'handled' };
@@ -409,9 +411,8 @@ export const useSlashCommandProcessor = (
                     }
                   }
                 case 'load_history': {
-                  config
-                    ?.getGeminiClient()
-                    ?.setHistory(result.clientHistory, { stripThoughts: true });
+                  config?.getGeminiClient()?.setHistory(result.clientHistory);
+                  config?.getGeminiClient()?.stripThoughtsFromHistory();
                   fullCommandContext.ui.clear();
                   result.history.forEach((item, index) => {
                     fullCommandContext.ui.addItem(item, index);
@@ -419,11 +420,7 @@ export const useSlashCommandProcessor = (
                   return { type: 'handled' };
                 }
                 case 'quit':
-                  setQuittingMessages(result.messages);
-                  setTimeout(async () => {
-                    await runExitCleanup();
-                    process.exit(0);
-                  }, 100);
+                  actions.quit(result.messages);
                   return { type: 'handled' };
 
                 case 'submit_prompt':
@@ -564,15 +561,10 @@ export const useSlashCommandProcessor = (
     [
       config,
       addItem,
-      openAuthDialog,
+      actions,
       commands,
       commandContext,
       addMessage,
-      openThemeDialog,
-      openPrivacyNotice,
-      openEditorDialog,
-      setQuittingMessages,
-      openSettingsDialog,
       setShellConfirmationRequest,
       setSessionShellAllowlist,
       setIsProcessing,

@@ -17,13 +17,16 @@
 import { render } from 'ink-testing-library';
 import { describe, it, expect, vi } from 'vitest';
 import { Text } from 'ink';
+import type React from 'react';
 import { ToolGroupMessage } from './ToolGroupMessage.js';
-import { type IndividualToolCallDisplay, ToolCallStatus } from '../../types.js';
+import type { IndividualToolCallDisplay } from '../../types.js';
+import { ToolCallStatus } from '../../types.js';
 import type {
   Config,
   ToolCallConfirmationDetails,
 } from '@salesforce/codey-core';
 import { TOOL_STATUS } from '../../constants.js';
+import { ConfigContext } from '../../contexts/ConfigContext.js';
 
 // Mock child components to isolate ToolGroupMessage behavior
 vi.mock('./ToolMessage.js', () => ({
@@ -91,14 +94,21 @@ describe('<ToolGroupMessage />', () => {
   const baseProps = {
     groupId: 1,
     terminalWidth: 80,
-    config: mockConfig,
     isFocused: true,
   };
+
+  // Helper to wrap component with required providers
+  const renderWithProviders = (component: React.ReactElement) =>
+    render(
+      <ConfigContext.Provider value={mockConfig}>
+        {component}
+      </ConfigContext.Provider>,
+    );
 
   describe('Golden Snapshots', () => {
     it('renders single successful tool call', () => {
       const toolCalls = [createToolCall()];
-      const { lastFrame } = render(
+      const { lastFrame } = renderWithProviders(
         <ToolGroupMessage {...baseProps} toolCalls={toolCalls} />,
       );
       expect(lastFrame()).toMatchSnapshot();
@@ -125,7 +135,7 @@ describe('<ToolGroupMessage />', () => {
           status: ToolCallStatus.Error,
         }),
       ];
-      const { lastFrame } = render(
+      const { lastFrame } = renderWithProviders(
         <ToolGroupMessage {...baseProps} toolCalls={toolCalls} />,
       );
       expect(lastFrame()).toMatchSnapshot();
@@ -146,7 +156,7 @@ describe('<ToolGroupMessage />', () => {
           },
         }),
       ];
-      const { lastFrame } = render(
+      const { lastFrame } = renderWithProviders(
         <ToolGroupMessage {...baseProps} toolCalls={toolCalls} />,
       );
       expect(lastFrame()).toMatchSnapshot();
@@ -161,7 +171,7 @@ describe('<ToolGroupMessage />', () => {
           status: ToolCallStatus.Success,
         }),
       ];
-      const { lastFrame } = render(
+      const { lastFrame } = renderWithProviders(
         <ToolGroupMessage {...baseProps} toolCalls={toolCalls} />,
       );
       expect(lastFrame()).toMatchSnapshot();
@@ -188,7 +198,7 @@ describe('<ToolGroupMessage />', () => {
           status: ToolCallStatus.Pending,
         }),
       ];
-      const { lastFrame } = render(
+      const { lastFrame } = renderWithProviders(
         <ToolGroupMessage {...baseProps} toolCalls={toolCalls} />,
       );
       expect(lastFrame()).toMatchSnapshot();
@@ -210,7 +220,7 @@ describe('<ToolGroupMessage />', () => {
           resultDisplay: 'More output here',
         }),
       ];
-      const { lastFrame } = render(
+      const { lastFrame } = renderWithProviders(
         <ToolGroupMessage
           {...baseProps}
           toolCalls={toolCalls}
@@ -222,7 +232,7 @@ describe('<ToolGroupMessage />', () => {
 
     it('renders when not focused', () => {
       const toolCalls = [createToolCall()];
-      const { lastFrame } = render(
+      const { lastFrame } = renderWithProviders(
         <ToolGroupMessage
           {...baseProps}
           toolCalls={toolCalls}
@@ -240,7 +250,7 @@ describe('<ToolGroupMessage />', () => {
             'This is a very long description that might cause wrapping issues',
         }),
       ];
-      const { lastFrame } = render(
+      const { lastFrame } = renderWithProviders(
         <ToolGroupMessage
           {...baseProps}
           toolCalls={toolCalls}
@@ -251,7 +261,7 @@ describe('<ToolGroupMessage />', () => {
     });
 
     it('renders empty tool calls array', () => {
-      const { lastFrame } = render(
+      const { lastFrame } = renderWithProviders(
         <ToolGroupMessage {...baseProps} toolCalls={[]} />,
       );
       expect(lastFrame()).toMatchSnapshot();
@@ -261,7 +271,7 @@ describe('<ToolGroupMessage />', () => {
   describe('Border Color Logic', () => {
     it('uses yellow border when tools are pending', () => {
       const toolCalls = [createToolCall({ status: ToolCallStatus.Pending })];
-      const { lastFrame } = render(
+      const { lastFrame } = renderWithProviders(
         <ToolGroupMessage {...baseProps} toolCalls={toolCalls} />,
       );
       // The snapshot will capture the visual appearance including border color
@@ -275,7 +285,7 @@ describe('<ToolGroupMessage />', () => {
           status: ToolCallStatus.Success,
         }),
       ];
-      const { lastFrame } = render(
+      const { lastFrame } = renderWithProviders(
         <ToolGroupMessage {...baseProps} toolCalls={toolCalls} />,
       );
       expect(lastFrame()).toMatchSnapshot();
@@ -290,7 +300,7 @@ describe('<ToolGroupMessage />', () => {
           status: ToolCallStatus.Success,
         }),
       ];
-      const { lastFrame } = render(
+      const { lastFrame } = renderWithProviders(
         <ToolGroupMessage {...baseProps} toolCalls={toolCalls} />,
       );
       expect(lastFrame()).toMatchSnapshot();
@@ -313,7 +323,7 @@ describe('<ToolGroupMessage />', () => {
           resultDisplay: '', // No result
         }),
       ];
-      const { lastFrame } = render(
+      const { lastFrame } = renderWithProviders(
         <ToolGroupMessage
           {...baseProps}
           toolCalls={toolCalls}
@@ -350,7 +360,7 @@ describe('<ToolGroupMessage />', () => {
           },
         }),
       ];
-      const { lastFrame } = render(
+      const { lastFrame } = renderWithProviders(
         <ToolGroupMessage {...baseProps} toolCalls={toolCalls} />,
       );
       // Should only show confirmation for the first tool

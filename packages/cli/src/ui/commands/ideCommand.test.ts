@@ -30,9 +30,6 @@ vi.mock('@salesforce/codey-core', async (importOriginal) => {
     IdeClient: {
       getInstance: vi.fn(),
     },
-    ideContext: {
-      getIdeContext: vi.fn(),
-    },
   };
 });
 
