@@ -40,6 +40,7 @@ import {
   EditTool,
   WriteFileTool,
   DEFAULT_GEMINI_MODEL,
+  DEFAULT_GATEWAY_MODEL,
 } from '@salesforce/codey-core';
 import type { Settings } from './settings.js';
 
@@ -51,7 +52,6 @@ import { resolvePath } from '../utils/resolvePath.js';
 import { appEvents } from '../utils/events.js';
 
 import { isWorkspaceTrusted } from './trustedFolders.js';
-import { DEFAULT_GATEWAY_MODEL } from '@salesforce/codey-core/src/gateway/models.js';
 
 // Simple console logger for now - replace with actual logger if available
 const logger = {

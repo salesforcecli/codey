@@ -37,7 +37,11 @@ import {
   type ChatGenerationRequest,
 } from './client.js';
 import { type ContentGenerator } from '../core/contentGenerator.js';
-import { GPT4oMini, findGatewayModel, type GatewayModel } from './models.js';
+import {
+  DEFAULT_GATEWAY_MODEL,
+  findGatewayModel,
+  type GatewayModel,
+} from './models.js';
 
 const isString = (content: ContentUnion): content is string =>
   typeof content === 'string';
@@ -190,7 +194,7 @@ export class GatewayContentGenerator implements ContentGenerator {
   model: GatewayModel;
 
   constructor({ modelName }: { modelName: string }) {
-    this.model = findGatewayModel(modelName) ?? GPT4oMini;
+    this.model = findGatewayModel(modelName) ?? DEFAULT_GATEWAY_MODEL;
     // need to get the model config from the displayId
     this.client = new GatewayClient({
       model: this.model,
@@ -342,19 +346,9 @@ export class GatewayContentGenerator implements ContentGenerator {
 
     // Add system instruction if present
     if (request.config?.systemInstruction) {
-      let systemContent = this.convertContentToText(
+      const systemContent = this.convertContentToText(
         request.config.systemInstruction,
       );
-
-      // TODO: use this https://git.soma.salesforce.com/pages/tech-enablement/einstein/docs/gateway/structured-outputs/#structured-outputs-via-response_format
-      // If JSON response is requested, add JSON enforcement to system instruction
-      if (request.config?.responseMimeType === 'application/json') {
-        systemContent = `JSON_MODE: You are operating in strict JSON response mode. You MUST respond with ONLY a valid JSON object. No explanations, no markdown, no text outside the JSON object.
-
-${systemContent}
-
-MANDATORY JSON FORMAT: Your response must be a single JSON object that starts with { and ends with }. Any other format will cause system failure.`;
-      }
 
       messages.push({
         role: 'system',
@@ -365,39 +359,8 @@ MANDATORY JSON FORMAT: Your response must be a single JSON object that starts wi
     // Convert contents to messages, preserving roles correctly
     const userContents = this.toContentsArray(request.contents);
     for (const content of userContents) {
-      let messageContent = this.convertContentToText(content);
-
+      const messageContent = this.convertContentToText(content);
       const role = content.role === 'model' ? 'assistant' : 'user';
-
-      // When JSON output is requested, add instructions to enforce JSON response
-      if (
-        request.config?.responseMimeType === 'application/json' &&
-        request.config.responseSchema &&
-        content === userContents[userContents.length - 1] &&
-        role === 'user' // Only add to user messages
-      ) {
-        const schema = JSON.stringify(request.config.responseSchema, null, 2);
-        const jsonInstruction = `
-
-⚠️ JSON_ONLY_MODE: CRITICAL OVERRIDE ⚠️
-
-You are in JSON-ONLY response mode. Your response MUST be valid JSON only.
-
-❌ NO conversational text
-❌ NO explanations
-❌ NO markdown
-❌ NO code blocks
-❌ NO "I understand..." or similar phrases
-
-✅ ONLY: Raw JSON object starting with { and ending with }
-
-REQUIRED SCHEMA:
-${schema}
-
-FINAL WARNING: Any non-JSON content will cause system failure. Respond with JSON immediately.
-`;
-        messageContent += jsonInstruction;
-      }
 
       messages.push({
         role,
@@ -411,6 +374,30 @@ FINAL WARNING: Any non-JSON content will cause system failure. Respond with JSON
       parallel_calls: true,
     } satisfies ChatGenerationRequest['tool_config'];
 
+    // Prepare response format for JSON responses
+    let responseFormat: Record<string, unknown> | undefined;
+    if (
+      request.config?.responseMimeType === 'application/json' &&
+      request.config.responseJsonSchema
+    ) {
+      // Normalize the schema to ensure Gateway API compatibility
+      const normalizedSchema = this.normalizeParameterSchema(
+        request.config.responseJsonSchema as Record<string, unknown>,
+      );
+
+      responseFormat = {
+        type: 'json_schema',
+        json_schema: {
+          name: 'response_schema',
+          strict: true,
+          schema: {
+            ...normalizedSchema,
+            additionalProperties: false,
+          },
+        },
+      };
+    }
+
     const gatewayRequest = {
       model: this.model.model,
       messages,
@@ -419,6 +406,9 @@ FINAL WARNING: Any non-JSON content will cause system failure. Respond with JSON
           request.config?.maxOutputTokens ?? this.model.maxOutputTokens,
         temperature: request.config?.temperature ?? 0.7,
         stop_sequences: request.config?.stopSequences,
+        ...(responseFormat
+          ? { parameters: { response_format: responseFormat } }
+          : {}),
       },
       ...(tools.length > 0 ? { tools, tool_config: toolConfig } : {}),
     };
