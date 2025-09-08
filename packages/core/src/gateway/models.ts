@@ -18,11 +18,6 @@ export type GatewayModel = {
   description: string;
   displayId: string;
   model: string;
-  isInsideTrustBoundary: boolean;
-  supportsStreaming: boolean;
-  supportsMcp: boolean;
-  supportsPromptCache: boolean;
-  supportsImages: boolean;
   maxInputTokens: number;
   maxOutputTokens: number;
   permittedParameters: string[];
@@ -30,16 +25,11 @@ export type GatewayModel = {
   customStreamHeaders?: Record<string, string>;
 };
 
-export const QWEN = {
+export const QWEN: GatewayModel = {
   description: 'Salesforce Qwen',
   displayId: 'SFR Model',
   model: 'xgen_stream',
-  isInsideTrustBoundary: true,
-  supportsStreaming: true,
-  supportsMcp: false,
-  supportsPromptCache: false,
-  supportsImages: false,
-  maxInputTokens: 32768,
+  maxInputTokens: 30720,
   maxOutputTokens: 2048,
   permittedParameters: ['command_source', 'guided_json', 'user_prompt'],
   customStreamHeaders: {
@@ -47,44 +37,45 @@ export const QWEN = {
   },
 };
 
-export const Claude37Sonnet = {
+export const Claude37Sonnet: GatewayModel = {
   description: 'Claude 3.7 Sonnet',
   displayId: 'Claude 3.7 Sonnet',
   model: 'llmgateway__BedrockAnthropicClaude37Sonnet',
-  isInsideTrustBoundary: true,
-  supportsStreaming: true,
-  supportsMcp: true,
-  supportsPromptCache: false,
-  supportsImages: false,
   maxInputTokens: 8192, // https://git.soma.salesforce.com/pages/tech-enablement/einstein/docs/gateway/models-and-providers/#comparison-table
   maxOutputTokens: 8192,
   permittedParameters: ['command_source', 'guided_json'], // it can get successful responses but seemingly not makes a difference
 };
 
-export const Claude4Sonnet = {
+export const Claude4Sonnet: GatewayModel = {
   description: 'Claude 4 Sonnet',
   displayId: 'Claude 4 Sonnet',
   model: 'llmgateway__BedrockAnthropicClaude4Sonnet',
-  isInsideTrustBoundary: true,
-  supportsStreaming: true,
-  supportsMcp: true,
-  supportsPromptCache: false,
-  supportsImages: false,
   maxInputTokens: 8192, // https://git.soma.salesforce.com/pages/tech-enablement/einstein/docs/gateway/models-and-providers/#comparison-table
   maxOutputTokens: 8192,
   permittedParameters: ['command_source', 'guided_json'], // it can get successful responses but seemingly not makes a difference
 };
 
-export const GPT4oMini = {
+export const GPT4oMini: GatewayModel = {
   description: 'ChatGPT 4o Mini',
   displayId: 'GPT-4o Mini',
   model: 'llmgateway__OpenAIGPT4OmniMini',
-  isInsideTrustBoundary: false,
-  supportsStreaming: true,
-  supportsMcp: true,
-  supportsPromptCache: false,
-  supportsImages: false,
   maxInputTokens: 128000, // refer to https://git.soma.salesforce.com/pages/tech-enablement/einstein/docs/gateway/models-and-providers/#comparison-table
   maxOutputTokens: 16384,
   permittedParameters: [],
 };
+
+// Registry of known Gateway models and helpers for lookup by name/id
+export const GATEWAY_MODELS: GatewayModel[] = [
+  QWEN,
+  Claude37Sonnet,
+  Claude4Sonnet,
+  GPT4oMini,
+];
+
+export function findGatewayModel(nameOrId: string): GatewayModel | undefined {
+  const needle = (nameOrId || '').toLowerCase();
+  return GATEWAY_MODELS.find(
+    (m) =>
+      m.model.toLowerCase() === needle || m.displayId.toLowerCase() === needle,
+  );
+}

@@ -37,7 +37,7 @@ import {
   type ChatGenerationRequest,
 } from './client.js';
 import { type ContentGenerator } from '../core/contentGenerator.js';
-import { Claude4Sonnet } from './models.js';
+import { GPT4oMini, findGatewayModel, type GatewayModel } from './models.js';
 
 const isString = (content: ContentUnion): content is string =>
   typeof content === 'string';
@@ -145,19 +145,32 @@ export class GatewayContentGenerator implements ContentGenerator {
     outputTokens: 0,
     totalTokens: 0,
   };
-  // Default to Claude4Sonnet model for now - this could be made configurable
-  model = Claude4Sonnet;
+  model: GatewayModel;
 
-  constructor() {
+  constructor({ modelName }: { modelName: string }) {
+    this.model = findGatewayModel(modelName) ?? GPT4oMini;
+    // need to get the model config from the displayId
     this.client = new GatewayClient({
       model: this.model,
     });
+  }
+
+  private recreateClient() {
+    this.client = new GatewayClient({ model: this.model });
   }
 
   async generateContent(
     request: GenerateContentParameters,
     _userPromptId: string,
   ): Promise<GenerateContentResponse> {
+    // Respect per-request model override
+    if (request?.model) {
+      const m = findGatewayModel(request.model);
+      if (m && m.model !== this.model.model) {
+        this.model = m as GatewayModel;
+        this.recreateClient();
+      }
+    }
     const gatewayRequest = this.prepareGatewayRequest(request);
     const response = await this.client.generateChatCompletion(gatewayRequest);
 
@@ -169,6 +182,14 @@ export class GatewayContentGenerator implements ContentGenerator {
     request: GenerateContentParameters,
     _userPromptId: string,
   ): Promise<AsyncGenerator<GenerateContentResponse>> {
+    // Respect per-request model override
+    if (request?.model) {
+      const m = findGatewayModel(request.model);
+      if (m && m.model !== this.model.model) {
+        this.model = m as GatewayModel;
+        this.recreateClient();
+      }
+    }
     const gatewayRequest = this.prepareGatewayRequest(request);
     const streamGenerator =
       await this.client.generateChatCompletionStream(gatewayRequest);
@@ -555,9 +576,6 @@ FINAL WARNING: Any non-JSON content will cause system failure. Respond with JSON
         };
 
         response.candidates = [finalCandidate];
-        console.log(
-          '🔧 Gateway: Transformed usage-only chunk to proper Gemini format with finishReason=STOP',
-        );
       }
 
       // Only yield responses that have candidates

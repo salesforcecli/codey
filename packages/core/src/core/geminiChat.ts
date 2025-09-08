@@ -31,6 +31,7 @@ import { retryWithBackoff } from '../utils/retry.js';
 import { AuthType } from './contentGenerator.js';
 import type { Config } from '../config/config.js';
 import { DEFAULT_GEMINI_FLASH_MODEL } from '../config/models.js';
+import { QWEN } from '../gateway/models.js';
 import { hasCycleInSchema } from '../tools/tools.js';
 import type { StructuredError } from './turn.js';
 import type { CompletedToolCall } from './coreToolScheduler.js';
@@ -197,15 +198,19 @@ export class GeminiChat {
     authType?: string,
     error?: unknown,
   ): Promise<string | null> {
-    // Only handle fallback for OAuth users
-    if (authType !== AuthType.LOGIN_WITH_GOOGLE) {
+    // Determine intended fallback per auth path
+    let fallbackModel: string | null = null;
+    if (authType === AuthType.LOGIN_WITH_GOOGLE) {
+      fallbackModel = DEFAULT_GEMINI_FLASH_MODEL;
+    } else if (authType === AuthType.USE_SF_LLMG) {
+      fallbackModel = QWEN.model;
+    } else {
       return null;
     }
 
     const currentModel = this.config.getModel();
-    const fallbackModel = DEFAULT_GEMINI_FLASH_MODEL;
 
-    // Don't fallback if already using Flash model
+    // Don't fallback if already using the intended fallback model
     if (currentModel === fallbackModel) {
       return null;
     }

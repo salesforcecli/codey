@@ -26,6 +26,7 @@ import { GoogleGenAI } from '@google/genai';
 import { createCodeAssistContentGenerator } from '../code_assist/codeAssist.js';
 import { GatewayContentGenerator } from '../gateway/contentGenerator.js';
 import { DEFAULT_GEMINI_MODEL } from '../config/models.js';
+import { Claude4Sonnet } from '../gateway/models.js';
 import type { Config } from '../config/config.js';
 
 import type { UserTierId } from '../code_assist/types.js';
@@ -78,8 +79,11 @@ export function createContentGeneratorConfig(
   const googleCloudProject = process.env['GOOGLE_CLOUD_PROJECT'] || undefined;
   const googleCloudLocation = process.env['GOOGLE_CLOUD_LOCATION'] || undefined;
 
-  // Use runtime model from config if available; otherwise, fall back to parameter or default
-  const effectiveModel = config.getModel() || DEFAULT_GEMINI_MODEL;
+  const effectiveModel =
+    authType === AuthType.USE_SF_LLMG
+      ? Claude4Sonnet.displayId
+      : // Use runtime model from config if available; otherwise, fall back by auth type
+        config.getModel() || DEFAULT_GEMINI_MODEL;
 
   const contentGeneratorConfig: ContentGeneratorConfig = {
     model: effectiveModel,
@@ -144,7 +148,10 @@ export async function createContentGenerator(
   }
 
   if (config.authType === AuthType.USE_SF_LLMG) {
-    return new LoggingContentGenerator(new GatewayContentGenerator(), gcConfig);
+    return new LoggingContentGenerator(
+      new GatewayContentGenerator({ modelName: config.model }),
+      gcConfig,
+    );
   }
 
   if (

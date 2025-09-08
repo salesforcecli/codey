@@ -28,7 +28,7 @@ import type {
   ChatGenerations,
   GatewayResponse,
 } from './client.js';
-import { Claude4Sonnet } from './models.js';
+import { GPT4oMini } from './models.js';
 
 // Mock external dependencies
 vi.mock('./client.js');
@@ -51,7 +51,7 @@ describe('GatewayContentGenerator', () => {
     vi.clearAllMocks();
     // Re-setup the constructor mocks after clearAllMocks
     vi.mocked(MockGatewayClient).mockImplementation(() => mockGatewayClient);
-    generator = new GatewayContentGenerator();
+    generator = new GatewayContentGenerator({ modelName: GPT4oMini.displayId });
     // Replace the client instance with our mock
     (generator as unknown as { client: GatewayClient }).client =
       mockGatewayClient;
@@ -62,13 +62,13 @@ describe('GatewayContentGenerator', () => {
   });
 
   describe('constructor', () => {
-    it('should initialize with Claude4Sonnet model by default', () => {
-      expect(generator.model).toBe(Claude4Sonnet);
+    it('should initialize with GPT4oMini model by default', () => {
+      expect(generator.model).toBe(GPT4oMini);
     });
 
     it('should create a GatewayClient with the correct model', () => {
       expect(MockGatewayClient).toHaveBeenCalledWith({
-        model: Claude4Sonnet,
+        model: GPT4oMini,
       });
     });
   });
@@ -119,7 +119,7 @@ describe('GatewayContentGenerator', () => {
       const result = await generator.generateContent(request, 'test-prompt-id');
 
       expect(mockGatewayClient.generateChatCompletion).toHaveBeenCalledWith({
-        model: Claude4Sonnet.model,
+        model: GPT4oMini.model,
         messages: [
           {
             role: 'user',
@@ -127,7 +127,7 @@ describe('GatewayContentGenerator', () => {
           },
         ],
         generation_settings: {
-          max_tokens: Claude4Sonnet.maxOutputTokens,
+          max_tokens: GPT4oMini.maxOutputTokens,
           temperature: 0.7,
         },
       });
@@ -189,7 +189,7 @@ describe('GatewayContentGenerator', () => {
       await generator.generateContent(request, 'test-prompt-id');
 
       expect(mockGatewayClient.generateChatCompletion).toHaveBeenCalledWith({
-        model: Claude4Sonnet.model,
+        model: GPT4oMini.model,
         messages: [
           {
             role: 'system',
@@ -201,7 +201,7 @@ describe('GatewayContentGenerator', () => {
           },
         ],
         generation_settings: {
-          max_tokens: Claude4Sonnet.maxOutputTokens,
+          max_tokens: GPT4oMini.maxOutputTokens,
           temperature: 0.7,
         },
       });

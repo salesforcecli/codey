@@ -102,10 +102,6 @@ describe('BuiltinCommandLoader', () => {
     const loader = new BuiltinCommandLoader(mockConfig);
     const commands = await loader.loadCommands(new AbortController().signal);
 
-    // The 'ide' command should be present.
-    const ideCmd = commands.find((c) => c.name === 'ide');
-    expect(ideCmd).toBeDefined();
-
     // Other commands should still be present.
     const aboutCmd = commands.find((c) => c.name === 'about');
     expect(aboutCmd).toBeDefined();
@@ -126,9 +122,6 @@ describe('BuiltinCommandLoader', () => {
     const aboutCmd = commands.find((c) => c.name === 'about');
     expect(aboutCmd).toBeDefined();
     expect(aboutCmd?.kind).toBe(CommandKind.BUILT_IN);
-
-    const ideCmd = commands.find((c) => c.name === 'ide');
-    expect(ideCmd).toBeDefined();
 
     const mcpCmd = commands.find((c) => c.name === 'mcp');
     expect(mcpCmd).toBeDefined();

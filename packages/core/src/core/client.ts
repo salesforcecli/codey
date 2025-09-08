@@ -46,6 +46,7 @@ import {
   DEFAULT_GEMINI_FLASH_MODEL,
   DEFAULT_THINKING_MODE,
 } from '../config/models.js';
+import { QWEN } from '../gateway/models.js';
 import { LoopDetectionService } from '../services/loopDetectionService.js';
 import { ideContext } from '../ide/ideContext.js';
 import {
@@ -899,15 +900,19 @@ export class GeminiClient {
     authType?: string,
     error?: unknown,
   ): Promise<string | null> {
-    // Only handle fallback for OAuth users
-    if (authType !== AuthType.LOGIN_WITH_GOOGLE) {
+    // Determine if we should handle fallback and which model to choose
+    let fallbackModel: string | null = null;
+    if (authType === AuthType.LOGIN_WITH_GOOGLE) {
+      fallbackModel = DEFAULT_GEMINI_FLASH_MODEL;
+    } else if (authType === AuthType.USE_SF_LLMG) {
+      fallbackModel = QWEN.model;
+    } else {
       return null;
     }
 
     const currentModel = this.config.getModel();
-    const fallbackModel = DEFAULT_GEMINI_FLASH_MODEL;
 
-    // Don't fallback if already using Flash model
+    // Don't fallback if already using the intended fallback model
     if (currentModel === fallbackModel) {
       return null;
     }
