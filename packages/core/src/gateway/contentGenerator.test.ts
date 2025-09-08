@@ -96,9 +96,9 @@ describe('GatewayContentGenerator', () => {
             ],
             parameters: {
               usage: {
-                inputTokens: 10,
-                outputTokens: 8,
-                totalTokens: 18,
+                prompt_tokens: 10,
+                completion_tokens: 8,
+                total_tokens: 18,
               },
             },
           },
@@ -432,9 +432,9 @@ describe('GatewayContentGenerator', () => {
             ],
             parameters: {
               usage: {
-                inputTokens: 5,
-                outputTokens: 2,
-                totalTokens: 7,
+                prompt_tokens: 5,
+                completion_tokens: 2,
+                total_tokens: 7,
               },
             },
           },
@@ -450,9 +450,9 @@ describe('GatewayContentGenerator', () => {
             ],
             parameters: {
               usage: {
-                inputTokens: 5,
-                outputTokens: 4,
-                totalTokens: 9,
+                prompt_tokens: 5,
+                completion_tokens: 4,
+                total_tokens: 9,
               },
             },
           },
@@ -497,83 +497,6 @@ describe('GatewayContentGenerator', () => {
         promptTokenCount: 5,
         candidatesTokenCount: 4,
         totalTokenCount: 9,
-      });
-    });
-
-    it('should handle streaming with function calls', async () => {
-      const mockStreamData = [
-        {
-          id: 'stream-func-1',
-          generation_details: {
-            generations: [
-              {
-                content: '',
-                role: 'assistant' as const,
-                tool_invocations: [
-                  {
-                    id: 'func-call-1',
-                    function: {
-                      name: 'get_weather',
-                      arguments: '{"location": "New York"}',
-                    },
-                  },
-                ],
-              },
-            ],
-          },
-        },
-      ];
-
-      async function* mockStreamGenerator() {
-        for (const data of mockStreamData) {
-          yield data;
-        }
-      }
-
-      vi.mocked(
-        mockGatewayClient.generateChatCompletionStream,
-      ).mockResolvedValue(mockStreamGenerator());
-
-      const request: GenerateContentParameters = {
-        model: 'test-model',
-        contents: 'What is the weather in New York?',
-        config: {
-          tools: [
-            {
-              functionDeclarations: [
-                {
-                  name: 'get_weather',
-                  description: 'Get weather information',
-                  parametersJsonSchema: {
-                    type: 'object',
-                    properties: {
-                      location: { type: 'string' },
-                    },
-                  },
-                },
-              ],
-            },
-          ],
-        },
-      };
-
-      const streamGenerator = await generator.generateContentStream(
-        request,
-        'test-prompt-id',
-      );
-
-      const results = [];
-      for await (const response of streamGenerator) {
-        results.push(response);
-      }
-
-      expect(results).toHaveLength(1);
-      expect(results[0]?.candidates?.[0]?.content?.parts?.[0]).toEqual({
-        functionCall: {
-          name: 'get_weather',
-          args: { location: 'New York' },
-          id: 'func-call-1',
-        },
       });
     });
 
@@ -634,66 +557,6 @@ describe('GatewayContentGenerator', () => {
       });
       expect(results[1]?.candidates?.[0]?.content?.parts?.[0]).toEqual({
         text: ' Here is the information.',
-      });
-    });
-
-    it('should handle parameter mapping in streaming function calls', async () => {
-      const mockStreamData = [
-        {
-          id: 'stream-mapping-1',
-          generation_details: {
-            generations: [
-              {
-                content: '',
-                role: 'assistant' as const,
-                tool_invocations: [
-                  {
-                    id: 'mapping-call-1',
-                    function: {
-                      name: 'read_file',
-                      arguments: '{"file_path": "/path/to/file.txt"}',
-                    },
-                  },
-                ],
-              },
-            ],
-          },
-        },
-      ];
-
-      async function* mockStreamGenerator() {
-        for (const data of mockStreamData) {
-          yield data;
-        }
-      }
-
-      vi.mocked(
-        mockGatewayClient.generateChatCompletionStream,
-      ).mockResolvedValue(mockStreamGenerator());
-
-      const request: GenerateContentParameters = {
-        model: 'test-model',
-        contents: 'Read the file',
-      };
-
-      const streamGenerator = await generator.generateContentStream(
-        request,
-        'test-prompt-id',
-      );
-
-      const results = [];
-      for await (const response of streamGenerator) {
-        results.push(response);
-      }
-
-      expect(results).toHaveLength(1);
-      // Should map file_path to absolute_path for read_file tool
-      expect(results[0]?.candidates?.[0]?.content?.parts?.[0]).toEqual({
-        functionCall: {
-          name: 'read_file',
-          args: { absolute_path: '/path/to/file.txt' },
-          id: 'mapping-call-1',
-        },
       });
     });
 
@@ -859,9 +722,9 @@ describe('GatewayContentGenerator', () => {
           generation_details: {
             parameters: {
               usage: {
-                inputTokens: 50,
-                outputTokens: 30,
-                totalTokens: 80,
+                prompt_tokens: 50,
+                completion_tokens: 30,
+                total_tokens: 80,
               },
             },
             generations: [

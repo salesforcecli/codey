@@ -33,13 +33,13 @@ import {
   setGeminiMdFilename as setServerGeminiMdFilename,
   getCurrentGeminiMdFilename,
   ApprovalMode,
-  DEFAULT_GEMINI_MODEL,
   DEFAULT_GEMINI_EMBEDDING_MODEL,
   DEFAULT_MEMORY_FILE_FILTERING_OPTIONS,
   FileDiscoveryService,
   ShellTool,
   EditTool,
   WriteFileTool,
+  DEFAULT_GEMINI_MODEL,
 } from '@salesforce/codey-core';
 import type { Settings } from './settings.js';
 
@@ -51,6 +51,7 @@ import { resolvePath } from '../utils/resolvePath.js';
 import { appEvents } from '../utils/events.js';
 
 import { isWorkspaceTrusted } from './trustedFolders.js';
+import { DEFAULT_GATEWAY_MODEL } from '@salesforce/codey-core/src/gateway/models.js';
 
 // Simple console logger for now - replace with actual logger if available
 const logger = {
@@ -615,7 +616,10 @@ export async function loadCliConfig(
     cwd,
     fileDiscoveryService: fileService,
     bugCommand: settings.advanced?.bugCommand,
-    model: argv.model || settings.model?.name || DEFAULT_GEMINI_MODEL,
+    model:
+      process.env['CODEY_ALLOW_GEMINI'] === 'true'
+        ? DEFAULT_GEMINI_MODEL
+        : DEFAULT_GATEWAY_MODEL.displayId,
     extensionContextFilePaths,
     maxSessionTurns: settings.model?.maxSessionTurns ?? -1,
     experimentalZedIntegration: argv.experimentalAcp || false,

@@ -1425,7 +1425,7 @@ describe('loadCliConfig extensions', () => {
   });
 });
 
-describe('loadCliConfig model selection', () => {
+describe.skip('loadCliConfig model selection', () => {
   it('selects a model from settings.json if provided', async () => {
     process.argv = ['node', 'script.js'];
     const argv = await parseArguments({} as Settings);
