@@ -144,11 +144,7 @@ export type ChatGenerations = {
     }>;
     parameters?: {
       usage?: {
-        cacheReadInputTokens?: number;
-        cacheWriteInputTokens?: number;
-        inputTokens?: number;
-        outputTokens?: number;
-        totalTokens?: number;
+        [key: string]: number;
       };
     };
   };

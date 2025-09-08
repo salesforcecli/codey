@@ -201,6 +201,23 @@ export class GatewayContentGenerator implements ContentGenerator {
     this.client = new GatewayClient({ model: this.model });
   }
 
+  private extractUsage(data: ChatGenerations): void {
+    const usage = data.generation_details?.parameters?.usage;
+    if (usage) {
+      this.usage = {
+        inputTokens:
+          usage[this.model.usageParameters.inputTokens] ||
+          this.usage.inputTokens,
+        outputTokens:
+          usage[this.model.usageParameters.outputTokens] ||
+          this.usage.outputTokens,
+        totalTokens:
+          usage[this.model.usageParameters.totalTokens] ||
+          this.usage.totalTokens,
+      };
+    }
+  }
+
   async generateContent(
     request: GenerateContentParameters,
     _userPromptId: string,
@@ -531,21 +548,14 @@ FINAL WARNING: Any non-JSON content will cause system failure. Respond with JSON
     const generations = chatResponse.data.generation_details?.generations;
     const candidates =
       generations?.map((gen) => convertGenerationToCandidate(gen)) || [];
-    const usage = chatResponse.data.generation_details?.parameters?.usage;
-    if (usage) {
-      this.usage = {
-        inputTokens: usage.inputTokens ?? this.usage.inputTokens,
-        outputTokens: usage.outputTokens ?? this.usage.outputTokens,
-        totalTokens: usage.totalTokens ?? this.usage.totalTokens,
-      };
-    }
+    this.extractUsage(chatResponse.data);
 
     const response = new GenerateContentResponse();
     response.candidates = candidates;
     response.usageMetadata = {
-      promptTokenCount: usage?.inputTokens ?? this.usage.inputTokens,
-      candidatesTokenCount: usage?.outputTokens ?? this.usage.outputTokens,
-      totalTokenCount: usage?.totalTokens ?? this.usage.totalTokens,
+      promptTokenCount: this.usage.inputTokens,
+      candidatesTokenCount: this.usage.outputTokens,
+      totalTokenCount: this.usage.totalTokens,
     };
     response.modelVersion = this.model.model;
     return response;
@@ -561,7 +571,7 @@ FINAL WARNING: Any non-JSON content will cause system failure. Respond with JSON
     let activeToolCall: StreamingToolCall | null = null;
 
     for await (const data of streamGenerator) {
-      this.updateUsageFromStreamData(data);
+      this.extractUsage(data);
 
       const response = this.createStreamResponse();
       const generations = data.generation_details?.generations || [];
@@ -611,20 +621,6 @@ FINAL WARNING: Any non-JSON content will cause system failure. Respond with JSON
       useStreamingToolCalls,
       activeToolCall,
     );
-  }
-
-  /**
-   * Update usage statistics from streaming data
-   */
-  private updateUsageFromStreamData(data: ChatGenerations): void {
-    const usage = data.generation_details?.parameters?.usage;
-    if (usage) {
-      this.usage = {
-        inputTokens: usage.inputTokens ?? this.usage.inputTokens,
-        outputTokens: usage.outputTokens ?? this.usage.outputTokens,
-        totalTokens: usage.totalTokens ?? this.usage.totalTokens,
-      };
-    }
   }
 
   /**

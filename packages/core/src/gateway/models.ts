@@ -24,6 +24,11 @@ export type GatewayModel = {
   customRequestHeaders?: Record<string, string>;
   customStreamHeaders?: Record<string, string>;
   streamToolCalls?: boolean;
+  usageParameters: {
+    inputTokens: string; // e.g., 'inputTokens' or 'promptTokens'
+    outputTokens: string; // e.g., 'outputTokens' or 'completionTokens'
+    totalTokens: string; // e.g., 'totalTokens'
+  };
 };
 
 export const QWEN: GatewayModel = {
@@ -36,6 +41,11 @@ export const QWEN: GatewayModel = {
   customStreamHeaders: {
     'x-llm-provider': 'InternalTextGeneration',
   },
+  usageParameters: {
+    inputTokens: 'inputTokens',
+    outputTokens: 'outputTokens',
+    totalTokens: 'totalTokens',
+  },
 };
 
 export const Claude37Sonnet: GatewayModel = {
@@ -45,6 +55,11 @@ export const Claude37Sonnet: GatewayModel = {
   maxInputTokens: 8192, // https://git.soma.salesforce.com/pages/tech-enablement/einstein/docs/gateway/models-and-providers/#comparison-table
   maxOutputTokens: 8192,
   permittedParameters: ['command_source', 'guided_json'], // it can get successful responses but seemingly not makes a difference
+  usageParameters: {
+    inputTokens: 'inputTokens',
+    outputTokens: 'outputTokens',
+    totalTokens: 'totalTokens',
+  },
 };
 
 export const Claude4Sonnet: GatewayModel = {
@@ -54,6 +69,11 @@ export const Claude4Sonnet: GatewayModel = {
   maxInputTokens: 8192, // https://git.soma.salesforce.com/pages/tech-enablement/einstein/docs/gateway/models-and-providers/#comparison-table
   maxOutputTokens: 8192,
   permittedParameters: ['command_source', 'guided_json'], // it can get successful responses but seemingly not makes a difference
+  usageParameters: {
+    inputTokens: 'inputTokens',
+    outputTokens: 'outputTokens',
+    totalTokens: 'totalTokens',
+  },
 };
 
 export const GPT4oMini: GatewayModel = {
@@ -64,6 +84,11 @@ export const GPT4oMini: GatewayModel = {
   maxOutputTokens: 16384,
   permittedParameters: [],
   streamToolCalls: true,
+  usageParameters: {
+    inputTokens: 'prompt_tokens',
+    outputTokens: 'completion_tokens',
+    totalTokens: 'total_tokens',
+  },
 };
 
 // Registry of known Gateway models and helpers for lookup by name/id

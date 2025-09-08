@@ -27,6 +27,7 @@ import type {
   ApiResponseEvent,
   ToolCallEvent,
 } from './types.js';
+import { findGatewayModel } from '../gateway/models.js';
 
 export type UiEvent =
   | (ApiResponseEvent & { 'event.name': typeof EVENT_API_RESPONSE })
@@ -162,11 +163,21 @@ export class UiTelemetryService extends EventEmitter {
     });
   }
 
-  private getOrCreateModelMetrics(modelName: string): ModelMetrics {
-    if (!this.#metrics.models[modelName]) {
-      this.#metrics.models[modelName] = createInitialModelMetrics();
+  private getModelDisplayName(modelName: string): string {
+    // Try to find the gateway model to get its displayId
+    const gatewayModel = findGatewayModel(modelName);
+    if (gatewayModel) {
+      return gatewayModel.displayId;
     }
-    return this.#metrics.models[modelName];
+    return modelName;
+  }
+
+  private getOrCreateModelMetrics(modelName: string): ModelMetrics {
+    const displayName = this.getModelDisplayName(modelName);
+    if (!this.#metrics.models[displayName]) {
+      this.#metrics.models[displayName] = createInitialModelMetrics();
+    }
+    return this.#metrics.models[displayName];
   }
 
   private processApiResponse(event: ApiResponseEvent) {

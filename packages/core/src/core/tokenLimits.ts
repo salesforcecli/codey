@@ -14,6 +14,13 @@
  * limitations under the License.
  */
 
+import {
+  QWEN,
+  Claude37Sonnet,
+  Claude4Sonnet,
+  GPT4oMini,
+} from '../gateway/models.js';
+
 type Model = string;
 type TokenCount = number;
 
@@ -36,8 +43,14 @@ export function tokenLimit(model: Model): TokenCount {
       return 1_048_576;
     case 'gemini-2.0-flash-preview-image-generation':
       return 32_000;
-    case 'Claude 4 Sonnet (Salesforce)':
-      return 8192;
+    case QWEN.displayId:
+      return QWEN.maxInputTokens;
+    case Claude37Sonnet.displayId:
+      return Claude37Sonnet.maxInputTokens;
+    case Claude4Sonnet.displayId:
+      return Claude4Sonnet.maxInputTokens;
+    case GPT4oMini.displayId:
+      return GPT4oMini.maxInputTokens;
     default:
       return DEFAULT_TOKEN_LIMIT;
   }
