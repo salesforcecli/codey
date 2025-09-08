@@ -534,9 +534,14 @@ FINAL WARNING: Any non-JSON content will cause system failure. Respond with JSON
       };
       response.modelVersion = this.model.model;
 
-      // Check if this is a usage-only chunk (no generations, only usage metadata)
-      const isUsageOnlyChunk =
-        (!generations || generations.length === 0) && usage;
+      // Check if this is truly a final usage-only chunk
+      // This should be a chunk that has usage data but no meaningful content to process
+      const hasAnyMeaningfulContent = generations?.some(
+        (g) =>
+          (g.content && g.content.trim()) ||
+          (g.tool_invocations && g.tool_invocations.length > 0),
+      );
+      const isUsageOnlyChunk = usage && !hasAnyMeaningfulContent;
 
       for (const generation of generations || []) {
         // If this generation has tool invocations, handle them directly
@@ -562,7 +567,8 @@ FINAL WARNING: Any non-JSON content will cause system failure. Respond with JSON
         }
       }
 
-      // If this is a usage-only chunk (final chunk with no content), transform it to have proper finish reason
+      // If this is a true usage-only chunk (final chunk with only usage metadata),
+      // create a final response with proper finish reason
       if (isUsageOnlyChunk) {
         // Create a final chunk with proper Gemini format and finish reason
         const finalCandidate: Candidate = {
