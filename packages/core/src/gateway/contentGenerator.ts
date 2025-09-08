@@ -87,10 +87,44 @@ const convertGenerationToCandidate = (
   generation: NonNullable<
     ChatGenerations['generation_details']
   >['generations'][number],
+  completedToolCalls?: Map<
+    string,
+    { id: string; name: string; arguments: string }
+  >,
 ): Candidate => {
   const parts: Part[] = [];
-  // Add tool calls if present
-  if (generation.tool_invocations && generation.tool_invocations.length > 0) {
+
+  // Add completed tool calls from buffer (streaming case)
+  if (completedToolCalls && completedToolCalls.size > 0) {
+    for (const [, toolCall] of completedToolCalls) {
+      try {
+        const rawArgs = JSON.parse(toolCall.arguments);
+        const mappedArgs = mapToolParameters(toolCall.name, rawArgs);
+
+        parts.push({
+          functionCall: {
+            name: toolCall.name,
+            args: mappedArgs,
+            id: toolCall.id,
+          },
+        });
+      } catch (error) {
+        console.error(
+          `Failed to parse tool arguments for ${toolCall.name}:`,
+          error,
+        );
+        console.error(`[DEBUG] Raw arguments string: "${toolCall.arguments}"`);
+        parts.push({
+          text: `Error: Failed to parse tool call ${toolCall.name}`,
+        });
+      }
+    }
+  }
+  // Handle tool calls directly from generation (non-streaming case)
+  else if (
+    generation.tool_invocations &&
+    generation.tool_invocations.length > 0
+  ) {
     for (const toolInvocation of generation.tool_invocations) {
       try {
         const rawArgs = JSON.parse(toolInvocation.function.arguments);
@@ -103,7 +137,7 @@ const convertGenerationToCandidate = (
           functionCall: {
             name: toolInvocation.function.name,
             args: mappedArgs,
-            id: toolInvocation.id, // Preserve tool call ID
+            id: toolInvocation.id,
           },
         });
       } catch (error) {
@@ -111,7 +145,6 @@ const convertGenerationToCandidate = (
           `Failed to parse tool arguments for ${toolInvocation.function.name}:`,
           error,
         );
-        // Add error handling - maybe add as text part explaining the error
         parts.push({
           text: `Error: Failed to parse tool call ${toolInvocation.function.name}`,
         });
@@ -127,7 +160,7 @@ const convertGenerationToCandidate = (
       role: 'model',
     },
     index: 0,
-    safetyRatings: [], // Gateway doesn't provide safety ratings in the same format
+    safetyRatings: [],
   };
 };
 
@@ -287,6 +320,7 @@ export class GatewayContentGenerator implements ContentGenerator {
         request.config.systemInstruction,
       );
 
+      // TODO: use this https://git.soma.salesforce.com/pages/tech-enablement/einstein/docs/gateway/structured-outputs/#structured-outputs-via-response_format
       // If JSON response is requested, add JSON enforcement to system instruction
       if (request.config?.responseMimeType === 'application/json') {
         systemContent = `JSON_MODE: You are operating in strict JSON response mode. You MUST respond with ONLY a valid JSON object. No explanations, no markdown, no text outside the JSON object.
@@ -486,7 +520,8 @@ FINAL WARNING: Any non-JSON content will cause system failure. Respond with JSON
     chatResponse: GatewayResponse<ChatGenerations>,
   ): GenerateContentResponse {
     const generations = chatResponse.data.generation_details?.generations;
-    const candidates = generations?.map(convertGenerationToCandidate) || [];
+    const candidates =
+      generations?.map((gen) => convertGenerationToCandidate(gen)) || [];
     const usage = chatResponse.data.generation_details?.parameters?.usage;
     if (usage) {
       this.usage = {
@@ -513,6 +548,13 @@ FINAL WARNING: Any non-JSON content will cause system failure. Respond with JSON
   private async *convertStreamGeneratorToGemini(
     streamGenerator: AsyncGenerator<ChatGenerations>,
   ): AsyncGenerator<GenerateContentResponse> {
+    // Buffer to accumulate tool call data until complete
+    let activeToolCall: {
+      id: string;
+      name: string;
+      argumentsBuffer: string;
+    } | null = null;
+
     for await (const data of streamGenerator) {
       const generations = data.generation_details?.generations;
       const usage = data.generation_details?.parameters?.usage;
@@ -534,25 +576,102 @@ FINAL WARNING: Any non-JSON content will cause system failure. Respond with JSON
       };
       response.modelVersion = this.model.model;
 
-      // Check if this is truly a final usage-only chunk
-      // This should be a chunk that has usage data but no meaningful content to process
-      const hasAnyMeaningfulContent = generations?.some(
-        (g) =>
-          (g.content && g.content.trim()) ||
-          (g.tool_invocations && g.tool_invocations.length > 0),
-      );
-      const isUsageOnlyChunk = usage && !hasAnyMeaningfulContent;
+      let shouldYieldResponse = false;
+      let hasToolInvocations = false;
 
+      // Check if any generation has tool_invocations
       for (const generation of generations || []) {
-        // If this generation has tool invocations, handle them directly
         if (
           generation?.tool_invocations &&
           generation.tool_invocations.length > 0
         ) {
-          const candidate = convertGenerationToCandidate(generation);
+          hasToolInvocations = true;
+          break;
+        }
+      }
+
+      // If we have an active tool call but no tool_invocations in this chunk,
+      // it means the tool call streaming is complete
+      if (activeToolCall && !hasToolInvocations) {
+        try {
+          const rawArgs = JSON.parse(activeToolCall?.argumentsBuffer || '{}');
+          const mappedArgs = mapToolParameters(
+            activeToolCall?.name || 'unknown',
+            rawArgs,
+          );
+
+          const candidate: Candidate = {
+            content: {
+              parts: [
+                {
+                  functionCall: {
+                    name: activeToolCall?.name || 'unknown',
+                    args: mappedArgs,
+                    id: activeToolCall?.id || '',
+                  },
+                },
+              ],
+              role: 'model',
+            },
+            index: 0,
+            safetyRatings: [],
+          };
+
           response.candidates.push(candidate);
-        } else if (generation?.content?.trim()) {
-          // Add any text content that's ready to be displayed
+          shouldYieldResponse = true;
+
+          // Clear the active tool call
+          activeToolCall = null;
+        } catch {
+          // Add error part and clear the tool call
+          const candidate: Candidate = {
+            content: {
+              parts: [
+                {
+                  text: `Error: Failed to parse tool call ${activeToolCall?.name || 'unknown'}`,
+                },
+              ],
+              role: 'model',
+            },
+            index: 0,
+            safetyRatings: [],
+          };
+          response.candidates.push(candidate);
+          shouldYieldResponse = true;
+          activeToolCall = null;
+        }
+      }
+
+      // Process current chunk's tool invocations
+      for (const generation of generations || []) {
+        if (
+          generation?.tool_invocations &&
+          generation.tool_invocations.length > 0
+        ) {
+          for (const toolInvocation of generation.tool_invocations) {
+            // Check if this starts a new tool call (has valid ID and name)
+            if (toolInvocation.id && toolInvocation.function.name) {
+              activeToolCall = {
+                id: toolInvocation.id,
+                name: toolInvocation.function.name,
+                argumentsBuffer: toolInvocation.function.arguments || '',
+              };
+            } else if (
+              activeToolCall &&
+              (!toolInvocation.id || !toolInvocation.function.name)
+            ) {
+              // This is a continuation chunk - append arguments
+              const newArgs = toolInvocation.function.arguments || '';
+              if (newArgs) {
+                activeToolCall.argumentsBuffer += newArgs;
+              }
+            }
+          }
+        } else if (
+          generation?.content !== undefined &&
+          generation?.content !== null
+        ) {
+          // Handle regular text content - preserve all content including whitespace and newlines
           const textPart: Part = { text: generation.content };
           const candidate: Candidate = {
             content: {
@@ -564,30 +683,45 @@ FINAL WARNING: Any non-JSON content will cause system failure. Respond with JSON
           };
 
           response.candidates.push(candidate);
+          shouldYieldResponse = true;
         }
       }
 
-      // If this is a true usage-only chunk (final chunk with only usage metadata),
-      // create a final response with proper finish reason
+      // Handle usage-only chunks (final chunks)
+      const hasAnyMeaningfulContent = generations?.some(
+        (g) =>
+          (g.content && g.content.trim()) ||
+          (g.tool_invocations && g.tool_invocations.length > 0),
+      );
+      const isUsageOnlyChunk = usage && !hasAnyMeaningfulContent;
+
       if (isUsageOnlyChunk) {
-        // Create a final chunk with proper Gemini format and finish reason
         const finalCandidate: Candidate = {
           content: {
-            parts: [], // Empty parts since this is just usage metadata
+            parts: [],
             role: 'model',
           },
           index: 0,
           safetyRatings: [],
-          finishReason: 'STOP' as FinishReason, // Add proper finish reason for successful completion
+          finishReason: 'STOP' as FinishReason,
         };
 
         response.candidates = [finalCandidate];
+        shouldYieldResponse = true;
       }
 
-      // Only yield responses that have candidates
-      if (response.candidates.length > 0) {
+      if (shouldYieldResponse) {
         yield response;
       }
+    }
+
+    // Handle case where stream ends with an incomplete tool call
+    if (activeToolCall) {
+      console.warn(
+        `[DEBUG] Stream ended with incomplete tool call:`,
+        activeToolCall,
+      );
+      // Could emit an error response here if needed
     }
   }
 }
