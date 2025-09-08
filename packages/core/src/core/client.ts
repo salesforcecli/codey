@@ -46,7 +46,7 @@ import {
   DEFAULT_GEMINI_FLASH_MODEL,
   DEFAULT_THINKING_MODE,
 } from '../config/models.js';
-import { QWEN } from '../gateway/models.js';
+import { DEFAULT_GATEWAY_FALLBACK_MODEL } from '../gateway/models.js';
 import { LoopDetectionService } from '../services/loopDetectionService.js';
 import { ideContext } from '../ide/ideContext.js';
 import {
@@ -905,7 +905,7 @@ export class GeminiClient {
     if (authType === AuthType.LOGIN_WITH_GOOGLE) {
       fallbackModel = DEFAULT_GEMINI_FLASH_MODEL;
     } else if (authType === AuthType.USE_SF_LLMG) {
-      fallbackModel = QWEN.model;
+      fallbackModel = DEFAULT_GATEWAY_FALLBACK_MODEL.displayId;
     } else {
       return null;
     }

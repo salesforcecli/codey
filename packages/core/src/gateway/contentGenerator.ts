@@ -83,6 +83,15 @@ const mapToolParameters = (
   return mappedArgs;
 };
 
+/**
+ * Type definition for streaming tool call state
+ */
+type StreamingToolCall = {
+  id: string;
+  name: string;
+  argumentsBuffer: string;
+};
+
 const convertGenerationToCandidate = (
   generation: NonNullable<
     ChatGenerations['generation_details']
@@ -548,164 +557,47 @@ FINAL WARNING: Any non-JSON content will cause system failure. Respond with JSON
   private async *convertStreamGeneratorToGemini(
     streamGenerator: AsyncGenerator<ChatGenerations>,
   ): AsyncGenerator<GenerateContentResponse> {
-    // Buffer to accumulate tool call data until complete
-    let activeToolCall: {
-      id: string;
-      name: string;
-      argumentsBuffer: string;
-    } | null = null;
+    const useStreamingToolCalls = this.model.streamToolCalls === true;
+    let activeToolCall: StreamingToolCall | null = null;
 
     for await (const data of streamGenerator) {
-      const generations = data.generation_details?.generations;
-      const usage = data.generation_details?.parameters?.usage;
+      this.updateUsageFromStreamData(data);
 
-      if (usage) {
-        this.usage = {
-          inputTokens: usage.inputTokens ?? this.usage.inputTokens,
-          outputTokens: usage.outputTokens ?? this.usage.outputTokens,
-          totalTokens: usage.totalTokens ?? this.usage.totalTokens,
-        };
-      }
-
-      const response = new GenerateContentResponse();
-      response.candidates = [];
-      response.usageMetadata = {
-        promptTokenCount: this.usage.inputTokens,
-        candidatesTokenCount: this.usage.outputTokens,
-        totalTokenCount: this.usage.totalTokens,
-      };
-      response.modelVersion = this.model.model;
+      const response = this.createStreamResponse();
+      const generations = data.generation_details?.generations || [];
 
       let shouldYieldResponse = false;
-      let hasToolInvocations = false;
 
-      // Check if any generation has tool_invocations
-      for (const generation of generations || []) {
-        if (
-          generation?.tool_invocations &&
-          generation.tool_invocations.length > 0
-        ) {
-          hasToolInvocations = true;
-          break;
-        }
-      }
-
-      // If we have an active tool call but no tool_invocations in this chunk,
-      // it means the tool call streaming is complete
-      if (activeToolCall && !hasToolInvocations) {
-        try {
-          const rawArgs = JSON.parse(activeToolCall?.argumentsBuffer || '{}');
-          const mappedArgs = mapToolParameters(
-            activeToolCall?.name || 'unknown',
-            rawArgs,
-          );
-
-          const candidate: Candidate = {
-            content: {
-              parts: [
-                {
-                  functionCall: {
-                    name: activeToolCall?.name || 'unknown',
-                    args: mappedArgs,
-                    id: activeToolCall?.id || '',
-                  },
-                },
-              ],
-              role: 'model',
-            },
-            index: 0,
-            safetyRatings: [],
-          };
-
-          response.candidates.push(candidate);
-          shouldYieldResponse = true;
-
-          // Clear the active tool call
-          activeToolCall = null;
-        } catch {
-          // Add error part and clear the tool call
-          const candidate: Candidate = {
-            content: {
-              parts: [
-                {
-                  text: `Error: Failed to parse tool call ${activeToolCall?.name || 'unknown'}`,
-                },
-              ],
-              role: 'model',
-            },
-            index: 0,
-            safetyRatings: [],
-          };
-          response.candidates.push(candidate);
+      // Handle completed streaming tool calls
+      if (useStreamingToolCalls) {
+        const completedCandidate = this.handleCompletedStreamingToolCall(
+          activeToolCall,
+          generations,
+        );
+        if (completedCandidate) {
+          response.candidates!.push(completedCandidate);
           shouldYieldResponse = true;
           activeToolCall = null;
         }
       }
 
-      // Process current chunk's tool invocations
-      for (const generation of generations || []) {
-        if (
-          generation?.tool_invocations &&
-          generation.tool_invocations.length > 0
-        ) {
-          for (const toolInvocation of generation.tool_invocations) {
-            // Check if this starts a new tool call (has valid ID and name)
-            if (toolInvocation.id && toolInvocation.function.name) {
-              activeToolCall = {
-                id: toolInvocation.id,
-                name: toolInvocation.function.name,
-                argumentsBuffer: toolInvocation.function.arguments || '',
-              };
-            } else if (
-              activeToolCall &&
-              (!toolInvocation.id || !toolInvocation.function.name)
-            ) {
-              // This is a continuation chunk - append arguments
-              const newArgs = toolInvocation.function.arguments || '';
-              if (newArgs) {
-                activeToolCall.argumentsBuffer += newArgs;
-              }
-            }
-          }
-        } else if (
-          generation?.content !== undefined &&
-          generation?.content !== null
-        ) {
-          // Handle regular text content - preserve all content including whitespace and newlines
-          const textPart: Part = { text: generation.content };
-          const candidate: Candidate = {
-            content: {
-              parts: [textPart],
-              role: 'model',
-            },
-            index: 0,
-            safetyRatings: [],
-          };
-
-          response.candidates.push(candidate);
-          shouldYieldResponse = true;
-        }
-      }
-
-      // Handle usage-only chunks (final chunks)
-      const hasAnyMeaningfulContent = generations?.some(
-        (g) =>
-          (g.content && g.content.trim()) ||
-          (g.tool_invocations && g.tool_invocations.length > 0),
+      // Process current generation chunks
+      const processResult = this.processGenerationChunks(
+        generations,
+        useStreamingToolCalls,
+        activeToolCall,
       );
-      const isUsageOnlyChunk = usage && !hasAnyMeaningfulContent;
 
-      if (isUsageOnlyChunk) {
-        const finalCandidate: Candidate = {
-          content: {
-            parts: [],
-            role: 'model',
-          },
-          index: 0,
-          safetyRatings: [],
-          finishReason: 'STOP' as FinishReason,
-        };
+      if (processResult.candidates.length > 0) {
+        response.candidates!.push(...processResult.candidates);
+        shouldYieldResponse = true;
+      }
 
+      activeToolCall = processResult.updatedActiveToolCall;
+
+      // Handle final usage-only chunks
+      const finalCandidate = this.handleUsageOnlyChunk(data, generations);
+      if (finalCandidate) {
         response.candidates = [finalCandidate];
         shouldYieldResponse = true;
       }
@@ -715,8 +607,227 @@ FINAL WARNING: Any non-JSON content will cause system failure. Respond with JSON
       }
     }
 
-    // Handle case where stream ends with an incomplete tool call
-    if (activeToolCall) {
+    this.handleIncompleteStreamingToolCall(
+      useStreamingToolCalls,
+      activeToolCall,
+    );
+  }
+
+  /**
+   * Update usage statistics from streaming data
+   */
+  private updateUsageFromStreamData(data: ChatGenerations): void {
+    const usage = data.generation_details?.parameters?.usage;
+    if (usage) {
+      this.usage = {
+        inputTokens: usage.inputTokens ?? this.usage.inputTokens,
+        outputTokens: usage.outputTokens ?? this.usage.outputTokens,
+        totalTokens: usage.totalTokens ?? this.usage.totalTokens,
+      };
+    }
+  }
+
+  /**
+   * Create a base streaming response with metadata
+   */
+  private createStreamResponse(): GenerateContentResponse {
+    const response = new GenerateContentResponse();
+    response.candidates = [];
+    response.usageMetadata = {
+      promptTokenCount: this.usage.inputTokens,
+      candidatesTokenCount: this.usage.outputTokens,
+      totalTokenCount: this.usage.totalTokens,
+    };
+    response.modelVersion = this.model.model;
+    return response;
+  }
+
+  /**
+   * Handle completion of streaming tool calls
+   */
+  private handleCompletedStreamingToolCall(
+    activeToolCall: StreamingToolCall | null,
+    generations: NonNullable<
+      ChatGenerations['generation_details']
+    >['generations'],
+  ): Candidate | null {
+    if (!activeToolCall) return null;
+
+    const hasToolInvocations = generations.some(
+      (g) => g?.tool_invocations && g.tool_invocations.length > 0,
+    );
+
+    // If we have an active tool call but no tool_invocations in this chunk,
+    // it means the tool call streaming is complete
+    if (!hasToolInvocations) {
+      try {
+        const rawArgs = JSON.parse(activeToolCall.argumentsBuffer || '{}');
+        const mappedArgs = mapToolParameters(activeToolCall.name, rawArgs);
+
+        return {
+          content: {
+            parts: [
+              {
+                functionCall: {
+                  name: activeToolCall.name,
+                  args: mappedArgs,
+                  id: activeToolCall.id,
+                },
+              },
+            ],
+            role: 'model',
+          },
+          index: 0,
+          safetyRatings: [],
+        };
+      } catch {
+        return {
+          content: {
+            parts: [
+              {
+                text: `Error: Failed to parse tool call ${activeToolCall.name}`,
+              },
+            ],
+            role: 'model',
+          },
+          index: 0,
+          safetyRatings: [],
+        };
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Process generation chunks and return candidates and updated tool call state
+   */
+  private processGenerationChunks(
+    generations: NonNullable<
+      ChatGenerations['generation_details']
+    >['generations'],
+    useStreamingToolCalls: boolean,
+    activeToolCall: StreamingToolCall | null,
+  ): {
+    candidates: Candidate[];
+    updatedActiveToolCall: StreamingToolCall | null;
+  } {
+    const candidates: Candidate[] = [];
+    let updatedActiveToolCall = activeToolCall;
+
+    for (const generation of generations) {
+      if (
+        generation?.tool_invocations &&
+        generation.tool_invocations.length > 0
+      ) {
+        if (useStreamingToolCalls) {
+          updatedActiveToolCall = this.handleStreamingToolInvocations(
+            generation.tool_invocations,
+            updatedActiveToolCall,
+          );
+        } else {
+          const candidate = convertGenerationToCandidate(generation);
+          candidates.push(candidate);
+        }
+      } else if (
+        generation?.content !== undefined &&
+        generation?.content !== null
+      ) {
+        candidates.push(this.createTextCandidate(generation.content));
+      }
+    }
+
+    return { candidates, updatedActiveToolCall };
+  }
+
+  /**
+   * Handle streaming tool invocations and update active tool call state
+   */
+  private handleStreamingToolInvocations(
+    toolInvocations: NonNullable<
+      ChatGenerations['generation_details']
+    >['generations'][number]['tool_invocations'],
+    activeToolCall: StreamingToolCall | null,
+  ): StreamingToolCall | null {
+    let updatedActiveToolCall = activeToolCall;
+
+    for (const toolInvocation of toolInvocations || []) {
+      // Check if this starts a new tool call (has valid ID and name)
+      if (toolInvocation.id && toolInvocation.function.name) {
+        updatedActiveToolCall = {
+          id: toolInvocation.id,
+          name: toolInvocation.function.name,
+          argumentsBuffer: toolInvocation.function.arguments || '',
+        };
+      } else if (
+        updatedActiveToolCall &&
+        (!toolInvocation.id || !toolInvocation.function.name)
+      ) {
+        // This is a continuation chunk - append arguments
+        const newArgs = toolInvocation.function.arguments || '';
+        if (newArgs) {
+          updatedActiveToolCall.argumentsBuffer += newArgs;
+        }
+      }
+    }
+
+    return updatedActiveToolCall;
+  }
+
+  /**
+   * Create a text content candidate
+   */
+  private createTextCandidate(content: string): Candidate {
+    return {
+      content: {
+        parts: [{ text: content }],
+        role: 'model',
+      },
+      index: 0,
+      safetyRatings: [],
+    };
+  }
+
+  /**
+   * Handle usage-only chunks (final chunks)
+   */
+  private handleUsageOnlyChunk(
+    data: ChatGenerations,
+    generations: NonNullable<
+      ChatGenerations['generation_details']
+    >['generations'],
+  ): Candidate | null {
+    const usage = data.generation_details?.parameters?.usage;
+    const hasAnyMeaningfulContent = generations.some(
+      (g) =>
+        (g.content && g.content.trim()) ||
+        (g.tool_invocations && g.tool_invocations.length > 0),
+    );
+    const isUsageOnlyChunk = usage && !hasAnyMeaningfulContent;
+
+    if (isUsageOnlyChunk) {
+      return {
+        content: {
+          parts: [],
+          role: 'model',
+        },
+        index: 0,
+        safetyRatings: [],
+        finishReason: 'STOP' as FinishReason,
+      };
+    }
+
+    return null;
+  }
+
+  /**
+   * Handle case where stream ends with an incomplete tool call
+   */
+  private handleIncompleteStreamingToolCall(
+    useStreamingToolCalls: boolean,
+    activeToolCall: StreamingToolCall | null,
+  ): void {
+    if (useStreamingToolCalls && activeToolCall) {
       console.warn(
         `[DEBUG] Stream ended with incomplete tool call:`,
         activeToolCall,

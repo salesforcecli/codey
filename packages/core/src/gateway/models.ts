@@ -23,6 +23,7 @@ export type GatewayModel = {
   permittedParameters: string[];
   customRequestHeaders?: Record<string, string>;
   customStreamHeaders?: Record<string, string>;
+  streamToolCalls?: boolean;
 };
 
 export const QWEN: GatewayModel = {
@@ -62,6 +63,7 @@ export const GPT4oMini: GatewayModel = {
   maxInputTokens: 128000, // refer to https://git.soma.salesforce.com/pages/tech-enablement/einstein/docs/gateway/models-and-providers/#comparison-table
   maxOutputTokens: 16384,
   permittedParameters: [],
+  streamToolCalls: true,
 };
 
 // Registry of known Gateway models and helpers for lookup by name/id
@@ -79,3 +81,6 @@ export function findGatewayModel(nameOrId: string): GatewayModel | undefined {
       m.model.toLowerCase() === needle || m.displayId.toLowerCase() === needle,
   );
 }
+
+export const DEFAULT_GATEWAY_MODEL = GPT4oMini;
+export const DEFAULT_GATEWAY_FALLBACK_MODEL = QWEN;
