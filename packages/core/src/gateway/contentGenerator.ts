@@ -35,13 +35,14 @@ import {
   toContentsArray,
   convertContentToText,
   convertGeminiToolsToGateway,
-  normalizeParameterSchema,
+  maybeConstructResponseFormat,
   convertGenerationToCandidate,
   handleCompletedStreamingToolCall,
   processGenerationChunks,
   handleUsageOnlyChunk,
   handleIncompleteStreamingToolCall,
   type StreamingToolCall,
+  maybeInsertJsonInstructions,
 } from './contentGeneratorUtils.js';
 
 /**
@@ -203,10 +204,15 @@ export class GatewayContentGenerator implements ContentGenerator {
     for (const content of userContents) {
       const messageContent = convertContentToText(content);
       const role = content.role === 'model' ? 'assistant' : 'user';
-
+      const isLastMessage = content === userContents[userContents.length - 1];
       messages.push({
         role,
-        content: messageContent,
+        content: maybeInsertJsonInstructions(
+          request,
+          model,
+          messageContent,
+          isLastMessage,
+        ),
       });
     }
 
@@ -216,30 +222,7 @@ export class GatewayContentGenerator implements ContentGenerator {
       parallel_calls: true,
     } satisfies ChatGenerationRequest['tool_config'];
 
-    // Prepare response format for JSON responses
-    let responseFormat: Record<string, unknown> | undefined;
-    if (
-      request.config?.responseMimeType === 'application/json' &&
-      request.config.responseJsonSchema
-    ) {
-      // Normalize the schema to ensure Gateway API compatibility
-      const normalizedSchema = normalizeParameterSchema(
-        request.config.responseJsonSchema as Record<string, unknown>,
-      );
-
-      responseFormat = {
-        type: 'json_schema',
-        json_schema: {
-          name: 'response_schema',
-          strict: true,
-          schema: {
-            ...normalizedSchema,
-            additionalProperties: false,
-          },
-        },
-      };
-    }
-
+    const responseFormat = maybeConstructResponseFormat(request, model);
     const gatewayRequest = {
       model: model.model,
       messages,

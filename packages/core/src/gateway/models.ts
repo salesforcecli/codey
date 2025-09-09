@@ -24,6 +24,7 @@ export type GatewayModel = {
   customRequestHeaders?: Record<string, string>;
   customStreamHeaders?: Record<string, string>;
   streamToolCalls?: boolean;
+  supportsStructuredOutput?: boolean;
   usageParameters: {
     inputTokens: string; // e.g., 'inputTokens' or 'promptTokens'
     outputTokens: string; // e.g., 'outputTokens' or 'completionTokens'
@@ -84,6 +85,7 @@ export const GPT4oMini: GatewayModel = {
   maxOutputTokens: 16384,
   permittedParameters: [],
   streamToolCalls: true,
+  supportsStructuredOutput: true,
   usageParameters: {
     inputTokens: 'prompt_tokens',
     outputTokens: 'completion_tokens',

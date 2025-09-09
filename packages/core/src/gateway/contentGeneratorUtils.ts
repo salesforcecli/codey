@@ -22,8 +22,10 @@ import {
   type ContentUnion,
   type ToolListUnion,
   type FinishReason,
+  type GenerateContentParameters,
 } from '@google/genai';
 import { type ChatGenerations, type ChatCompletionTool } from './client.js';
+import type { GatewayModel } from './models.js';
 
 /**
  * Type definition for streaming tool call state
@@ -578,4 +580,96 @@ export const processGenerationChunks = (
     };
     return { candidate: mergedCandidate, updatedActiveToolCall };
   }
+};
+
+/**
+ * Constructs a response format configuration for content generation requests.
+ *
+ * This function determines if structured JSON output should be used based on the request
+ * configuration and model capabilities. When all conditions are met (JSON MIME type,
+ * response schema provided, and model supports structured output), it returns a
+ * JSON schema configuration with strict validation and no additional properties allowed.
+ *
+ * @param request - The content generation parameters containing configuration options
+ * @param model - The gateway model instance that may support structured output
+ * @returns A JSON schema response format configuration object, or null if conditions aren't met
+ */
+export const maybeConstructResponseFormat = (
+  request: GenerateContentParameters,
+  model: GatewayModel,
+) => {
+  if (
+    request.config?.responseMimeType === 'application/json' &&
+    request.config.responseJsonSchema &&
+    model.supportsStructuredOutput
+  ) {
+    const normalizedSchema = normalizeParameterSchema(
+      request.config.responseJsonSchema as Record<string, unknown>,
+    );
+
+    return {
+      type: 'json_schema',
+      json_schema: {
+        name: 'response_schema',
+        strict: true,
+        schema: {
+          ...normalizedSchema,
+          additionalProperties: false,
+        },
+      },
+    };
+  }
+
+  return null;
+};
+
+/**
+ * Conditionally appends JSON formatting instructions to message content for models that don't support structured output.
+ *
+ * This function checks if the model lacks structured output support and if JSON response format is requested.
+ * When these conditions are met and it's the last user message, it appends detailed instructions
+ * to ensure the model responds with valid JSON matching the provided schema.
+ *
+ * @param request - The content generation parameters containing configuration and response requirements
+ * @param model - The gateway model instance with capability information
+ * @param messageContent - The current message content to potentially modify
+ * @param isLastMessage - Flag indicating if this is the final message from the user
+ * @returns The message content, potentially with JSON formatting instructions appended
+ */
+export const maybeInsertJsonInstructions = (
+  request: GenerateContentParameters,
+  model: GatewayModel,
+  messageContent: string,
+  isLastMessage: boolean,
+) => {
+  if (model.supportsStructuredOutput) return messageContent;
+  if (
+    request.config?.responseMimeType === 'application/json' &&
+    request.config.responseJsonSchema &&
+    isLastMessage
+  ) {
+    const schema = JSON.stringify(request.config.responseJsonSchema, null, 2);
+    const jsonInstruction = `
+
+⚠️ JSON_ONLY_MODE: CRITICAL OVERRIDE ⚠️
+
+You are in JSON-ONLY response mode. Your response MUST be valid JSON only.
+
+❌ NO conversational text
+❌ NO explanations
+❌ NO markdown
+❌ NO code blocks
+❌ NO "I understand..." or similar phrases
+
+✅ ONLY: Raw JSON object starting with { and ending with }
+
+REQUIRED SCHEMA:
+${schema}
+
+FINAL WARNING: Any non-JSON content will cause system failure. Respond with JSON immediately.
+`;
+    return messageContent + jsonInstruction;
+  }
+
+  return messageContent;
 };
