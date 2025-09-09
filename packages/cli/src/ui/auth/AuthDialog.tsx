@@ -187,7 +187,7 @@ Logging in with Google... Please restart Gemini CLI to continue.
       <Box marginTop={1}>
         <Text color={Colors.Gray}>(Use Enter to select)</Text>
       </Box>
-      <Box marginTop={1}>
+      {/* <Box marginTop={1}>
         <Text>Terms of Services and Privacy Notice for Gemini CLI</Text>
       </Box>
       <Box marginTop={1}>
@@ -196,7 +196,7 @@ Logging in with Google... Please restart Gemini CLI to continue.
             'https://github.com/google-gemini/gemini-cli/blob/main/docs/tos-privacy.md'
           }
         </Text>
-      </Box>
+      </Box> */}
     </Box>
   );
 }
