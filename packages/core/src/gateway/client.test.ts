@@ -23,6 +23,7 @@ import { GatewayClient } from './client.js';
 import { JSONWebToken } from './jwt.js';
 import * as env from './env.js';
 import * as models from './models.js';
+import { defaultExtractUsage } from './models.js';
 
 // Mock external dependencies at the top for proper hoisting
 vi.mock('undici');
@@ -67,14 +68,8 @@ describe('GatewayClient', () => {
         model: 'default-model',
         maxInputTokens: 4096,
         maxOutputTokens: 2048,
-        permittedParameters: [],
-        customRequestHeaders: { 'x-custom': 'request' },
-        customStreamHeaders: { 'x-custom': 'stream' },
-        usageParameters: {
-          inputTokens: 'inputTokens',
-          outputTokens: 'outputTokens',
-          totalTokens: 'totalTokens',
-        },
+        customHeaders: { 'x-custom': 'InternalTextGeneration' },
+        extractUsage: defaultExtractUsage,
       },
     });
 
@@ -236,7 +231,7 @@ describe('GatewayClient', () => {
             'x-sfdc-core-tenant-id': 'mock-tenant-id',
             'x-salesforce-region': 'EAST_REGION_1',
             'x-client-trace-id': expect.any(String),
-            'x-custom': 'request',
+            'x-custom': 'InternalTextGeneration',
           }),
           body: JSON.stringify(mockRequest),
         },
@@ -631,7 +626,7 @@ describe('GatewayClient', () => {
     });
 
     it('should generate correct headers for request type', () => {
-      const headers = client['getHeaders']('request', 'test-model');
+      const headers = client['getHeaders']('test-model');
 
       expect(headers).toEqual({
         Authorization: 'Bearer mock-jwt-token',
@@ -641,12 +636,12 @@ describe('GatewayClient', () => {
         'x-sfdc-core-tenant-id': 'mock-tenant-id',
         'x-salesforce-region': 'EAST_REGION_1',
         'x-client-trace-id': expect.any(String),
-        'x-custom': 'request',
+        'x-custom': 'InternalTextGeneration',
       });
     });
 
     it('should generate correct headers for stream type', () => {
-      const headers = client['getHeaders']('stream', 'test-model');
+      const headers = client['getHeaders']('test-model');
 
       expect(headers).toEqual({
         Authorization: 'Bearer mock-jwt-token',
@@ -656,19 +651,19 @@ describe('GatewayClient', () => {
         'x-sfdc-core-tenant-id': 'mock-tenant-id',
         'x-salesforce-region': 'EAST_REGION_1',
         'x-client-trace-id': expect.any(String),
-        'x-custom': 'stream',
+        'x-custom': 'InternalTextGeneration',
       });
     });
 
     it('should use default model when model not found', () => {
       vi.mocked(models.findGatewayModel).mockReturnValue(undefined);
 
-      const headers = client['getHeaders']('request', 'unknown-model');
+      const headers = client['getHeaders']('unknown-model');
 
       expect(models.findGatewayModel).toHaveBeenCalledWith('unknown-model');
       expect(headers).toEqual(
         expect.objectContaining({
-          'x-custom': 'request',
+          'x-custom': 'InternalTextGeneration',
         }),
       );
     });
@@ -680,22 +675,17 @@ describe('GatewayClient', () => {
         model: 'custom-model',
         maxInputTokens: 8192,
         maxOutputTokens: 4096,
-        permittedParameters: [],
-        customRequestHeaders: { 'x-custom-model': 'custom-request' },
-        customStreamHeaders: { 'x-custom-model': 'custom-stream' },
-        usageParameters: {
-          inputTokens: 'inputTokens',
-          outputTokens: 'outputTokens',
-          totalTokens: 'totalTokens',
-        },
+        customHeaders: { 'x-custom-model': 'InternalTextGeneration' },
+        supportsMcp: true,
+        extractUsage: defaultExtractUsage,
       };
       vi.mocked(models.findGatewayModel).mockReturnValue(customModel);
 
-      const headers = client['getHeaders']('request', 'custom-model');
+      const headers = client['getHeaders']('custom-model');
 
       expect(headers).toEqual(
         expect.objectContaining({
-          'x-custom-model': 'custom-request',
+          'x-custom-model': 'InternalTextGeneration',
         }),
       );
     });
@@ -703,9 +693,7 @@ describe('GatewayClient', () => {
     it('should throw error when JWT is not available', () => {
       (client as unknown as { jwt: undefined })['jwt'] = undefined;
 
-      expect(() => client['getHeaders']('request', 'test-model')).toThrow(
-        'JWT not found',
-      );
+      expect(() => client['getHeaders']('test-model')).toThrow('JWT not found');
     });
   });
 

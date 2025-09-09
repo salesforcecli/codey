@@ -23,12 +23,12 @@ import {
   type EmbedContentParameters,
   type Candidate,
 } from '@google/genai';
+import { GatewayClient } from './client.js';
 import {
-  GatewayClient,
   type ChatGenerations,
   type GatewayResponse,
   type ChatGenerationRequest,
-} from './client.js';
+} from './types.js';
 import { type ContentGenerator } from '../core/contentGenerator.js';
 import { getModelOrDefault, type GatewayModel } from './models.js';
 import {
@@ -39,7 +39,7 @@ import {
   convertGenerationToCandidate,
   handleCompletedStreamingToolCall,
   processGenerationChunks,
-  handleUsageOnlyChunk,
+  handleTerminalChunk,
   handleIncompleteStreamingToolCall,
   type StreamingToolCall,
   maybeInsertJsonInstructions,
@@ -234,7 +234,9 @@ export class GatewayContentGenerator implements ContentGenerator {
           ? { parameters: { response_format: responseFormat } }
           : {}),
       },
-      ...(tools.length > 0 ? { tools, tool_config: toolConfig } : {}),
+      ...(tools.length > 0 && model.supportsMcp
+        ? { tools, tool_config: toolConfig }
+        : {}),
     };
 
     return gatewayRequest;
@@ -249,15 +251,12 @@ export class GatewayContentGenerator implements ContentGenerator {
    * @private
    */
   private extractUsage(data: ChatGenerations, model: GatewayModel): void {
-    const usage = data.generation_details?.parameters?.usage;
+    const usage = model.extractUsage(data);
     if (usage) {
       this.usage = {
-        inputTokens:
-          usage[model.usageParameters.inputTokens] || this.usage.inputTokens,
-        outputTokens:
-          usage[model.usageParameters.outputTokens] || this.usage.outputTokens,
-        totalTokens:
-          usage[model.usageParameters.totalTokens] || this.usage.totalTokens,
+        inputTokens: usage.inputTokens || this.usage.inputTokens,
+        outputTokens: usage.outputTokens || this.usage.outputTokens,
+        totalTokens: usage.totalTokens || this.usage.totalTokens,
       };
     }
   }
@@ -307,12 +306,28 @@ export class GatewayContentGenerator implements ContentGenerator {
   ): AsyncGenerator<GenerateContentResponse> {
     const useStreamingToolCalls = model.streamToolCalls === true;
     let activeToolCall: StreamingToolCall | null = null;
+    let isFirstContentChunk = true;
 
     for await (const data of streamGenerator) {
       this.extractUsage(data, model);
 
       const response = this.createStreamResponse(model);
       const generations = data.generation_details?.generations || [];
+
+      // Transform content if transformer is available
+      const processedGenerations = model.transformContent
+        ? generations.map((gen) => {
+            if (gen.content && gen.content.trim()) {
+              const transformedContent = model.transformContent!(
+                gen.content,
+                isFirstContentChunk,
+              );
+              isFirstContentChunk = false;
+              return { ...gen, content: transformedContent };
+            }
+            return gen;
+          })
+        : generations;
 
       let shouldYieldResponse = false;
       let candidateToYield: Candidate | null = null;
@@ -321,7 +336,7 @@ export class GatewayContentGenerator implements ContentGenerator {
       if (useStreamingToolCalls) {
         const completedCandidate = handleCompletedStreamingToolCall(
           activeToolCall,
-          generations,
+          processedGenerations,
         );
         if (completedCandidate) {
           candidateToYield = completedCandidate;
@@ -333,7 +348,7 @@ export class GatewayContentGenerator implements ContentGenerator {
       // Process current generation chunks (only if we don't already have a completed tool call)
       if (!candidateToYield) {
         const processResult = processGenerationChunks(
-          generations,
+          processedGenerations,
           useStreamingToolCalls,
           activeToolCall,
         );
@@ -348,7 +363,7 @@ export class GatewayContentGenerator implements ContentGenerator {
 
       // Handle final usage-only chunks (only if we don't already have a candidate)
       if (!candidateToYield) {
-        const finalCandidate = handleUsageOnlyChunk(data, generations);
+        const finalCandidate = handleTerminalChunk(data, processedGenerations);
         if (finalCandidate) {
           candidateToYield = finalCandidate;
           shouldYieldResponse = true;

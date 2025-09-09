@@ -25,126 +25,15 @@ import { Org } from '@salesforce/core';
 import { randomBytes } from 'node:crypto';
 import { createParser } from 'eventsource-parser';
 import { DEFAULT_GATEWAY_MODEL, findGatewayModel } from './models.js';
-
-type GenerationRequest = {
-  prompt: string;
-  model: string;
-  num_generations?: number;
-  max_tokens?: number;
-  temperature?: number;
-  stop_sequences?: string[];
-  frequency_penalty?: number;
-  presence_penalty?: number;
-  enable_pii_masking?: boolean;
-  enable_input_safety_scoring?: boolean;
-  enable_output_safety_scoring?: boolean;
-  enable_input_bias_scoring?: boolean;
-  enable_output_bias_scoring?: boolean;
-  parameters?: Record<string, unknown>;
-};
-
-type ChatMessageRequest = {
-  role: 'system' | 'user' | 'assistant' | 'tool';
-  content: string | MessageContent[];
-  name?: string;
-  tool_call_id?: string;
-};
-
-type MessageContent = {
-  type: string;
-  text?: string;
-  url?: string;
-};
-
-type GenerationSettings = {
-  max_tokens?: number;
-  temperature?: number;
-  stop_sequences?: string[];
-  frequency_penalty?: number;
-  presence_penalty?: number;
-  top_p?: number;
-  top_k?: number;
-  seed?: number;
-};
-
-export type ChatGenerationRequest = {
-  model: string;
-  messages: ChatMessageRequest[];
-  generation_settings?: GenerationSettings;
-  enable_pii_masking?: boolean;
-  enable_input_safety_scoring?: boolean;
-  enable_output_safety_scoring?: boolean;
-  enable_input_bias_scoring?: boolean;
-  enable_output_bias_scoring?: boolean;
-  turn_id?: string;
-  system_prompt_strategy?: string;
-  tools?: ChatCompletionTool[];
-  tool_config?: {
-    mode: 'auto' | 'none' | 'tool' | 'any';
-    allowed_tools?: Array<{
-      type: string;
-      name: string;
-    }>;
-    parallel_calls?: boolean;
-  };
-};
-
-export type ChatCompletionTool = {
-  type: string;
-  function?: {
-    name: string;
-    description: string;
-    parameters: Record<string, unknown>;
-  };
-  web_search?: {
-    provider: string;
-    options: Record<string, unknown>;
-  };
-};
-
-type EmbeddingRequest = {
-  input: string[];
-  model?: string;
-  enable_pii_masking?: boolean;
-  parameters?: Record<string, unknown>;
-};
-
-export type GatewayResponse<T = unknown> = {
-  data: T;
-  status: number;
-  headers: Record<string, string>;
-};
-
-type CoreJwtResponse = { jwt: string };
-
-export type Generations = {
-  id: string;
-  generations: Array<{
-    text: string;
-  }>;
-};
-
-export type ChatGenerations = {
-  id: string;
-  generation_details?: {
-    generations: Array<{
-      content: string;
-      role: string;
-      tool_invocations?: Array<{
-        id: string;
-        function: {
-          name: string;
-          arguments: string;
-        };
-      }>;
-    }>;
-    parameters?: {
-      usage?: {
-        [key: string]: number;
-      };
-    };
-  };
-};
+import type {
+  CoreJwtResponse,
+  GenerationRequest,
+  GatewayResponse,
+  Generations,
+  ChatGenerations,
+  ChatGenerationRequest,
+  EmbeddingRequest,
+} from './types.js';
 
 type EndPoint =
   | '/generations'
@@ -224,6 +113,16 @@ export class GatewayClient {
   async generateCompletion(
     request: GenerationRequest,
   ): Promise<GatewayResponse<Generations>> {
+    const modelConfig = findGatewayModel(request.model);
+    if (modelConfig?.streamingOnly) {
+      // For streaming-only models, use the streaming endpoint but accumulate the full response
+      return this.makeRequestAsStream<Generations>(
+        '/generations/stream',
+        'POST',
+        request,
+      );
+    }
+
     return this.makeRequest<Generations>('/generations', 'POST', request);
   }
 
@@ -246,6 +145,19 @@ export class GatewayClient {
   async generateChatCompletion(
     request: ChatGenerationRequest,
   ): Promise<GatewayResponse<ChatGenerations>> {
+    const modelConfig = findGatewayModel(request.model);
+    if (modelConfig?.streamingOnly) {
+      // For streaming-only models, use the streaming endpoint but accumulate the full response
+      return this.makeRequestAsStream<ChatGenerations>(
+        '/chat/generations/stream',
+        'POST',
+        {
+          ...request,
+          system_prompt_strategy: 'use_model_parameter',
+        },
+      );
+    }
+
     return this.makeRequest<ChatGenerations>('/chat/generations', 'POST', {
       ...request,
       system_prompt_strategy: 'use_model_parameter',
@@ -302,7 +214,7 @@ export class GatewayClient {
   ): Promise<GatewayResponse<T>> {
     await this.maybeRequestJWT();
     const url = `${this.baseUrl}${endpoint}`;
-    const headers = this.getHeaders('request', body?.model);
+    const headers = this.getHeaders(body?.model);
     const response = await request(url, {
       method,
       headers,
@@ -334,7 +246,7 @@ export class GatewayClient {
   ): Promise<AsyncGenerator<T>> {
     await this.maybeRequestJWT();
     const url = `${this.baseUrl}${endpoint}`;
-    const headers = this.getHeaders('stream', body?.model);
+    const headers = this.getHeaders(body?.model);
 
     const response = await request(url, {
       method,
@@ -361,7 +273,6 @@ export class GatewayClient {
       const parser = createParser({
         onEvent: ({ event, data }) => {
           if (shouldSkipEvent(event, data)) return;
-
           try {
             queue.push(JSON.parse(data));
           } catch (e) {
@@ -386,10 +297,7 @@ export class GatewayClient {
   /**
    * Get the required headers for LLMG API requests
    */
-  private getHeaders(
-    type: 'request' | 'stream',
-    modelName: string | undefined,
-  ): Record<string, string> {
+  private getHeaders(modelName: string | undefined): Record<string, string> {
     if (!this.jwt) {
       throw new Error('JWT not found');
     }
@@ -406,10 +314,147 @@ export class GatewayClient {
       'x-sfdc-core-tenant-id': this.jwt.tnk(),
       'x-salesforce-region': this.regionHeader,
       'x-client-trace-id': randomBytes(8).toString('hex'),
-      ...(type === 'request' ? model.customRequestHeaders || {} : {}),
-      ...(type === 'stream' ? model.customStreamHeaders || {} : {}),
+      ...(model.customHeaders || {}),
     };
 
     return headers;
+  }
+
+  /**
+   * Makes a streaming request to the specified endpoint and accumulates all chunks into a single response.
+   *
+   * @template T - The type of chat generations response, must extend ChatGenerations
+   * @param endpoint - The API endpoint to make the request to
+   * @param method - The HTTP method to use for the request
+   * @param body - Optional request body to send with the request
+   * @returns A promise that resolves to a GatewayResponse containing the accumulated stream data
+   * @throws {Error} When no data is received from the stream
+   *
+   * @remarks
+   * This method consumes the entire stream by iterating through all chunks and merging them
+   * using the `mergeStreamChunks` method. The first chunk initializes the accumulated response,
+   * and subsequent chunks are merged into it.
+   */
+  private async makeRequestAsStream<T extends ChatGenerations>(
+    endpoint: EndPoint,
+    method: string,
+    body?: RequestBody,
+  ): Promise<GatewayResponse<T>> {
+    const streamGenerator = await this.makeStreamRequest<T>(
+      endpoint,
+      method,
+      body,
+    );
+
+    let accumulatedResponse: T | null = null;
+    const lastStatusCode = 200;
+    const lastHeaders: Record<string, string> = {};
+
+    // Consume the entire stream
+    for await (const chunk of streamGenerator) {
+      if (!accumulatedResponse) {
+        // Initialize with the first chunk
+        accumulatedResponse = { ...chunk };
+      } else {
+        // Merge subsequent chunks
+        accumulatedResponse = this.mergeStreamChunks(
+          accumulatedResponse,
+          chunk,
+        );
+      }
+    }
+
+    if (!accumulatedResponse) {
+      throw new Error('No data received from stream');
+    }
+
+    return {
+      data: accumulatedResponse,
+      status: lastStatusCode,
+      headers: lastHeaders,
+    };
+  }
+
+  /**
+   * Merge streaming chunks into a single accumulated response
+   */
+  private mergeStreamChunks<T extends ChatGenerations>(
+    accumulated: T,
+    chunk: T,
+  ): T {
+    const merged = { ...accumulated };
+
+    // Merge generation details
+    if (chunk.generation_details?.generations) {
+      if (!merged.generation_details) {
+        merged.generation_details = { generations: [] };
+      }
+      if (!merged.generation_details.generations) {
+        merged.generation_details.generations = [];
+      }
+
+      // For each generation in the chunk
+      chunk.generation_details.generations.forEach((chunkGen, index) => {
+        if (!merged.generation_details!.generations[index]) {
+          // First time seeing this generation index, initialize it
+          merged.generation_details!.generations[index] = {
+            content: '',
+            role: chunkGen.role,
+            parameters: { ...chunkGen.parameters },
+            tool_invocations: chunkGen.tool_invocations
+              ? [...chunkGen.tool_invocations]
+              : undefined,
+          };
+        }
+
+        const existingGen = merged.generation_details!.generations[index];
+
+        // Accumulate content
+        if (chunkGen.content) {
+          existingGen.content += chunkGen.content;
+        }
+
+        // Update parameters (later chunks may have finish_reason, usage info, etc.)
+        if (chunkGen.parameters) {
+          existingGen.parameters = {
+            ...existingGen.parameters,
+            ...chunkGen.parameters,
+          };
+        }
+
+        // Merge tool invocations
+        if (chunkGen.tool_invocations) {
+          if (!existingGen.tool_invocations) {
+            existingGen.tool_invocations = [];
+          }
+
+          chunkGen.tool_invocations.forEach((chunkTool) => {
+            const existingTool = existingGen.tool_invocations!.find(
+              (t) => t.id === chunkTool.id,
+            );
+            if (existingTool) {
+              // Accumulate arguments for streaming tool calls
+              existingTool.function.arguments += chunkTool.function.arguments;
+            } else {
+              // New tool invocation
+              existingGen.tool_invocations!.push({ ...chunkTool });
+            }
+          });
+        }
+      });
+    }
+
+    // Update top-level parameters (usage info, etc.)
+    if (chunk.generation_details?.parameters) {
+      if (!merged.generation_details!.parameters) {
+        merged.generation_details!.parameters = {};
+      }
+      merged.generation_details!.parameters = {
+        ...merged.generation_details!.parameters,
+        ...chunk.generation_details.parameters,
+      };
+    }
+
+    return merged;
   }
 }

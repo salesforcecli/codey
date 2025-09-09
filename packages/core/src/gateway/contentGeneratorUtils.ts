@@ -24,7 +24,7 @@ import {
   type FinishReason,
   type GenerateContentParameters,
 } from '@google/genai';
-import { type ChatGenerations, type ChatCompletionTool } from './client.js';
+import type { ChatGenerations, ChatCompletionTool } from './types.js';
 import type { GatewayModel } from './models.js';
 
 /**
@@ -463,13 +463,14 @@ export const handleStreamingToolInvocations = (
 
 /**
  * Handles usage-only chunks that appear at the end of streaming responses.
- * Detects final chunks that contain only usage metadata without meaningful content.
+ * Detects final chunks that contain only usage metadata without meaningful content,
+ * or chunks with terminal finish reasons indicating the generation is complete.
  *
  * @param data - The ChatGenerations data containing usage information
- * @param generations - The generation chunks to check for meaningful content
- * @returns A final Candidate with STOP finish reason, or null if not a usage-only chunk
+ * @param generations - The generation chunks to check for meaningful content and finish reasons
+ * @returns A final Candidate with appropriate finish reason, or null if not a terminal chunk
  */
-export const handleUsageOnlyChunk = (
+export const handleTerminalChunk = (
   data: ChatGenerations,
   generations: NonNullable<
     ChatGenerations['generation_details']
@@ -481,9 +482,51 @@ export const handleUsageOnlyChunk = (
       (g.content && g.content.trim()) ||
       (g.tool_invocations && g.tool_invocations.length > 0),
   );
-  const isUsageOnlyChunk = usage && !hasAnyMeaningfulContent;
 
-  if (isUsageOnlyChunk) {
+  // Check if any generation has a terminal finish reason
+  const terminalFinishReason = generations.find(
+    (g) =>
+      g.parameters?.finish_reason &&
+      [
+        'eos_token',
+        'stop',
+        'length',
+        'max_tokens',
+        'safety',
+        'recitation',
+      ].includes(g.parameters.finish_reason),
+  )?.parameters?.finish_reason;
+
+  // This is a terminal chunk if:
+  // 1. We have usage data but no meaningful content, OR
+  // 2. We have a terminal finish reason (regardless of content)
+  const isTerminalChunk =
+    (usage && !hasAnyMeaningfulContent) || terminalFinishReason;
+
+  if (isTerminalChunk) {
+    // Convert the finish reason to Gemini format
+    let finishReason: FinishReason = 'STOP' as FinishReason;
+    if (terminalFinishReason) {
+      switch (terminalFinishReason) {
+        case 'eos_token':
+        case 'stop':
+          finishReason = 'STOP' as FinishReason;
+          break;
+        case 'length':
+        case 'max_tokens':
+          finishReason = 'MAX_TOKENS' as FinishReason;
+          break;
+        case 'safety':
+          finishReason = 'SAFETY' as FinishReason;
+          break;
+        case 'recitation':
+          finishReason = 'RECITATION' as FinishReason;
+          break;
+        default:
+          finishReason = 'STOP' as FinishReason;
+      }
+    }
+
     return {
       content: {
         parts: [],
@@ -491,7 +534,7 @@ export const handleUsageOnlyChunk = (
       },
       index: 0,
       safetyRatings: [],
-      finishReason: 'STOP' as FinishReason,
+      finishReason,
     };
   }
 
@@ -556,7 +599,8 @@ export const processGenerationChunks = (
       }
     } else if (
       generation?.content !== undefined &&
-      generation?.content !== null
+      generation?.content !== null &&
+      generation.content.trim() !== ''
     ) {
       candidates.push(createTextCandidate(generation.content));
     }
