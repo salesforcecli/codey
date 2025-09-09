@@ -198,6 +198,11 @@ export class GeminiChat {
     authType?: string,
     error?: unknown,
   ): Promise<string | null> {
+    console.log(
+      '[DEBUG:geminiChat] Handling Flash fallback for auth type:',
+      authType,
+      authType === AuthType.USE_SF_LLMG,
+    );
     // Determine intended fallback per auth path
     let fallbackModel: string | null = null;
     if (authType === AuthType.LOGIN_WITH_GOOGLE) {
@@ -223,6 +228,10 @@ export class GeminiChat {
           currentModel,
           fallbackModel,
           error,
+        );
+        console.log(
+          '[DEBUG:geminiChat] Flash fallback handler accepted:',
+          accepted,
         );
         if (accepted !== false && accepted !== null) {
           this.config.setModel(fallbackModel);

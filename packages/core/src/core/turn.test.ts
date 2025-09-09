@@ -252,7 +252,7 @@ describe('Turn', () => {
       expect(turn.getDebugResponses().length).toBe(0);
       expect(reportError).toHaveBeenCalledWith(
         error,
-        'Error when talking to Gemini API',
+        'Error when talking to LLM Gateway API',
         [...historyContent, reqParts],
         'Turn.run-sendMessageStream',
       );

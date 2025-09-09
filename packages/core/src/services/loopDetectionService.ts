@@ -21,11 +21,11 @@ import { GeminiEventType } from '../core/turn.js';
 import { logLoopDetected } from '../telemetry/loggers.js';
 import { LoopDetectedEvent, LoopType } from '../telemetry/types.js';
 import type { Config } from '../config/config.js';
-import { DEFAULT_GEMINI_FLASH_MODEL } from '../config/config.js';
 import {
   isFunctionCall,
   isFunctionResponse,
 } from '../utils/messageInspectors.js';
+import { DEFAULT_GATEWAY_MODEL } from '../gateway/models.js';
 
 const TOOL_CALL_LOOP_THRESHOLD = 5;
 const CONTENT_LOOP_THRESHOLD = 10;
@@ -408,7 +408,12 @@ Please analyze the conversation history to determine the possibility that the co
     try {
       result = await this.config
         .getGeminiClient()
-        .generateJson(contents, schema, signal, DEFAULT_GEMINI_FLASH_MODEL);
+        .generateJson(
+          contents,
+          schema,
+          signal,
+          DEFAULT_GATEWAY_MODEL.displayId,
+        );
     } catch (e) {
       // Do nothing, treat it as a non-loop.
       this.config.getDebugMode() ? console.error(e) : console.debug(e);

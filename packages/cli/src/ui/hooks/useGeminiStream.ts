@@ -36,13 +36,13 @@ import {
   GitService,
   UnauthorizedError,
   UserPromptEvent,
-  DEFAULT_GEMINI_FLASH_MODEL,
   logConversationFinishedEvent,
   ConversationFinishedEvent,
   ApprovalMode,
   parseAndFormatApiError,
   getCodeAssistServer,
   UserTierId,
+  DEFAULT_GATEWAY_FALLBACK_MODEL,
 } from '@salesforce/codey-core';
 import { type Part, type PartListUnion, FinishReason } from '@google/genai';
 import type {
@@ -499,7 +499,7 @@ export const useGeminiStream = (
             config.getContentGeneratorConfig()?.authType,
             undefined,
             config.getModel(),
-            DEFAULT_GEMINI_FLASH_MODEL,
+            DEFAULT_GATEWAY_FALLBACK_MODEL.displayId,
           ),
         },
         userMessageTimestamp,
@@ -774,7 +774,7 @@ export const useGeminiStream = (
                 config.getContentGeneratorConfig()?.authType,
                 undefined,
                 config.getModel(),
-                DEFAULT_GEMINI_FLASH_MODEL,
+                DEFAULT_GATEWAY_FALLBACK_MODEL.displayId,
               ),
             },
             userMessageTimestamp,

@@ -17,12 +17,12 @@
 import type { Mock } from 'vitest';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { Content } from '@google/genai';
-import { DEFAULT_GEMINI_FLASH_MODEL } from '../config/models.js';
 import { GeminiClient } from '../core/client.js';
 import type { Config } from '../config/config.js';
 import type { NextSpeakerResponse } from './nextSpeakerChecker.js';
 import { checkNextSpeaker } from './nextSpeakerChecker.js';
 import { GeminiChat } from '../core/geminiChat.js';
+import { DEFAULT_GATEWAY_MODEL } from '../index.js';
 
 // Mock fs module to prevent actual file system operations during tests
 const mockFileSystem = new Map<string, string>();
@@ -237,7 +237,7 @@ describe('checkNextSpeaker', () => {
     expect(result).toBeNull();
   });
 
-  it('should call generateJson with DEFAULT_GEMINI_FLASH_MODEL', async () => {
+  it('should call generateJson with DEFAULT_GATEWAY_FALLBACK_MODEL', async () => {
     (chatInstance.getHistory as Mock).mockReturnValue([
       { role: 'model', parts: [{ text: 'Some model output.' }] },
     ] as Content[]);
@@ -252,6 +252,6 @@ describe('checkNextSpeaker', () => {
     expect(mockGeminiClient.generateJson).toHaveBeenCalled();
     const generateJsonCall = (mockGeminiClient.generateJson as Mock).mock
       .calls[0];
-    expect(generateJsonCall[3]).toBe(DEFAULT_GEMINI_FLASH_MODEL);
+    expect(generateJsonCall[3]).toBe(DEFAULT_GATEWAY_MODEL.displayId);
   });
 });

@@ -106,6 +106,25 @@ export async function retryWithBackoff<T>(
       return await fn();
     } catch (error) {
       const errorStatus = getErrorStatus(error);
+      if (
+        errorStatus === 429 &&
+        authType === AuthType.USE_SF_LLMG &&
+        onPersistent429
+      ) {
+        // No retries for Salesforce LLM Gateway OAuth users on 429 - immediate fallback
+        const fallbackModel = await onPersistent429(authType, error);
+        if (fallbackModel !== false && fallbackModel !== null) {
+          // Reset attempt counter and try with new model
+          attempt = 0;
+          consecutive429Count = 0;
+          currentDelay = initialDelayMs;
+          // With the model updated, we continue to the next attempt
+          continue;
+        } else {
+          // Fallback handler returned null/false, meaning don't continue - stop retry process
+          throw error;
+        }
+      }
 
       // Check for Pro quota exceeded error first - immediate fallback for OAuth users
       if (
