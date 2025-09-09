@@ -21,166 +21,36 @@ import {
   type CountTokensParameters,
   type EmbedContentResponse,
   type EmbedContentParameters,
-  type Content,
-  type Part,
   type Candidate,
-  type ContentListUnion,
-  type ContentUnion,
-  type ToolListUnion,
-  type FinishReason,
 } from '@google/genai';
 import {
   GatewayClient,
   type ChatGenerations,
   type GatewayResponse,
-  type ChatCompletionTool,
   type ChatGenerationRequest,
 } from './client.js';
 import { type ContentGenerator } from '../core/contentGenerator.js';
+import { getModelOrDefault, type GatewayModel } from './models.js';
 import {
-  DEFAULT_GATEWAY_MODEL,
-  findGatewayModel,
-  type GatewayModel,
-} from './models.js';
-
-const isString = (content: ContentUnion): content is string =>
-  typeof content === 'string';
-
-const isPart = (content: ContentUnion): content is Part =>
-  typeof content === 'object' &&
-  content !== null &&
-  ('text' in content || 'inlineData' in content || 'fileData' in content);
-
-const isContent = (content: ContentUnion): content is Content =>
-  typeof content === 'object' && content !== null && 'parts' in content;
+  toContentsArray,
+  convertContentToText,
+  convertGeminiToolsToGateway,
+  normalizeParameterSchema,
+  convertGenerationToCandidate,
+  handleCompletedStreamingToolCall,
+  processGenerationChunks,
+  handleUsageOnlyChunk,
+  handleIncompleteStreamingToolCall,
+  type StreamingToolCall,
+} from './contentGeneratorUtils.js';
 
 /**
- * Maps Gateway parameter names to the expected tool parameter names
- */
-const mapToolParameters = (
-  toolName: string,
-  args: Record<string, unknown>,
-): Record<string, unknown> => {
-  const mappedArgs = { ...args };
-
-  switch (toolName) {
-    case 'read_file':
-      if ('file_path' in mappedArgs) {
-        mappedArgs['absolute_path'] = mappedArgs['file_path'];
-        delete mappedArgs['file_path'];
-      }
-      break;
-    case 'write_file':
-      // write_file expects file_path parameter - no mapping needed
-      break;
-    case 'edit_file':
-      // edit_file expects file_path parameter - no mapping needed
-      break;
-    case 'shell_command':
-      // Handle shell parameter mapping if needed
-      break;
-    // Add more tool-specific mappings as needed
-    default:
-      break;
-  }
-
-  return mappedArgs;
-};
-
-/**
- * Type definition for streaming tool call state
- */
-type StreamingToolCall = {
-  id: string;
-  name: string;
-  argumentsBuffer: string;
-};
-
-const convertGenerationToCandidate = (
-  generation: NonNullable<
-    ChatGenerations['generation_details']
-  >['generations'][number],
-  completedToolCalls?: Map<
-    string,
-    { id: string; name: string; arguments: string }
-  >,
-): Candidate => {
-  const parts: Part[] = [];
-
-  // Add completed tool calls from buffer (streaming case)
-  if (completedToolCalls && completedToolCalls.size > 0) {
-    for (const [, toolCall] of completedToolCalls) {
-      try {
-        const rawArgs = JSON.parse(toolCall.arguments);
-        const mappedArgs = mapToolParameters(toolCall.name, rawArgs);
-
-        parts.push({
-          functionCall: {
-            name: toolCall.name,
-            args: mappedArgs,
-            id: toolCall.id,
-          },
-        });
-      } catch (error) {
-        console.error(
-          `Failed to parse tool arguments for ${toolCall.name}:`,
-          error,
-        );
-        console.error(`[DEBUG] Raw arguments string: "${toolCall.arguments}"`);
-        parts.push({
-          text: `Error: Failed to parse tool call ${toolCall.name}`,
-        });
-      }
-    }
-  }
-  // Handle tool calls directly from generation (non-streaming case)
-  else if (
-    generation.tool_invocations &&
-    generation.tool_invocations.length > 0
-  ) {
-    for (const toolInvocation of generation.tool_invocations) {
-      try {
-        const rawArgs = JSON.parse(toolInvocation.function.arguments);
-        const mappedArgs = mapToolParameters(
-          toolInvocation.function.name,
-          rawArgs,
-        );
-
-        parts.push({
-          functionCall: {
-            name: toolInvocation.function.name,
-            args: mappedArgs,
-            id: toolInvocation.id,
-          },
-        });
-      } catch (error) {
-        console.error(
-          `Failed to parse tool arguments for ${toolInvocation.function.name}:`,
-          error,
-        );
-        parts.push({
-          text: `Error: Failed to parse tool call ${toolInvocation.function.name}`,
-        });
-      }
-    }
-  } else if (generation.content) {
-    parts.push({ text: generation.content });
-  }
-
-  const candidate = {
-    content: {
-      parts,
-      role: 'model',
-    },
-    index: 0,
-    safetyRatings: [],
-  };
-
-  return candidate;
-};
-
-/**
- * ContentGenerator implementation that uses Salesforce LLM Gateway
+ * Gateway-based content generator that implements the ContentGenerator interface.
+ * Provides content generation capabilities through the Salesforce LLM Gateway,
+ * supporting both streaming and non-streaming responses, token counting, and embeddings.
+ *
+ * This class serves as an adapter between the Gemini API format and the Gateway API,
+ * handling request/response conversion, usage tracking, and streaming operations.
  */
 export class GatewayContentGenerator implements ContentGenerator {
   private client: GatewayClient;
@@ -193,75 +63,63 @@ export class GatewayContentGenerator implements ContentGenerator {
     outputTokens: 0,
     totalTokens: 0,
   };
-  model: GatewayModel;
 
-  constructor({ modelName }: { modelName: string }) {
-    this.model = findGatewayModel(modelName) ?? DEFAULT_GATEWAY_MODEL;
-    // need to get the model config from the displayId
-    this.client = new GatewayClient({
-      model: this.model,
-    });
+  /**
+   * Creates a new GatewayContentGenerator instance.
+   * Initializes the Gateway client for communicating with Salesforce LLM Gateway.
+   */
+  constructor() {
+    this.client = new GatewayClient();
   }
 
-  private recreateClient() {
-    this.client = new GatewayClient({ model: this.model });
-  }
-
-  private extractUsage(data: ChatGenerations): void {
-    const usage = data.generation_details?.parameters?.usage;
-    if (usage) {
-      this.usage = {
-        inputTokens:
-          usage[this.model.usageParameters.inputTokens] ||
-          this.usage.inputTokens,
-        outputTokens:
-          usage[this.model.usageParameters.outputTokens] ||
-          this.usage.outputTokens,
-        totalTokens:
-          usage[this.model.usageParameters.totalTokens] ||
-          this.usage.totalTokens,
-      };
-    }
-  }
-
+  /**
+   * Generates content using the Salesforce LLM Gateway.
+   *
+   * @param request - The content generation request parameters including model, contents, and configuration
+   * @param _userPromptId - User prompt identifier (currently unused)
+   * @returns Promise resolving to the generated content response
+   * @throws Error if the Gateway request fails or response conversion fails
+   */
   async generateContent(
     request: GenerateContentParameters,
     _userPromptId: string,
   ): Promise<GenerateContentResponse> {
-    // Respect per-request model override
-    if (request?.model) {
-      const m = findGatewayModel(request.model);
-      if (m && m.model !== this.model.model) {
-        this.model = m as GatewayModel;
-        this.recreateClient();
-      }
-    }
-    const gatewayRequest = this.prepareGatewayRequest(request);
+    const model = getModelOrDefault(request.model);
+    const gatewayRequest = this.prepareGatewayRequest(request, model);
     const response = await this.client.generateChatCompletion(gatewayRequest);
 
     // Convert Gateway response back to Gemini format
-    return this.convertGatewayResponseToGemini(response);
+    return this.convertGatewayResponseToGemini(response, model);
   }
 
+  /**
+   * Generates streaming content using the Salesforce LLM Gateway.
+   * Returns an async generator that yields content responses as they become available.
+   *
+   * @param request - The content generation request parameters including model, contents, and configuration
+   * @param _userPromptId - User prompt identifier (currently unused)
+   * @returns Promise resolving to an async generator of content responses
+   * @throws Error if the Gateway streaming request fails or response conversion fails
+   */
   async generateContentStream(
     request: GenerateContentParameters,
     _userPromptId: string,
   ): Promise<AsyncGenerator<GenerateContentResponse>> {
-    // Respect per-request model override
-    if (request?.model) {
-      const m = findGatewayModel(request.model);
-      if (m && m.model !== this.model.model) {
-        this.model = m as GatewayModel;
-        this.recreateClient();
-      }
-    }
-    const gatewayRequest = this.prepareGatewayRequest(request);
+    const model = getModelOrDefault(request.model);
+    const gatewayRequest = this.prepareGatewayRequest(request, model);
     const streamGenerator =
       await this.client.generateChatCompletionStream(gatewayRequest);
 
-    return this.convertStreamGeneratorToGemini(streamGenerator);
+    return this.convertStreamGeneratorToGemini(streamGenerator, model);
   }
 
+  /**
+   * Counts the tokens used in the conversation so far.
+   * Currently returns the total tokens from the last usage calculation.
+   *
+   * @param _request - Token counting request parameters (currently unused)
+   * @returns Promise resolving to the token count response
+   */
   async countTokens(
     _request: CountTokensParameters,
   ): Promise<CountTokensResponse> {
@@ -270,13 +128,22 @@ export class GatewayContentGenerator implements ContentGenerator {
     };
   }
 
-  // NOTE: This has not been test yet
+  /**
+   * Generates embeddings for the provided content using the Gateway's embedding service.
+   * Converts content to text format and creates vector embeddings for semantic similarity.
+   *
+   * NOTE: This method has not been tested yet.
+   *
+   * @param request - The embedding request containing content to embed
+   * @returns Promise resolving to the embedding response with vector values
+   * @throws Error if content conversion fails or embedding request fails
+   */
   async embedContent(
     request: EmbedContentParameters,
   ): Promise<EmbedContentResponse> {
     // Convert content to text - handle ContentListUnion properly
-    const contentArray = this.toContentsArray(request.contents);
-    const text = this.convertContentToText(contentArray[0]);
+    const contentArray = toContentsArray(request.contents);
+    const text = convertContentToText(contentArray[0]);
 
     const embeddingRequest = {
       input: [text],
@@ -301,46 +168,19 @@ export class GatewayContentGenerator implements ContentGenerator {
   }
 
   /**
-   * Convert ContentListUnion to Content array (similar to converter.ts)
+   * Prepares a Gateway API request from Gemini format request parameters.
+   * Converts system instructions, user contents, and tools to Gateway format.
+   * Handles JSON schema response format configuration.
+   *
+   * @param request - The Gemini format content generation request
+   * @param model - The Gateway model configuration to use
+   * @returns Gateway API request object ready for submission
+   * @private
    */
-  private toContentsArray(contents: ContentListUnion): Content[] {
-    if (Array.isArray(contents)) {
-      return contents.map(this.toContent.bind(this));
-    }
-    return [this.toContent(contents)];
-  }
-
-  /**
-   * Convert ContentUnion to Content (similar to converter.ts)
-   */
-  private toContent(content: ContentUnion): Content {
-    if (Array.isArray(content)) {
-      // it's a PartsUnion[]
-      return {
-        role: 'user',
-        parts: content.map((part) =>
-          typeof part === 'string' ? { text: part } : part,
-        ),
-      };
-    }
-    if (typeof content === 'string') {
-      return {
-        role: 'user',
-        parts: [{ text: content }],
-      };
-    }
-    // Check if it's a Part (has properties like text, but not role)
-    if ('text' in content && !('role' in content)) {
-      return {
-        role: 'user',
-        parts: [content],
-      };
-    }
-    // it's already a Content object
-    return content as Content;
-  }
-
-  private prepareGatewayRequest(request: GenerateContentParameters) {
+  private prepareGatewayRequest(
+    request: GenerateContentParameters,
+    model: GatewayModel,
+  ) {
     const messages: Array<{
       role: 'system' | 'user' | 'assistant' | 'tool';
       content: string;
@@ -348,7 +188,7 @@ export class GatewayContentGenerator implements ContentGenerator {
 
     // Add system instruction if present
     if (request.config?.systemInstruction) {
-      const systemContent = this.convertContentToText(
+      const systemContent = convertContentToText(
         request.config.systemInstruction,
       );
 
@@ -359,9 +199,9 @@ export class GatewayContentGenerator implements ContentGenerator {
     }
 
     // Convert contents to messages, preserving roles correctly
-    const userContents = this.toContentsArray(request.contents);
+    const userContents = toContentsArray(request.contents);
     for (const content of userContents) {
-      const messageContent = this.convertContentToText(content);
+      const messageContent = convertContentToText(content);
       const role = content.role === 'model' ? 'assistant' : 'user';
 
       messages.push({
@@ -370,7 +210,7 @@ export class GatewayContentGenerator implements ContentGenerator {
       });
     }
 
-    const tools = this.convertGeminiToolsToGateway(request.config?.tools ?? []);
+    const tools = convertGeminiToolsToGateway(request.config?.tools ?? []);
     const toolConfig = {
       mode: 'auto',
       parallel_calls: true,
@@ -383,7 +223,7 @@ export class GatewayContentGenerator implements ContentGenerator {
       request.config.responseJsonSchema
     ) {
       // Normalize the schema to ensure Gateway API compatibility
-      const normalizedSchema = this.normalizeParameterSchema(
+      const normalizedSchema = normalizeParameterSchema(
         request.config.responseJsonSchema as Record<string, unknown>,
       );
 
@@ -401,11 +241,10 @@ export class GatewayContentGenerator implements ContentGenerator {
     }
 
     const gatewayRequest = {
-      model: this.model.model,
+      model: model.model,
       messages,
       generation_settings: {
-        max_tokens:
-          request.config?.maxOutputTokens ?? this.model.maxOutputTokens,
+        max_tokens: request.config?.maxOutputTokens ?? model.maxOutputTokens,
         temperature: request.config?.temperature ?? 0.7,
         stop_sequences: request.config?.stopSequences,
         ...(responseFormat
@@ -418,129 +257,45 @@ export class GatewayContentGenerator implements ContentGenerator {
     return gatewayRequest;
   }
 
-  private convertGeminiToolsToGateway(
-    tools: ToolListUnion,
-  ): ChatCompletionTool[] {
-    const gatewayTools: ChatCompletionTool[] = [];
-
-    for (const tool of tools) {
-      // Support both Tool and CallableTool types
-      // Tool: has functionDeclarations (array)
-      // CallableTool: has 'function' property (single function)
-      if (
-        'functionDeclarations' in tool &&
-        Array.isArray(tool.functionDeclarations)
-      ) {
-        for (const funcDecl of tool.functionDeclarations) {
-          // Normalize the parameter schema to fix type case issues and other inconsistencies
-          const normalizedSchema = this.normalizeParameterSchema(
-            funcDecl.parametersJsonSchema as Record<string, unknown>,
-          );
-
-          gatewayTools.push({
-            type: 'function',
-            function: {
-              name: funcDecl.name || '',
-              description: funcDecl.description || '',
-              parameters: normalizedSchema,
-            },
-          });
-        }
-      } else if ('function' in tool && tool.function) {
-        console.log('CallableTool type - skipping for now', tool);
-        // CallableTool type - skip for now
-        // gatewayTools.push({
-        //   type: 'function',
-        //   function: {
-        //     name: tool.function.name || '',
-        //     description: tool.function.description || '',
-        //     parameters: tool.function.parametersJsonSchema as Record<string, unknown>,
-        //   },
-        // });
-      }
-    }
-
-    return gatewayTools;
-  }
-
   /**
-   * Normalizes parameter schema to ensure Gateway API compatibility.
-   * Fixes common issues like uppercase type specifications and other schema inconsistencies.
+   * Extracts and updates usage metrics from the Gateway response.
+   * Updates the internal usage tracking with input, output, and total token counts.
+   *
+   * @param data - The Gateway response data containing usage information
+   * @param model - The Gateway model configuration containing usage parameter mappings
+   * @private
    */
-  private normalizeParameterSchema(
-    schema: Record<string, unknown>,
-  ): Record<string, unknown> {
-    if (!schema) return schema;
-
-    // Deep clone to avoid mutating the original schema
-    const normalized = JSON.parse(JSON.stringify(schema));
-
-    // Recursively normalize type properties and other schema issues
-    const normalizeTypes = (obj: unknown): unknown => {
-      if (Array.isArray(obj)) {
-        return obj.map(normalizeTypes);
-      }
-
-      if (obj && typeof obj === 'object') {
-        const result: Record<string, unknown> = {};
-
-        for (const [key, value] of Object.entries(obj)) {
-          if (key === 'type' && typeof value === 'string') {
-            // Normalize type to lowercase (e.g., 'OBJECT' -> 'object', 'STRING' -> 'string')
-            result[key] = value.toLowerCase();
-          } else if (typeof value === 'object' && value !== null) {
-            result[key] = normalizeTypes(value);
-          } else {
-            result[key] = value;
-          }
-        }
-
-        return result;
-      }
-
-      return obj;
-    };
-
-    return normalizeTypes(normalized) as Record<string, unknown>;
+  private extractUsage(data: ChatGenerations, model: GatewayModel): void {
+    const usage = data.generation_details?.parameters?.usage;
+    if (usage) {
+      this.usage = {
+        inputTokens:
+          usage[model.usageParameters.inputTokens] || this.usage.inputTokens,
+        outputTokens:
+          usage[model.usageParameters.outputTokens] || this.usage.outputTokens,
+        totalTokens:
+          usage[model.usageParameters.totalTokens] || this.usage.totalTokens,
+      };
+    }
   }
 
   /**
-   * Convert a single Content to text string
-   */
-  private convertContentToText(content: ContentUnion): string {
-    if (isString(content)) {
-      return content;
-    }
-
-    if (isPart(content)) {
-      return content.text || '';
-    }
-
-    if (isContent(content)) {
-      return (
-        content.parts
-          ?.map((part) => this.convertContentToText(part))
-          .join(' ') || ''
-      );
-    }
-
-    if (Array.isArray(content)) {
-      return content.map((c) => this.convertContentToText(c)).join('\n');
-    }
-
-    return JSON.stringify(content);
-  }
-
-  /**
-   * Convert Gateway response to Gemini GenerateContentResponse format
+   * Converts Gateway response to Gemini GenerateContentResponse format.
+   * Maps Gateway generations to Gemini candidates and extracts usage metadata.
+   *
+   * @param chatResponse - The raw Gateway API response containing generations
+   * @param model - The Gateway model configuration for usage parameter mapping
+   * @returns Converted Gemini format response with candidates and usage metadata
+   * @private
    */
   private convertGatewayResponseToGemini(
     chatResponse: GatewayResponse<ChatGenerations>,
+    model: GatewayModel,
   ): GenerateContentResponse {
     const generations = chatResponse.data.generation_details?.generations;
     const candidates =
       generations?.map((gen) => convertGenerationToCandidate(gen)) || [];
-    this.extractUsage(chatResponse.data);
+    this.extractUsage(chatResponse.data, model);
 
     const response = new GenerateContentResponse();
     response.candidates = candidates;
@@ -549,23 +304,31 @@ export class GatewayContentGenerator implements ContentGenerator {
       candidatesTokenCount: this.usage.outputTokens,
       totalTokenCount: this.usage.totalTokens,
     };
-    response.modelVersion = this.model.model;
+    response.modelVersion = model.model;
     return response;
   }
 
   /**
-   * Convert streaming Gateway generator to Gemini format
+   * Converts streaming Gateway generator to Gemini format.
+   * Handles streaming tool calls, processes generation chunks, and manages streaming state.
+   * Yields individual GenerateContentResponse objects as data becomes available.
+   *
+   * @param streamGenerator - The async generator from Gateway streaming API
+   * @param model - The Gateway model configuration for streaming behavior
+   * @returns Async generator yielding Gemini format responses
+   * @private
    */
   private async *convertStreamGeneratorToGemini(
     streamGenerator: AsyncGenerator<ChatGenerations>,
+    model: GatewayModel,
   ): AsyncGenerator<GenerateContentResponse> {
-    const useStreamingToolCalls = this.model.streamToolCalls === true;
+    const useStreamingToolCalls = model.streamToolCalls === true;
     let activeToolCall: StreamingToolCall | null = null;
 
     for await (const data of streamGenerator) {
-      this.extractUsage(data);
+      this.extractUsage(data, model);
 
-      const response = this.createStreamResponse();
+      const response = this.createStreamResponse(model);
       const generations = data.generation_details?.generations || [];
 
       let shouldYieldResponse = false;
@@ -573,7 +336,7 @@ export class GatewayContentGenerator implements ContentGenerator {
 
       // Handle completed streaming tool calls
       if (useStreamingToolCalls) {
-        const completedCandidate = this.handleCompletedStreamingToolCall(
+        const completedCandidate = handleCompletedStreamingToolCall(
           activeToolCall,
           generations,
         );
@@ -586,7 +349,7 @@ export class GatewayContentGenerator implements ContentGenerator {
 
       // Process current generation chunks (only if we don't already have a completed tool call)
       if (!candidateToYield) {
-        const processResult = this.processGenerationChunks(
+        const processResult = processGenerationChunks(
           generations,
           useStreamingToolCalls,
           activeToolCall,
@@ -602,7 +365,7 @@ export class GatewayContentGenerator implements ContentGenerator {
 
       // Handle final usage-only chunks (only if we don't already have a candidate)
       if (!candidateToYield) {
-        const finalCandidate = this.handleUsageOnlyChunk(data, generations);
+        const finalCandidate = handleUsageOnlyChunk(data, generations);
         if (finalCandidate) {
           candidateToYield = finalCandidate;
           shouldYieldResponse = true;
@@ -616,16 +379,18 @@ export class GatewayContentGenerator implements ContentGenerator {
       }
     }
 
-    this.handleIncompleteStreamingToolCall(
-      useStreamingToolCalls,
-      activeToolCall,
-    );
+    handleIncompleteStreamingToolCall(useStreamingToolCalls, activeToolCall);
   }
 
   /**
-   * Create a base streaming response with metadata
+   * Creates a base streaming response with usage metadata.
+   * Provides a standardized response structure for streaming operations.
+   *
+   * @param model - The Gateway model configuration for response metadata
+   * @returns Base GenerateContentResponse with empty candidates and current usage stats
+   * @private
    */
-  private createStreamResponse(): GenerateContentResponse {
+  private createStreamResponse(model: GatewayModel): GenerateContentResponse {
     const response = new GenerateContentResponse();
     response.candidates = [];
     response.usageMetadata = {
@@ -633,218 +398,7 @@ export class GatewayContentGenerator implements ContentGenerator {
       candidatesTokenCount: this.usage.outputTokens,
       totalTokenCount: this.usage.totalTokens,
     };
-    response.modelVersion = this.model.model;
+    response.modelVersion = model.model;
     return response;
-  }
-
-  /**
-   * Handle completion of streaming tool calls
-   */
-  private handleCompletedStreamingToolCall(
-    activeToolCall: StreamingToolCall | null,
-    generations: NonNullable<
-      ChatGenerations['generation_details']
-    >['generations'],
-  ): Candidate | null {
-    if (!activeToolCall) return null;
-
-    const hasToolInvocations = generations.some(
-      (g) => g?.tool_invocations && g.tool_invocations.length > 0,
-    );
-
-    // If we have an active tool call but no tool_invocations in this chunk,
-    // it means the tool call streaming is complete
-    if (!hasToolInvocations) {
-      try {
-        const rawArgs = JSON.parse(activeToolCall.argumentsBuffer || '{}');
-        const mappedArgs = mapToolParameters(activeToolCall.name, rawArgs);
-
-        return {
-          content: {
-            parts: [
-              {
-                functionCall: {
-                  name: activeToolCall.name,
-                  args: mappedArgs,
-                  id: activeToolCall.id,
-                },
-              },
-            ],
-            role: 'model',
-          },
-          index: 0,
-          safetyRatings: [],
-        };
-      } catch {
-        return {
-          content: {
-            parts: [
-              {
-                text: `Error: Failed to parse tool call ${activeToolCall.name}`,
-              },
-            ],
-            role: 'model',
-          },
-          index: 0,
-          safetyRatings: [],
-        };
-      }
-    }
-
-    return null;
-  }
-
-  /**
-   * Process generation chunks and return a single merged candidate and updated tool call state
-   */
-  private processGenerationChunks(
-    generations: NonNullable<
-      ChatGenerations['generation_details']
-    >['generations'],
-    useStreamingToolCalls: boolean,
-    activeToolCall: StreamingToolCall | null,
-  ): {
-    candidate: Candidate | null;
-    updatedActiveToolCall: StreamingToolCall | null;
-  } {
-    const candidates: Candidate[] = [];
-    let updatedActiveToolCall = activeToolCall;
-
-    for (const generation of generations) {
-      if (
-        generation?.tool_invocations &&
-        generation.tool_invocations.length > 0
-      ) {
-        if (useStreamingToolCalls) {
-          updatedActiveToolCall = this.handleStreamingToolInvocations(
-            generation.tool_invocations,
-            updatedActiveToolCall,
-          );
-        } else {
-          const candidate = convertGenerationToCandidate(generation);
-          candidates.push(candidate);
-        }
-      } else if (
-        generation?.content !== undefined &&
-        generation?.content !== null
-      ) {
-        candidates.push(this.createTextCandidate(generation.content));
-      }
-    }
-
-    // Merge multiple candidates into a single candidate for streaming consistency
-    if (candidates.length === 0) {
-      return { candidate: null, updatedActiveToolCall };
-    } else if (candidates.length === 1) {
-      return { candidate: candidates[0], updatedActiveToolCall };
-    } else {
-      // Merge multiple candidates into one
-      const mergedParts = candidates.flatMap((c) => c.content?.parts || []);
-      const mergedCandidate: Candidate = {
-        content: {
-          parts: mergedParts,
-          role: 'model',
-        },
-        index: 0,
-        safetyRatings: [],
-      };
-      return { candidate: mergedCandidate, updatedActiveToolCall };
-    }
-  }
-
-  /**
-   * Handle streaming tool invocations and update active tool call state
-   */
-  private handleStreamingToolInvocations(
-    toolInvocations: NonNullable<
-      ChatGenerations['generation_details']
-    >['generations'][number]['tool_invocations'],
-    activeToolCall: StreamingToolCall | null,
-  ): StreamingToolCall | null {
-    let updatedActiveToolCall = activeToolCall;
-
-    for (const toolInvocation of toolInvocations || []) {
-      // Check if this starts a new tool call (has valid ID and name)
-      if (toolInvocation.id && toolInvocation.function.name) {
-        updatedActiveToolCall = {
-          id: toolInvocation.id,
-          name: toolInvocation.function.name,
-          argumentsBuffer: toolInvocation.function.arguments || '',
-        };
-      } else if (
-        updatedActiveToolCall &&
-        (!toolInvocation.id || !toolInvocation.function.name)
-      ) {
-        // This is a continuation chunk - append arguments
-        const newArgs = toolInvocation.function.arguments || '';
-        if (newArgs) {
-          updatedActiveToolCall.argumentsBuffer += newArgs;
-        }
-      }
-    }
-
-    return updatedActiveToolCall;
-  }
-
-  /**
-   * Create a text content candidate
-   */
-  private createTextCandidate(content: string): Candidate {
-    return {
-      content: {
-        parts: [{ text: content }],
-        role: 'model',
-      },
-      index: 0,
-      safetyRatings: [],
-    };
-  }
-
-  /**
-   * Handle usage-only chunks (final chunks)
-   */
-  private handleUsageOnlyChunk(
-    data: ChatGenerations,
-    generations: NonNullable<
-      ChatGenerations['generation_details']
-    >['generations'],
-  ): Candidate | null {
-    const usage = data.generation_details?.parameters?.usage;
-    const hasAnyMeaningfulContent = generations.some(
-      (g) =>
-        (g.content && g.content.trim()) ||
-        (g.tool_invocations && g.tool_invocations.length > 0),
-    );
-    const isUsageOnlyChunk = usage && !hasAnyMeaningfulContent;
-
-    if (isUsageOnlyChunk) {
-      return {
-        content: {
-          parts: [],
-          role: 'model',
-        },
-        index: 0,
-        safetyRatings: [],
-        finishReason: 'STOP' as FinishReason,
-      };
-    }
-
-    return null;
-  }
-
-  /**
-   * Handle case where stream ends with an incomplete tool call
-   */
-  private handleIncompleteStreamingToolCall(
-    useStreamingToolCalls: boolean,
-    activeToolCall: StreamingToolCall | null,
-  ): void {
-    if (useStreamingToolCalls && activeToolCall) {
-      console.warn(
-        `[DEBUG] Stream ended with incomplete tool call:`,
-        activeToolCall,
-      );
-      // Could emit an error response here if needed
-    }
   }
 }

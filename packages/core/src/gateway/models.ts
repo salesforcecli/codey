@@ -91,14 +91,22 @@ export const GPT4oMini: GatewayModel = {
   },
 };
 
-// Registry of known Gateway models and helpers for lookup by name/id
-export const GATEWAY_MODELS: GatewayModel[] = [
+export const DEFAULT_GATEWAY_MODEL = GPT4oMini;
+export const DEFAULT_GATEWAY_FALLBACK_MODEL = QWEN;
+
+const GATEWAY_MODELS: GatewayModel[] = [
   QWEN,
   Claude37Sonnet,
   Claude4Sonnet,
   GPT4oMini,
 ];
 
+/**
+ * Finds a gateway model by its name or display ID.
+ *
+ * @param nameOrId - The model name or display ID to search for (case-insensitive)
+ * @returns The matching GatewayModel if found, undefined otherwise
+ */
 export function findGatewayModel(nameOrId: string): GatewayModel | undefined {
   const needle = (nameOrId || '').toLowerCase();
   return GATEWAY_MODELS.find(
@@ -107,5 +115,14 @@ export function findGatewayModel(nameOrId: string): GatewayModel | undefined {
   );
 }
 
-export const DEFAULT_GATEWAY_MODEL = GPT4oMini;
-export const DEFAULT_GATEWAY_FALLBACK_MODEL = QWEN;
+/**
+ * Retrieves a gateway model by name or ID, returning the default model if not found or if no identifier is provided.
+ *
+ * @param nameOrId - The name or ID of the gateway model to retrieve. If undefined, the default model is returned.
+ * @returns The found gateway model or the default gateway model if not found or if nameOrId is undefined.
+ */
+export function getModelOrDefault(nameOrId: string | undefined): GatewayModel {
+  return nameOrId
+    ? findGatewayModel(nameOrId) || DEFAULT_GATEWAY_MODEL
+    : DEFAULT_GATEWAY_MODEL;
+}

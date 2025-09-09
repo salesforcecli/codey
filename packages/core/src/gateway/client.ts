@@ -22,13 +22,9 @@ import {
   resolveSfApiEnv,
 } from './env.js';
 import { Org } from '@salesforce/core';
-import { type GatewayModel } from './models.js';
 import { randomBytes } from 'node:crypto';
 import { createParser } from 'eventsource-parser';
-
-type Options = {
-  model: GatewayModel;
-};
+import { DEFAULT_GATEWAY_MODEL, findGatewayModel } from './models.js';
 
 type GenerationRequest = {
   prompt: string;
@@ -158,6 +154,11 @@ type EndPoint =
   | '/embeddings'
   | '/feedback';
 
+type RequestBody = {
+  [key: string]: unknown;
+  model?: string;
+};
+
 /**
  * Skip events that are not relevant to the user.
  */
@@ -183,13 +184,11 @@ export class GatewayClient {
   private baseUrl: string;
   private regionHeader: string;
   private jwt: JSONWebToken | undefined;
-  private model: GatewayModel;
 
-  constructor(options: Options) {
+  constructor() {
     const env = resolveSfApiEnv();
     this.regionHeader = getSalesforceRegionHeader(env);
     this.baseUrl = `${getSalesforceBaseUrl(env)}/einstein/gpt/code/v1.1`;
-    this.model = options.model;
   }
 
   async maybeRequestJWT(): Promise<void> {
@@ -299,11 +298,11 @@ export class GatewayClient {
   private async makeRequest<T>(
     endpoint: EndPoint,
     method: string,
-    body?: unknown,
+    body?: RequestBody,
   ): Promise<GatewayResponse<T>> {
     await this.maybeRequestJWT();
     const url = `${this.baseUrl}${endpoint}`;
-    const headers = this.getHeaders('request');
+    const headers = this.getHeaders('request', body?.model);
     const response = await request(url, {
       method,
       headers,
@@ -331,11 +330,11 @@ export class GatewayClient {
   private async makeStreamRequest<T>(
     endpoint: EndPoint,
     method: string,
-    body?: unknown,
+    body?: RequestBody,
   ): Promise<AsyncGenerator<T>> {
     await this.maybeRequestJWT();
     const url = `${this.baseUrl}${endpoint}`;
-    const headers = this.getHeaders('stream');
+    const headers = this.getHeaders('stream', body?.model);
 
     const response = await request(url, {
       method,
@@ -387,10 +386,18 @@ export class GatewayClient {
   /**
    * Get the required headers for LLMG API requests
    */
-  private getHeaders(type: 'request' | 'stream'): Record<string, string> {
+  private getHeaders(
+    type: 'request' | 'stream',
+    modelName: string | undefined,
+  ): Record<string, string> {
     if (!this.jwt) {
       throw new Error('JWT not found');
     }
+
+    const model = modelName
+      ? (findGatewayModel(modelName) ?? DEFAULT_GATEWAY_MODEL)
+      : DEFAULT_GATEWAY_MODEL;
+
     const headers: Record<string, string> = {
       Authorization: `Bearer ${this.jwt.value()}`,
       'Content-Type': 'application/json;charset=utf-8',
@@ -399,8 +406,8 @@ export class GatewayClient {
       'x-sfdc-core-tenant-id': this.jwt.tnk(),
       'x-salesforce-region': this.regionHeader,
       'x-client-trace-id': randomBytes(8).toString('hex'),
-      ...(type === 'request' ? this.model.customRequestHeaders || {} : {}),
-      ...(type === 'stream' ? this.model.customStreamHeaders || {} : {}),
+      ...(type === 'request' ? model.customRequestHeaders || {} : {}),
+      ...(type === 'stream' ? model.customStreamHeaders || {} : {}),
     };
 
     return headers;
