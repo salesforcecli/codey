@@ -41,10 +41,7 @@ import { isFunctionResponse } from '../utils/messageInspectors.js';
 import { tokenLimit } from './tokenLimits.js';
 import type { ChatRecordingService } from '../services/chatRecordingService.js';
 import type { ContentGenerator } from './contentGenerator.js';
-import {
-  DEFAULT_GEMINI_FLASH_MODEL,
-  DEFAULT_THINKING_MODE,
-} from '../config/models.js';
+import { DEFAULT_THINKING_MODE } from '../config/models.js';
 import { LoopDetectionService } from '../services/loopDetectionService.js';
 import { ideContext } from '../ide/ideContext.js';
 import {
@@ -59,6 +56,7 @@ import {
 } from '../telemetry/types.js';
 import type { IdeContext, File } from '../ide/types.js';
 import { handleFallback } from '../fallback/handler.js';
+import { getModel } from '../core/getModel.js';
 
 export function isThinkingSupported(model: string) {
   if (model.startsWith('gemini-2.5')) return true;
@@ -573,7 +571,10 @@ export class GeminiClient {
 
       const apiCall = () => {
         const modelToUse = this.config.isInFallbackMode()
-          ? DEFAULT_GEMINI_FLASH_MODEL
+          ? getModel(
+              'generateJson',
+              this.config.getContentGeneratorConfig()?.authType,
+            )
           : model;
         currentAttemptModel = modelToUse;
 
@@ -698,7 +699,10 @@ export class GeminiClient {
 
       const apiCall = () => {
         const modelToUse = this.config.isInFallbackMode()
-          ? DEFAULT_GEMINI_FLASH_MODEL
+          ? getModel(
+              'generateJson',
+              this.config.getContentGeneratorConfig()?.authType,
+            )
           : model;
         currentAttemptModel = modelToUse;
 

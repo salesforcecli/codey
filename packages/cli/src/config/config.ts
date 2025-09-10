@@ -33,7 +33,6 @@ import {
   setGeminiMdFilename as setServerGeminiMdFilename,
   getCurrentGeminiMdFilename,
   ApprovalMode,
-  DEFAULT_GEMINI_EMBEDDING_MODEL,
   DEFAULT_MEMORY_FILE_FILTERING_OPTIONS,
   FileDiscoveryService,
   ShellTool,
@@ -41,6 +40,7 @@ import {
   WriteFileTool,
   DEFAULT_GEMINI_MODEL,
   DEFAULT_GATEWAY_MODEL,
+  getModel,
 } from '@salesforce/codey-core';
 import type { Settings } from './settings.js';
 
@@ -562,7 +562,7 @@ export async function loadCliConfig(
       : (settings.ui?.accessibility?.screenReader ?? false);
   return new Config({
     sessionId,
-    embeddingModel: DEFAULT_GEMINI_EMBEDDING_MODEL,
+    embeddingModel: getModel('embeddings'),
     sandbox: sandboxConfig,
     targetDir: cwd,
     includeDirectories,

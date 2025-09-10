@@ -23,14 +23,13 @@ import { ReadFileTool } from '../tools/read-file.js';
 import { ReadManyFilesTool } from '../tools/read-many-files.js';
 import { GrepTool } from '../tools/grep.js';
 import { LruCache } from './LruCache.js';
-import { DEFAULT_GEMINI_FLASH_LITE_MODEL } from '../config/models.js';
 import {
   isFunctionResponse,
   isFunctionCall,
 } from '../utils/messageInspectors.js';
 import * as fs from 'node:fs';
+import { getModel } from '../core/getModel.js';
 
-const EditModel = DEFAULT_GEMINI_FLASH_LITE_MODEL;
 const EditConfig: GenerateContentConfig = {
   thinkingConfig: {
     thinkingBudget: 0,
@@ -416,7 +415,7 @@ Return ONLY the corrected target snippet in the specified JSON format with the k
       contents,
       OLD_STRING_CORRECTION_SCHEMA,
       abortSignal,
-      EditModel,
+      getModel('generateJson'),
       EditConfig,
     );
 
@@ -504,7 +503,7 @@ Return ONLY the corrected string in the specified JSON format with the key 'corr
       contents,
       NEW_STRING_CORRECTION_SCHEMA,
       abortSignal,
-      EditModel,
+      getModel('generateJson'),
       EditConfig,
     );
 
@@ -573,7 +572,7 @@ Return ONLY the corrected string in the specified JSON format with the key 'corr
       contents,
       CORRECT_NEW_STRING_ESCAPING_SCHEMA,
       abortSignal,
-      EditModel,
+      getModel('generateJson'),
       EditConfig,
     );
 
@@ -639,7 +638,7 @@ Return ONLY the corrected string in the specified JSON format with the key 'corr
       contents,
       CORRECT_STRING_ESCAPING_SCHEMA,
       abortSignal,
-      EditModel,
+      getModel('generateJson'),
       EditConfig,
     );
 

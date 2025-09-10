@@ -37,13 +37,13 @@ import {
   type DetectedIde,
   type IdeContext,
   type UserTierId,
-  DEFAULT_GEMINI_FLASH_MODEL,
   IdeClient,
   ideContext,
   getErrorMessage,
   getAllGeminiMdFilenames,
   AuthType,
   clearCachedCredentialFile,
+  getModel,
 } from '@salesforce/codey-core';
 import { validateAuthMethod } from '../config/auth.js';
 import { loadHierarchicalGeminiMemory } from '../config/config.js';
@@ -135,7 +135,7 @@ export const AppContainer = (props: AppContainerProps) => {
   // Helper to determine the effective model, considering the fallback state.
   const getEffectiveModel = useCallback(() => {
     if (config.isInFallbackMode()) {
-      return DEFAULT_GEMINI_FLASH_MODEL;
+      return getModel('fallback', config.getContentGeneratorConfig().authType);
     }
     return config.getModel();
   }, [config]);

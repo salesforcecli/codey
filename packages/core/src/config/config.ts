@@ -59,10 +59,7 @@ import {
   DEFAULT_OTLP_ENDPOINT,
 } from '../telemetry/index.js';
 import { StartSessionEvent } from '../telemetry/index.js';
-import {
-  DEFAULT_GEMINI_EMBEDDING_MODEL,
-  DEFAULT_GEMINI_FLASH_MODEL,
-} from './models.js';
+import { DEFAULT_GEMINI_FLASH_MODEL } from './models.js';
 import { shouldAttemptBrowserLaunch } from '../utils/browser.js';
 import type { MCPOAuthConfig } from '../mcp/oauth-provider.js';
 import { IdeClient } from '../ide/ide-client.js';
@@ -90,7 +87,7 @@ import { FileExclusions } from '../utils/ignorePatterns.js';
 import type { EventEmitter } from 'node:events';
 import type { UserTierId } from '../code_assist/types.js';
 import { ProxyAgent, setGlobalDispatcher } from 'undici';
-import { AUTH_CACHE } from '../core/getModel.js';
+import { AUTH_CACHE, getModel } from '../core/getModel.js';
 
 export enum ApprovalMode {
   DEFAULT = 'default',
@@ -332,8 +329,7 @@ export class Config {
 
   constructor(params: ConfigParameters) {
     this.sessionId = params.sessionId;
-    this.embeddingModel =
-      params.embeddingModel ?? DEFAULT_GEMINI_EMBEDDING_MODEL;
+    this.embeddingModel = params.embeddingModel ?? getModel('embeddings');
     this.fileSystemService = new StandardFileSystemService();
     this.sandbox = params.sandbox;
     this.targetDir = path.resolve(params.targetDir);

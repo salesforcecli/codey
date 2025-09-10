@@ -37,7 +37,7 @@ import type {
 import {
   ApprovalMode,
   AuthType,
-  DEFAULT_GATEWAY_FALLBACK_MODEL,
+  DEFAULT_GEMINI_FLASH_MODEL,
   GeminiEventType as ServerGeminiEventType,
   ToolErrorType,
 } from '@salesforce/codey-core';
@@ -1280,7 +1280,7 @@ describe('useGeminiStream', () => {
           mockAuthType,
           undefined,
           'gemini-2.5-pro',
-          DEFAULT_GATEWAY_FALLBACK_MODEL.displayId,
+          DEFAULT_GEMINI_FLASH_MODEL,
         );
       });
     });
@@ -1796,7 +1796,7 @@ describe('useGeminiStream', () => {
         expect.any(String),
         undefined,
         'gemini-2.5-pro',
-        DEFAULT_GATEWAY_FALLBACK_MODEL.displayId,
+        DEFAULT_GEMINI_FLASH_MODEL,
       );
     });
   });

@@ -60,18 +60,18 @@ describe('GatewayClient', () => {
     );
 
     // Mock models
+    const mockDefaultModel = {
+      description: 'Default model',
+      displayId: 'default',
+      model: 'default-model',
+      maxInputTokens: 4096,
+      maxOutputTokens: 2048,
+      customHeaders: { 'x-custom': 'InternalTextGeneration' },
+      supportsMcp: true,
+      extractUsage: defaultExtractUsage,
+    };
     vi.mocked(models.findGatewayModel).mockReturnValue(undefined);
-    Object.defineProperty(models, 'DEFAULT_GATEWAY_MODEL', {
-      value: {
-        description: 'Default model',
-        displayId: 'default',
-        model: 'default-model',
-        maxInputTokens: 4096,
-        maxOutputTokens: 2048,
-        customHeaders: { 'x-custom': 'InternalTextGeneration' },
-        extractUsage: defaultExtractUsage,
-      },
-    });
+    vi.mocked(models.getModelOrDefault).mockReturnValue(mockDefaultModel);
 
     // Mock crypto
     vi.mocked(randomBytes).mockImplementation((size: number) => {
@@ -656,11 +656,10 @@ describe('GatewayClient', () => {
     });
 
     it('should use default model when model not found', () => {
-      vi.mocked(models.findGatewayModel).mockReturnValue(undefined);
-
+      // The default mock setup in beforeEach already handles this case
       const headers = client['getHeaders']('unknown-model');
 
-      expect(models.findGatewayModel).toHaveBeenCalledWith('unknown-model');
+      expect(models.getModelOrDefault).toHaveBeenCalledWith('unknown-model');
       expect(headers).toEqual(
         expect.objectContaining({
           'x-custom': 'InternalTextGeneration',
@@ -679,7 +678,7 @@ describe('GatewayClient', () => {
         supportsMcp: true,
         extractUsage: defaultExtractUsage,
       };
-      vi.mocked(models.findGatewayModel).mockReturnValue(customModel);
+      vi.mocked(models.getModelOrDefault).mockReturnValue(customModel);
 
       const headers = client['getHeaders']('custom-model');
 

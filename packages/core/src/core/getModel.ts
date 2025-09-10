@@ -16,6 +16,7 @@
 
 import {
   DEFAULT_GEMINI_EMBEDDING_MODEL,
+  DEFAULT_GEMINI_FLASH_LITE_MODEL,
   DEFAULT_GEMINI_FLASH_MODEL,
   DEFAULT_GEMINI_MODEL,
 } from '../config/models.js';
@@ -30,7 +31,8 @@ type ModelType =
   | 'fallback'
   | 'embeddings'
   | 'search'
-  | 'generateJson';
+  | 'generateJson'
+  | 'promptCompletion';
 
 const GOOGLE_MODELS = {
   default: DEFAULT_GEMINI_MODEL,
@@ -38,6 +40,7 @@ const GOOGLE_MODELS = {
   embeddings: DEFAULT_GEMINI_EMBEDDING_MODEL,
   search: DEFAULT_GEMINI_FLASH_MODEL,
   generateJson: DEFAULT_GEMINI_FLASH_MODEL,
+  promptCompletion: DEFAULT_GEMINI_FLASH_LITE_MODEL,
 };
 
 const MODELS = {
@@ -51,6 +54,7 @@ const MODELS = {
     embeddings: DEFAULT_GATEWAY_MODEL.displayId,
     search: DEFAULT_GATEWAY_MODEL.displayId,
     generateJson: DEFAULT_GATEWAY_MODEL.displayId,
+    promptCompletion: DEFAULT_GATEWAY_MODEL.displayId,
   },
 };
 
