@@ -85,9 +85,9 @@ export class GatewayClient {
       return;
     }
 
-    const username = process.env['SF_LLMG_USERNAME'];
+    const username = process.env['CODEY_ORG_USERNAME'];
     if (!username) {
-      throw new Error('SF_LLMG_USERNAME is required for SF LLMG auth');
+      throw new Error('CODEY_ORG_USERNAME is required for SF LLMG auth');
     }
 
     const org = await Org.create({ aliasOrUsername: username });

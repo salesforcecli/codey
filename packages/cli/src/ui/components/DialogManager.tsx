@@ -22,7 +22,7 @@ import { RadioButtonSelect } from './shared/RadioButtonSelect.js';
 import { ThemeDialog } from './ThemeDialog.js';
 import { SettingsDialog } from './SettingsDialog.js';
 import { AuthInProgress } from '../auth/AuthInProgress.js';
-import { AuthDialog } from '../auth/AuthDialog.js';
+import { CodeyAuthDialog } from '../auth/CodeyAuthDialog.js';
 import { EditorSettingsDialog } from './EditorSettingsDialog.js';
 import { PrivacyNotice } from '../privacy/PrivacyNotice.js';
 import { WorkspaceMigrationDialog } from './WorkspaceMigrationDialog.js';
@@ -154,13 +154,7 @@ export const DialogManager = () => {
   if (uiState.isAuthDialogOpen) {
     return (
       <Box flexDirection="column">
-        <AuthDialog
-          config={config}
-          settings={settings}
-          setAuthState={uiActions.setAuthState}
-          authError={uiState.authError}
-          onAuthError={uiActions.onAuthError}
-        />
+        <CodeyAuthDialog />
       </Box>
     );
   }

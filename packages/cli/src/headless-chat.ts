@@ -81,6 +81,7 @@ export async function initClient(
     extensions,
     sessionId,
     {
+      org: 'test-org', // TODO: this is a placeholder until we productionize headless-chat
       model: undefined,
       sandbox: undefined,
       sandboxImage: undefined,

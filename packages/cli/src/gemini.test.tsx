@@ -215,8 +215,10 @@ describe('gemini.tsx main function kitty protocol', () => {
         ui: {},
       },
       setValue: vi.fn(),
+      refresh: vi.fn(),
     } as never);
     vi.mocked(parseArguments).mockResolvedValue({
+      org: 'test-org',
       model: undefined,
       sandbox: undefined,
       sandboxImage: undefined,

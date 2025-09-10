@@ -217,6 +217,22 @@ export async function main() {
   await cleanupCheckpoints();
 
   const argv = await parseArguments(settings.merged);
+
+  // A better solution would be to set the org in the Config instance
+  // I opted for this approach to minimize changes to other parts of the code, which
+  // will make staying in sync with upstream changes easier.
+  process.env['CODEY_ORG_USERNAME'] = argv.org ?? process.env['CODEY_ORG_USERNAME'] ?? '';
+  // Do not throw if either CODEY_ORG_USERNAME or GEMINI_API_KEY is set
+  if (!process.env['CODEY_ORG_USERNAME'] && !process.env['GEMINI_API_KEY']) {
+    console.error(
+      'Error: No org specified. Please provide an org using the --org flag or set the CODEY_ORG_USERNAME environment variable.',
+    );
+    process.exit(1);
+  }
+
+  // Refresh settings after setting env var to trigger auth type auto-selection
+  settings.refresh();
+
   const extensions = loadExtensions();
   const config = await loadCliConfig(
     settings.merged,

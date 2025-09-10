@@ -24,6 +24,7 @@ import {
   GEMINI_CONFIG_DIR as GEMINI_DIR,
   getErrorMessage,
   Storage,
+  AuthType,
 } from '@salesforce/codey-core';
 import stripJsonComments from 'strip-json-comments';
 import { DefaultLight } from '../ui/themes/default-light.js';
@@ -386,14 +387,49 @@ export class LoadedSettings {
     return this._merged;
   }
 
-  private computeMergedSettings(): Settings {
-    return mergeSettings(
+  private computeMergedSettings(deriveAuth: boolean = false): Settings {
+    const merged = mergeSettings(
       this.system.settings,
       this.systemDefaults.settings,
       this.user.settings,
       this.workspace.settings,
       this.isTrusted,
     );
+
+    if (!deriveAuth) {
+      return merged;
+    }
+
+    // Minimal env-driven auth selection: if no selectedType is set, prefer
+    // CODEY_ORG_USERNAME (LLM Gateway) over GEMINI_API_KEY (Gemini API Key).
+    // Do not persist; this only affects the merged, in-memory view.
+    try {
+      const enforced = merged.security?.auth?.enforcedType;
+      const selected = merged.security?.auth?.selectedType;
+      if (!selected && !enforced) {
+        const hasOrgUsername = Boolean(process.env['CODEY_ORG_USERNAME']);
+        const hasGeminiKey = Boolean(process.env['GEMINI_API_KEY']);
+
+        let autoType: AuthType | undefined;
+        if (hasOrgUsername) {
+          autoType = AuthType.USE_SF_LLMG;
+        } else if (hasGeminiKey) {
+          autoType = AuthType.USE_GEMINI;
+        }
+
+        if (autoType) {
+          setNestedProperty(
+            merged as unknown as Record<string, unknown>,
+            'security.auth.selectedType',
+            autoType,
+          );
+        }
+      }
+    } catch {
+      // Best-effort only; do not block settings load on any error here.
+    }
+
+    return merged;
   }
 
   forScope(scope: SettingScope): SettingsFile {
@@ -416,6 +452,10 @@ export class LoadedSettings {
     setNestedProperty(settingsFile.settings, key, value);
     this._merged = this.computeMergedSettings();
     saveSettings(settingsFile);
+  }
+
+  refresh(): void {
+    this._merged = this.computeMergedSettings(true);
   }
 }
 

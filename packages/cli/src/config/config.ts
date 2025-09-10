@@ -64,6 +64,7 @@ const logger = {
 };
 
 export interface CliArgs {
+  org: string | undefined;
   model: string | undefined;
   sandbox: boolean | string | undefined;
   sandboxImage: string | undefined;
@@ -110,6 +111,11 @@ export async function parseArguments(settings: Settings): Promise<CliArgs> {
         //   description: `Model`,
         //   default: process.env['GEMINI_MODEL'],
         // })
+        .option('org', {
+          alias: 'o',
+          type: 'string',
+          description: 'Org username or alias to use for authentication.',
+        })
         .option('prompt', {
           alias: 'p',
           type: 'string',
@@ -616,7 +622,7 @@ export async function loadCliConfig(
     cwd,
     fileDiscoveryService: fileService,
     bugCommand: settings.advanced?.bugCommand,
-    model: process.env['SF_LLMG_USERNAME']
+    model: process.env['CODEY_ORG_USERNAME']
       ? DEFAULT_GATEWAY_MODEL.displayId
       : DEFAULT_GEMINI_MODEL,
     extensionContextFilePaths,
