@@ -15,9 +15,10 @@
  */
 
 import { type Content, Type } from '@google/genai';
-import { type GeminiClient } from '../core/client.js';
+import { type BaseLlmClient } from '../core/baseLlmClient.js';
 import { LruCache } from './LruCache.js';
 import { getModel } from '../core/getModel.js';
+import { promptIdContext } from './promptIdContext.js';
 
 const MAX_CACHE_SIZE = 50;
 
@@ -103,8 +104,9 @@ const editCorrectionWithInstructionCache = new LruCache<
  * @param new_string The original replacement string.
  * @param error The error that occurred during the initial edit.
  * @param current_content The current content of the file.
- * @param geminiClient The Gemini client to use for the LLM call.
+ * @param baseLlmClient The BaseLlmClient to use for the LLM call.
  * @param abortSignal An abort signal to cancel the operation.
+ * @param promptId A unique ID for the prompt.
  * @returns A new search and replace pair.
  */
 export async function FixLLMEditWithInstruction(
@@ -113,9 +115,17 @@ export async function FixLLMEditWithInstruction(
   new_string: string,
   error: string,
   current_content: string,
-  geminiClient: GeminiClient,
+  baseLlmClient: BaseLlmClient,
   abortSignal: AbortSignal,
 ): Promise<SearchReplaceEdit> {
+  let promptId = promptIdContext.getStore();
+  if (!promptId) {
+    promptId = `llm-fixer-fallback-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    console.warn(
+      `Could not find promptId in context. This is unexpected. Using a fallback ID: ${promptId}`,
+    );
+  }
+
   const cacheKey = `${instruction}---${old_string}---${new_string}--${current_content}--${error}`;
   const cachedResult = editCorrectionWithInstructionCache.get(cacheKey);
   if (cachedResult) {
@@ -130,21 +140,18 @@ export async function FixLLMEditWithInstruction(
   const contents: Content[] = [
     {
       role: 'user',
-      parts: [
-        {
-          text: `${EDIT_SYS_PROMPT}
-${userPrompt}`,
-        },
-      ],
+      parts: [{ text: userPrompt }],
     },
   ];
 
-  const result = (await geminiClient.generateJson(
+  const result = (await baseLlmClient.generateJson({
     contents,
-    SearchReplaceEditSchema,
+    schema: SearchReplaceEditSchema,
     abortSignal,
-    getModel('generateJson'),
-  )) as unknown as SearchReplaceEdit;
+    model: getModel('generateJson'),
+    systemInstruction: EDIT_SYS_PROMPT,
+    promptId,
+  })) as unknown as SearchReplaceEdit;
 
   editCorrectionWithInstructionCache.set(cacheKey, result);
   return result;

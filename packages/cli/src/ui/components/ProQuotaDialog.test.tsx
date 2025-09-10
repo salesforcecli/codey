@@ -32,7 +32,7 @@ describe('ProQuotaDialog', () => {
   it('should render with correct title and options', () => {
     const { lastFrame } = render(
       <ProQuotaDialog
-        currentModel="gemini-2.5-pro"
+        failedModel="gemini-2.5-pro"
         fallbackModel="gemini-2.5-flash"
         onChoice={() => {}}
       />,
@@ -63,7 +63,7 @@ describe('ProQuotaDialog', () => {
     const mockOnChoice = vi.fn();
     render(
       <ProQuotaDialog
-        currentModel="gemini-2.5-pro"
+        failedModel="gemini-2.5-pro"
         fallbackModel="gemini-2.5-flash"
         onChoice={mockOnChoice}
       />,
@@ -82,7 +82,7 @@ describe('ProQuotaDialog', () => {
     const mockOnChoice = vi.fn();
     render(
       <ProQuotaDialog
-        currentModel="gemini-2.5-pro"
+        failedModel="gemini-2.5-pro"
         fallbackModel="gemini-2.5-flash"
         onChoice={mockOnChoice}
       />,

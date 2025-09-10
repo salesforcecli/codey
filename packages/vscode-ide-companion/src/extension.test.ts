@@ -17,6 +17,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as vscode from 'vscode';
 import { activate } from './extension.js';
+import { DetectedIde, detectIdeFromEnv } from '@salesforce/codey-core';
+
+vi.mock('@salesforce/codey-core', async () => {
+  const actual = await vi.importActual('@salesforce/codey-core');
+  return {
+    ...actual,
+    detectIdeFromEnv: vi.fn(() => DetectedIde.VSCode),
+  };
+});
 
 vi.mock('vscode', () => ({
   window: {
@@ -188,6 +197,23 @@ describe('activate', () => {
         }),
       } as Response);
 
+      const showInformationMessageMock = vi.mocked(
+        vscode.window.showInformationMessage,
+      );
+
+      await activate(context);
+
+      expect(showInformationMessageMock).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      {
+        ide: DetectedIde.CloudShell,
+      },
+      { ide: DetectedIde.FirebaseStudio },
+    ])('does not show the notification for $ide', async ({ ide }) => {
+      vi.mocked(detectIdeFromEnv).mockReturnValue(ide);
+      vi.mocked(context.globalState.get).mockReturnValue(undefined);
       const showInformationMessageMock = vi.mocked(
         vscode.window.showInformationMessage,
       );

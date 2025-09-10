@@ -28,7 +28,6 @@ import type {
 import { toParts } from '../code_assist/converter.js';
 import { createUserContent } from '@google/genai';
 import { retryWithBackoff } from '../utils/retry.js';
-import { AuthType } from './contentGenerator.js';
 import type { Config } from '../config/config.js';
 import { hasCycleInSchema } from '../tools/tools.js';
 import type { StructuredError } from './turn.js';
@@ -44,6 +43,7 @@ import {
   ContentRetryFailureEvent,
   InvalidChunkEvent,
 } from '../telemetry/types.js';
+import { handleFallback } from '../fallback/handler.js';
 import { isFunctionResponse } from '../utils/messageInspectors.js';
 import { partListUnionToString } from './geminiRequest.js';
 import { getModel } from './getModel.js';
@@ -189,66 +189,6 @@ export class GeminiChat {
     this.chatRecordingService.initialize();
   }
 
-  /**
-   * Handles falling back to Flash model when persistent 429 errors occur for OAuth users.
-   * Uses a fallback handler if provided by the config; otherwise, returns null.
-   */
-  private async handleFlashFallback(
-    authType?: string,
-    error?: unknown,
-  ): Promise<string | null> {
-    console.log(
-      '[DEBUG:geminiChat] Handling Flash fallback for auth type:',
-      authType,
-      authType === AuthType.USE_SF_LLMG,
-    );
-    // Determine intended fallback per auth path
-    let fallbackModel: string | null = null;
-    if (authType === AuthType.LOGIN_WITH_GOOGLE) {
-      fallbackModel = getModel('fallback');
-    } else if (authType === AuthType.USE_SF_LLMG) {
-      fallbackModel = getModel('fallback');
-    } else {
-      return null;
-    }
-
-    const currentModel = this.config.getModel();
-
-    // Don't fallback if already using the intended fallback model
-    if (currentModel === fallbackModel) {
-      return null;
-    }
-
-    // Check if config has a fallback handler (set by CLI package)
-    const fallbackHandler = this.config.flashFallbackHandler;
-    if (typeof fallbackHandler === 'function') {
-      try {
-        const accepted = await fallbackHandler(
-          currentModel,
-          fallbackModel,
-          error,
-        );
-        console.log(
-          '[DEBUG:geminiChat] Flash fallback handler accepted:',
-          accepted,
-        );
-        if (accepted !== false && accepted !== null) {
-          this.config.setModel(fallbackModel);
-          this.config.setFallbackMode(true);
-          return fallbackModel;
-        }
-        // Check if the model was switched manually in the handler
-        if (this.config.getModel() === fallbackModel) {
-          return null; // Model was switched but don't continue with current prompt
-        }
-      } catch (error) {
-        console.warn('Flash fallback handler failed:', error);
-      }
-    }
-
-    return null;
-  }
-
   setSystemInstruction(sysInstr: string) {
     this.generationConfig.systemInstruction = sysInstr;
   }
@@ -295,8 +235,13 @@ export class GeminiChat {
     let response: GenerateContentResponse;
 
     try {
+      let currentAttemptModel: string | undefined;
+
       const apiCall = () => {
-        const modelToUse = this.config.getModel() || getModel('fallback');
+        const modelToUse = this.config.isInFallbackMode()
+          ? getModel('fallback')
+          : this.config.getModel();
+        currentAttemptModel = modelToUse;
 
         // Prevent Flash model calls immediately after quota error
         if (
@@ -318,6 +263,19 @@ export class GeminiChat {
         );
       };
 
+      const onPersistent429Callback = async (
+        authType?: string,
+        error?: unknown,
+      ) => {
+        if (!currentAttemptModel) return null;
+        return await handleFallback(
+          this.config,
+          currentAttemptModel,
+          authType,
+          error,
+        );
+      };
+
       response = await retryWithBackoff(apiCall, {
         shouldRetry: (error: unknown) => {
           // Check for known error messages and codes.
@@ -328,8 +286,7 @@ export class GeminiChat {
           }
           return false; // Don't retry other errors by default
         },
-        onPersistent429: async (authType?: string, error?: unknown) =>
-          await this.handleFlashFallback(authType, error),
+        onPersistent429: onPersistent429Callback,
         authType: this.config.getContentGeneratorConfig()?.authType,
       });
 
@@ -507,8 +464,13 @@ export class GeminiChat {
     prompt_id: string,
     userContent: Content,
   ): Promise<AsyncGenerator<GenerateContentResponse>> {
+    let currentAttemptModel: string | undefined;
+
     const apiCall = () => {
-      const modelToUse = this.config.getModel();
+      const modelToUse = this.config.isInFallbackMode()
+        ? getModel('fallback')
+        : this.config.getModel();
+      currentAttemptModel = modelToUse;
 
       if (
         this.config.getQuotaErrorOccurred() &&
@@ -529,6 +491,19 @@ export class GeminiChat {
       );
     };
 
+    const onPersistent429Callback = async (
+      authType?: string,
+      error?: unknown,
+    ) => {
+      if (!currentAttemptModel) return null;
+      return await handleFallback(
+        this.config,
+        currentAttemptModel,
+        authType,
+        error,
+      );
+    };
+
     const streamResponse = await retryWithBackoff(apiCall, {
       shouldRetry: (error: unknown) => {
         if (error instanceof Error && error.message) {
@@ -538,8 +513,7 @@ export class GeminiChat {
         }
         return false;
       },
-      onPersistent429: async (authType?: string, error?: unknown) =>
-        await this.handleFlashFallback(authType, error),
+      onPersistent429: onPersistent429Callback,
       authType: this.config.getContentGeneratorConfig()?.authType,
     });
 

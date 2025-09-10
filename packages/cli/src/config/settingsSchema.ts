@@ -53,7 +53,7 @@ export const TOGGLE_TYPES: ReadonlySet<SettingsType | undefined> = new Set([
   'enum',
 ]);
 
-interface SettingEnumOption {
+export interface SettingEnumOption {
   value: string | number;
   label: string;
 }
@@ -701,11 +701,20 @@ const SETTINGS_SCHEMA = {
           'Use ripgrep for file content search instead of the fallback implementation. Provides faster search performance.',
         showInDialog: true,
       },
+      enableToolOutputTruncation: {
+        type: 'boolean',
+        label: 'Enable Tool Output Truncation',
+        category: 'General',
+        requiresRestart: true,
+        default: false,
+        description: 'Enable truncation of large tool outputs.',
+        showInDialog: true,
+      },
       truncateToolOutputThreshold: {
         type: 'number',
         label: 'Tool Output Truncation Threshold',
         category: 'General',
-        requiresRestart: false,
+        requiresRestart: true,
         default: DEFAULT_TRUNCATE_TOOL_OUTPUT_THRESHOLD,
         description:
           'Truncate tool output if it is larger than this many characters. Set to -1 to disable.',
@@ -715,7 +724,7 @@ const SETTINGS_SCHEMA = {
         type: 'number',
         label: 'Tool Output Truncation Lines',
         category: 'General',
-        requiresRestart: false,
+        requiresRestart: true,
         default: DEFAULT_TRUNCATE_TOOL_OUTPUT_LINES,
         description: 'The number of lines to keep when truncating tool output.',
         showInDialog: true,

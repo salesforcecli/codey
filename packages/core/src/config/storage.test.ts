@@ -58,4 +58,9 @@ describe('Storage – additional helpers', () => {
     const expected = path.join(os.homedir(), '.codey', 'mcp-oauth-tokens.json');
     expect(Storage.getMcpOAuthTokensPath()).toBe(expected);
   });
+
+  it('getGlobalBinDir returns ~/.gemini/tmp/bin', () => {
+    const expected = path.join(os.homedir(), '.gemini', 'tmp', 'bin');
+    expect(Storage.getGlobalBinDir()).toBe(expected);
+  });
 });
