@@ -32,7 +32,7 @@ import { useUIState } from '../contexts/UIStateContext.js';
 import { useUIActions } from '../contexts/UIActionsContext.js';
 import { useConfig } from '../contexts/ConfigContext.js';
 import { useSettings } from '../contexts/SettingsContext.js';
-import { DEFAULT_GATEWAY_FALLBACK_MODEL } from '@salesforce/codey-core';
+import { getModel } from '@salesforce/codey-core';
 import process from 'node:process';
 
 // Props for DialogManager
@@ -68,7 +68,7 @@ export const DialogManager = () => {
     return (
       <ProQuotaDialog
         currentModel={uiState.currentModel}
-        fallbackModel={DEFAULT_GATEWAY_FALLBACK_MODEL.displayId}
+        fallbackModel={getModel('fallback')}
         onChoice={uiActions.handleProQuotaChoice}
       />
     );

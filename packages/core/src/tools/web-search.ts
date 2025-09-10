@@ -22,7 +22,7 @@ import { ToolErrorType } from './tool-error.js';
 import { getErrorMessage } from '../utils/errors.js';
 import { type Config } from '../config/config.js';
 import { getResponseText } from '../utils/partUtils.js';
-import { DEFAULT_GEMINI_FLASH_MODEL } from '../config/models.js';
+import { getModel } from '../core/getModel.js';
 
 interface GroundingChunkWeb {
   uri?: string;
@@ -89,7 +89,7 @@ class WebSearchToolInvocation extends BaseToolInvocation<
         [{ role: 'user', parts: [{ text: this.params.query }] }],
         { tools: [{ googleSearch: {} }] },
         signal,
-        DEFAULT_GEMINI_FLASH_MODEL,
+        getModel('search'),
       );
 
       const responseText = getResponseText(response);

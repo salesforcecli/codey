@@ -25,13 +25,13 @@ import type {
 import { GoogleGenAI } from '@google/genai';
 import { createCodeAssistContentGenerator } from '../code_assist/codeAssist.js';
 import { GatewayContentGenerator } from '../gateway/contentGenerator.js';
-import { DEFAULT_GEMINI_MODEL } from '../config/models.js';
-import { DEFAULT_GATEWAY_MODEL } from '../gateway/models.js';
 import type { Config } from '../config/config.js';
 
 import type { UserTierId } from '../code_assist/types.js';
 import { LoggingContentGenerator } from './loggingContentGenerator.js';
 import { InstallationManager } from '../utils/installationManager.js';
+import { DEFAULT_GATEWAY_MODEL } from '../gateway/models.js';
+import { DEFAULT_GEMINI_MODEL } from '../config/models.js';
 
 /**
  * Interface abstracting the core functionalities for generating content and counting tokens.

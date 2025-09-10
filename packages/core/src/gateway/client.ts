@@ -24,7 +24,7 @@ import {
 import { Org } from '@salesforce/core';
 import { randomBytes } from 'node:crypto';
 import { createParser } from 'eventsource-parser';
-import { DEFAULT_GATEWAY_MODEL, findGatewayModel } from './models.js';
+import { findGatewayModel, getModelOrDefault } from './models.js';
 import type {
   CoreJwtResponse,
   GenerationRequest,
@@ -302,9 +302,7 @@ export class GatewayClient {
       throw new Error('JWT not found');
     }
 
-    const model = modelName
-      ? (findGatewayModel(modelName) ?? DEFAULT_GATEWAY_MODEL)
-      : DEFAULT_GATEWAY_MODEL;
+    const model = getModelOrDefault(modelName);
 
     const headers: Record<string, string> = {
       Authorization: `Bearer ${this.jwt.value()}`,

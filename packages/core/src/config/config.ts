@@ -80,6 +80,7 @@ import { FileExclusions } from '../utils/ignorePatterns.js';
 import type { EventEmitter } from 'node:events';
 import type { UserTierId } from '../code_assist/types.js';
 import { ProxyAgent, setGlobalDispatcher } from 'undici';
+import { AUTH_CACHE } from '../core/getModel.js';
 
 export enum ApprovalMode {
   DEFAULT = 'default',
@@ -472,6 +473,8 @@ export class Config {
 
     // Reset the session flag since we're explicitly changing auth and using default model
     this.inFallbackMode = false;
+
+    AUTH_CACHE.set('activeAuth', authMethod);
   }
 
   getUserTier(): UserTierId | undefined {

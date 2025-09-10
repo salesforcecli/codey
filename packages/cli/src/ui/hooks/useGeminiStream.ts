@@ -42,7 +42,7 @@ import {
   parseAndFormatApiError,
   getCodeAssistServer,
   UserTierId,
-  DEFAULT_GATEWAY_FALLBACK_MODEL,
+  getModel,
 } from '@salesforce/codey-core';
 import { type Part, type PartListUnion, FinishReason } from '@google/genai';
 import type {
@@ -499,7 +499,7 @@ export const useGeminiStream = (
             config.getContentGeneratorConfig()?.authType,
             undefined,
             config.getModel(),
-            DEFAULT_GATEWAY_FALLBACK_MODEL.displayId,
+            getModel('fallback'),
           ),
         },
         userMessageTimestamp,
@@ -774,7 +774,7 @@ export const useGeminiStream = (
                 config.getContentGeneratorConfig()?.authType,
                 undefined,
                 config.getModel(),
-                DEFAULT_GATEWAY_FALLBACK_MODEL.displayId,
+                getModel('fallback'),
               ),
             },
             userMessageTimestamp,

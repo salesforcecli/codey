@@ -30,8 +30,6 @@ import { createUserContent } from '@google/genai';
 import { retryWithBackoff } from '../utils/retry.js';
 import { AuthType } from './contentGenerator.js';
 import type { Config } from '../config/config.js';
-import { DEFAULT_GEMINI_FLASH_MODEL } from '../config/models.js';
-import { DEFAULT_GATEWAY_FALLBACK_MODEL } from '../gateway/models.js';
 import { hasCycleInSchema } from '../tools/tools.js';
 import type { StructuredError } from './turn.js';
 import type { CompletedToolCall } from './coreToolScheduler.js';
@@ -48,6 +46,7 @@ import {
 } from '../telemetry/types.js';
 import { isFunctionResponse } from '../utils/messageInspectors.js';
 import { partListUnionToString } from './geminiRequest.js';
+import { getModel } from './getModel.js';
 
 export enum StreamEventType {
   /** A regular content chunk from the API. */
@@ -206,9 +205,9 @@ export class GeminiChat {
     // Determine intended fallback per auth path
     let fallbackModel: string | null = null;
     if (authType === AuthType.LOGIN_WITH_GOOGLE) {
-      fallbackModel = DEFAULT_GEMINI_FLASH_MODEL;
+      fallbackModel = getModel('fallback');
     } else if (authType === AuthType.USE_SF_LLMG) {
-      fallbackModel = DEFAULT_GATEWAY_FALLBACK_MODEL.displayId;
+      fallbackModel = getModel('fallback');
     } else {
       return null;
     }
@@ -297,12 +296,12 @@ export class GeminiChat {
 
     try {
       const apiCall = () => {
-        const modelToUse = this.config.getModel() || DEFAULT_GEMINI_FLASH_MODEL;
+        const modelToUse = this.config.getModel() || getModel('fallback');
 
         // Prevent Flash model calls immediately after quota error
         if (
           this.config.getQuotaErrorOccurred() &&
-          modelToUse === DEFAULT_GEMINI_FLASH_MODEL
+          modelToUse === getModel('fallback')
         ) {
           throw new Error(
             'Please submit a new query to continue with the Flash model.',
@@ -513,7 +512,7 @@ export class GeminiChat {
 
       if (
         this.config.getQuotaErrorOccurred() &&
-        modelToUse === DEFAULT_GEMINI_FLASH_MODEL
+        modelToUse === getModel('fallback')
       ) {
         throw new Error(
           'Please submit a new query to continue with the Flash model.',

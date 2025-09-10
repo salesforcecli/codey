@@ -18,7 +18,7 @@ import type { Content } from '@google/genai';
 import type { GeminiClient } from '../core/client.js';
 import type { GeminiChat } from '../core/geminiChat.js';
 import { isFunctionResponse } from './messageInspectors.js';
-import { DEFAULT_GATEWAY_MODEL } from '../gateway/models.js';
+import { getModel } from '../core/getModel.js';
 
 const CHECK_PROMPT = `Analyze *only* the content and structure of your immediately preceding response (your last turn in the conversation history). Based *strictly* on that response, determine who should logically speak next: the 'user' or the 'model' (you).
 **Decision Rules (apply in order):**
@@ -122,7 +122,7 @@ export async function checkNextSpeaker(
       contents,
       RESPONSE_SCHEMA,
       abortSignal,
-      DEFAULT_GATEWAY_MODEL.displayId,
+      getModel('generateJson'),
     )) as unknown as NextSpeakerResponse;
 
     if (

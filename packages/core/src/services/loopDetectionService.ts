@@ -25,7 +25,7 @@ import {
   isFunctionCall,
   isFunctionResponse,
 } from '../utils/messageInspectors.js';
-import { DEFAULT_GATEWAY_MODEL } from '../gateway/models.js';
+import { getModel } from '../core/getModel.js';
 
 const TOOL_CALL_LOOP_THRESHOLD = 5;
 const CONTENT_LOOP_THRESHOLD = 10;
@@ -408,12 +408,7 @@ Please analyze the conversation history to determine the possibility that the co
     try {
       result = await this.config
         .getGeminiClient()
-        .generateJson(
-          contents,
-          schema,
-          signal,
-          DEFAULT_GATEWAY_MODEL.displayId,
-        );
+        .generateJson(contents, schema, signal, getModel('generateJson'));
     } catch (e) {
       // Do nothing, treat it as a non-loop.
       this.config.getDebugMode() ? console.error(e) : console.debug(e);
