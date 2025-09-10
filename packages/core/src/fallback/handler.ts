@@ -26,7 +26,11 @@ export async function handleFallback(
   error?: unknown,
 ): Promise<string | boolean | null> {
   // Applicability Checks
-  if (authType !== AuthType.LOGIN_WITH_GOOGLE) return null;
+  if (
+    authType !== AuthType.LOGIN_WITH_GOOGLE &&
+    authType !== AuthType.USE_SF_LLMG
+  )
+    return null;
 
   const fallbackModel = getModel('fallback', authType);
 

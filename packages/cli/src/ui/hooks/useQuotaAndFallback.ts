@@ -62,7 +62,8 @@ export function useQuotaAndFallback({
       const contentGeneratorConfig = config.getContentGeneratorConfig();
       if (
         !contentGeneratorConfig ||
-        contentGeneratorConfig.authType !== AuthType.LOGIN_WITH_GOOGLE
+        (contentGeneratorConfig.authType !== AuthType.LOGIN_WITH_GOOGLE &&
+          contentGeneratorConfig.authType !== AuthType.USE_SF_LLMG)
       ) {
         return null;
       }
@@ -107,6 +108,9 @@ export function useQuotaAndFallback({
           message = `${actionMessage}
 ⚡ Possible reasons for this are that you have received multiple consecutive capacity errors or you have reached your daily ${failedModel} quota limit
 ⚡ To continue accessing the ${failedModel} model today, consider using /auth to switch to using a paid API key from AI Studio at https://aistudio.google.com/apikey`;
+        } else if (contentGeneratorConfig.authType === AuthType.USE_SF_LLMG) {
+          message = `${actionMessage}
+⚡ Possible reasons for this are that you have received multiple consecutive capacity errors or you have reached your daily ${failedModel} quota limit`;
         } else {
           message = `${actionMessage}
 ⚡ Possible reasons for this are that you have received multiple consecutive capacity errors or you have reached your daily ${failedModel} quota limit
