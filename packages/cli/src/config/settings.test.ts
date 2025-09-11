@@ -72,7 +72,7 @@ import {
   type Settings,
   loadEnvironment,
 } from './settings.js';
-import { FatalConfigError, GEMINI_DIR } from '@salesforce/codey-core';
+import { FatalConfigError, GEMINI_DIR, AuthType } from '@salesforce/codey-core';
 
 const MOCK_WORKSPACE_DIR = '/mock/workspace';
 // Use the (mocked) SETTINGS_DIRECTORY_NAME for consistency
@@ -1846,6 +1846,254 @@ describe('Settings Loading and Merging', () => {
       expect(settings.merged.tools?.sandbox).toBe(false); // User setting
       expect(settings.merged.context?.fileName).toBe('USER.md'); // User setting
       expect(settings.merged.ui?.theme).toBe('dark'); // User setting
+    });
+  });
+
+  describe('LoadedSettings.refresh', () => {
+    beforeEach(() => {
+      // Reset process.env for each test
+      delete process.env['CODEY_ORG_USERNAME'];
+      delete process.env['GEMINI_API_KEY'];
+    });
+
+    afterEach(() => {
+      // Clean up process.env
+      delete process.env['CODEY_ORG_USERNAME'];
+      delete process.env['GEMINI_API_KEY'];
+    });
+
+    it('should recompute merged settings with deriveAuth=true when refresh is called', () => {
+      (mockFsExistsSync as Mock).mockImplementation(
+        (p: fs.PathLike) => p === USER_SETTINGS_PATH,
+      );
+      const userSettingsContent = {
+        ui: { theme: 'dark' },
+        tools: { sandbox: true },
+      };
+      (fs.readFileSync as Mock).mockImplementation(
+        (p: fs.PathOrFileDescriptor) => {
+          if (p === USER_SETTINGS_PATH)
+            return JSON.stringify(userSettingsContent);
+          return '{}';
+        },
+      );
+
+      const settings = loadSettings(MOCK_WORKSPACE_DIR);
+
+      // Initially, no auth settings should be auto-derived
+      expect(settings.merged.security?.auth?.selectedType).toBeUndefined();
+
+      // Set environment variable to simulate having credentials
+      process.env['CODEY_ORG_USERNAME'] = 'test@example.com';
+
+      // Call refresh to trigger recomputation with deriveAuth=true
+      settings.refresh();
+
+      // After refresh, auth should be auto-derived based on environment
+      expect(settings.merged.security?.auth?.selectedType).toBe(
+        AuthType.USE_SF_LLMG,
+      );
+    });
+
+    it('should prefer CODEY_ORG_USERNAME over GEMINI_API_KEY when both are present', () => {
+      (mockFsExistsSync as Mock).mockImplementation(
+        (p: fs.PathLike) => p === USER_SETTINGS_PATH,
+      );
+      const userSettingsContent = { ui: { theme: 'dark' } };
+      (fs.readFileSync as Mock).mockImplementation(
+        (p: fs.PathOrFileDescriptor) => {
+          if (p === USER_SETTINGS_PATH)
+            return JSON.stringify(userSettingsContent);
+          return '{}';
+        },
+      );
+
+      const settings = loadSettings(MOCK_WORKSPACE_DIR);
+
+      // Set both environment variables
+      process.env['CODEY_ORG_USERNAME'] = 'test@example.com';
+      process.env['GEMINI_API_KEY'] = 'test-api-key';
+
+      settings.refresh();
+
+      // Should prefer CODEY_ORG_USERNAME (USE_SF_LLMG) over GEMINI_API_KEY (USE_GEMINI)
+      expect(settings.merged.security?.auth?.selectedType).toBe(
+        AuthType.USE_SF_LLMG,
+      );
+    });
+
+    it('should use GEMINI_API_KEY when CODEY_ORG_USERNAME is not present', () => {
+      (mockFsExistsSync as Mock).mockImplementation(
+        (p: fs.PathLike) => p === USER_SETTINGS_PATH,
+      );
+      const userSettingsContent = { ui: { theme: 'dark' } };
+      (fs.readFileSync as Mock).mockImplementation(
+        (p: fs.PathOrFileDescriptor) => {
+          if (p === USER_SETTINGS_PATH)
+            return JSON.stringify(userSettingsContent);
+          return '{}';
+        },
+      );
+
+      const settings = loadSettings(MOCK_WORKSPACE_DIR);
+
+      // Set only GEMINI_API_KEY
+      process.env['GEMINI_API_KEY'] = 'test-api-key';
+
+      settings.refresh();
+
+      expect(settings.merged.security?.auth?.selectedType).toBe(
+        AuthType.USE_GEMINI,
+      );
+    });
+
+    it('should not override explicitly set selectedType in settings', () => {
+      (mockFsExistsSync as Mock).mockImplementation(
+        (p: fs.PathLike) => p === USER_SETTINGS_PATH,
+      );
+      const userSettingsContent = {
+        security: {
+          auth: {
+            selectedType: AuthType.USE_VERTEX_AI,
+          },
+        },
+      };
+      (fs.readFileSync as Mock).mockImplementation(
+        (p: fs.PathOrFileDescriptor) => {
+          if (p === USER_SETTINGS_PATH)
+            return JSON.stringify(userSettingsContent);
+          return '{}';
+        },
+      );
+
+      const settings = loadSettings(MOCK_WORKSPACE_DIR);
+
+      // Set environment variable
+      process.env['CODEY_ORG_USERNAME'] = 'test@example.com';
+
+      settings.refresh();
+
+      // Should keep the explicitly set value, not override with env-derived value
+      expect(settings.merged.security?.auth?.selectedType).toBe(
+        AuthType.USE_VERTEX_AI,
+      );
+    });
+
+    it('should not override enforcedType in settings', () => {
+      (mockFsExistsSync as Mock).mockImplementation(
+        (p: fs.PathLike) => p === USER_SETTINGS_PATH,
+      );
+      const userSettingsContent = {
+        security: {
+          auth: {
+            enforcedType: AuthType.USE_VERTEX_AI,
+          },
+        },
+      };
+      (fs.readFileSync as Mock).mockImplementation(
+        (p: fs.PathOrFileDescriptor) => {
+          if (p === USER_SETTINGS_PATH)
+            return JSON.stringify(userSettingsContent);
+          return '{}';
+        },
+      );
+
+      const settings = loadSettings(MOCK_WORKSPACE_DIR);
+
+      // Set environment variable
+      process.env['CODEY_ORG_USERNAME'] = 'test@example.com';
+
+      settings.refresh();
+
+      // Should keep the enforced type and not set selectedType
+      expect(settings.merged.security?.auth?.enforcedType).toBe(
+        AuthType.USE_VERTEX_AI,
+      );
+      expect(settings.merged.security?.auth?.selectedType).toBeUndefined();
+    });
+
+    it('should not derive auth when neither environment variable is present', () => {
+      (mockFsExistsSync as Mock).mockImplementation(
+        (p: fs.PathLike) => p === USER_SETTINGS_PATH,
+      );
+      const userSettingsContent = { ui: { theme: 'dark' } };
+      (fs.readFileSync as Mock).mockImplementation(
+        (p: fs.PathOrFileDescriptor) => {
+          if (p === USER_SETTINGS_PATH)
+            return JSON.stringify(userSettingsContent);
+          return '{}';
+        },
+      );
+
+      const settings = loadSettings(MOCK_WORKSPACE_DIR);
+
+      // Ensure no auth environment variables are set
+      delete process.env['CODEY_ORG_USERNAME'];
+      delete process.env['GEMINI_API_KEY'];
+
+      settings.refresh();
+
+      expect(settings.merged.security?.auth?.selectedType).toBeUndefined();
+    });
+
+    it('should gracefully handle errors during auth derivation', () => {
+      (mockFsExistsSync as Mock).mockImplementation(
+        (p: fs.PathLike) => p === USER_SETTINGS_PATH,
+      );
+      const userSettingsContent = { ui: { theme: 'dark' } };
+      (fs.readFileSync as Mock).mockImplementation(
+        (p: fs.PathOrFileDescriptor) => {
+          if (p === USER_SETTINGS_PATH)
+            return JSON.stringify(userSettingsContent);
+          return '{}';
+        },
+      );
+
+      const settings = loadSettings(MOCK_WORKSPACE_DIR);
+
+      // Set environment variable
+      process.env['CODEY_ORG_USERNAME'] = 'test@example.com';
+
+      // Mock the setNestedProperty behavior to throw an error
+      const originalSettings = settings.merged;
+      Object.defineProperty(settings, 'merged', {
+        get: () => {
+          // Create a problematic object that will cause setNestedProperty to fail
+          const badSettings = Object.create(null);
+          badSettings.security = null;
+          return badSettings;
+        },
+        configurable: true,
+      });
+
+      // Should not throw even if auth derivation fails
+      expect(() => settings.refresh()).not.toThrow();
+
+      // Restore the original merged settings getter
+      Object.defineProperty(settings, 'merged', {
+        get: () => originalSettings,
+        configurable: true,
+      });
+    });
+
+    it('should recompute merged settings even when current settings are empty', () => {
+      (mockFsExistsSync as Mock).mockReturnValue(false);
+      (fs.readFileSync as Mock).mockReturnValue('{}');
+
+      const settings = loadSettings(MOCK_WORKSPACE_DIR);
+
+      // Verify initial state is empty
+      expect(settings.merged).toEqual({});
+
+      // Set environment variable
+      process.env['CODEY_ORG_USERNAME'] = 'test@example.com';
+
+      settings.refresh();
+
+      // After refresh, should have auto-derived auth
+      expect(settings.merged.security?.auth?.selectedType).toBe(
+        AuthType.USE_SF_LLMG,
+      );
     });
   });
 
