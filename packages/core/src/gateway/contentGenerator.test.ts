@@ -308,7 +308,7 @@ describe('GatewayContentGenerator (happy paths)', () => {
         input: ['Vectorize me'],
         model: 'text-embedding-model',
       });
-      expect(res.embeddings[0]?.values).toEqual([0.1, 0.2, 0.3]);
+      expect(res.embeddings?.[0]?.values).toEqual([0.1, 0.2, 0.3]);
     });
   });
 });

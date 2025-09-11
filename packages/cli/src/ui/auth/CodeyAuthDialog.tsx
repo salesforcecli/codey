@@ -35,14 +35,14 @@ export function CodeyAuthDialog(): React.JSX.Element {
 
   const message = isSet ? (
     <>
-      You are authorized to{' '}
-      <Text color={Colors.AccentBlue}>{username}</Text>
+      You are authorized to <Text color={Colors.AccentBlue}>{username}</Text>
     </>
   ) : (
     <>
       You are not authorized. Set the{' '}
-      <Text color={Colors.AccentYellow}>CODEY_ORG_USERNAME</Text>
-      {' '}environment variable or use the <Text color={Colors.AccentYellow}>--org</Text> flag to proceed.
+      <Text color={Colors.AccentYellow}>CODEY_ORG_USERNAME</Text> environment
+      variable or use the <Text color={Colors.AccentYellow}>--org</Text> flag to
+      proceed.
     </>
   );
 
@@ -67,9 +67,7 @@ export function CodeyAuthDialog(): React.JSX.Element {
     >
       <Text bold>Authorization</Text>
       <Box marginTop={1}>
-        <Text>
-          {message}
-        </Text>
+        <Text>{message}</Text>
       </Box>
       <Box marginTop={1}>
         <Text color={Colors.Gray}>(Press Enter to continue)</Text>
