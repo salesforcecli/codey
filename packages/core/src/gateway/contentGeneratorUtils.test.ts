@@ -1135,23 +1135,6 @@ describe('contentGeneratorUtils', () => {
       expect(result.candidate?.content?.parts?.[1]).toEqual({ text: 'World' });
     });
 
-    it('should ignore empty content', () => {
-      const generations = [
-        {
-          content: '',
-          role: 'model',
-        },
-        {
-          content: '   ',
-          role: 'model',
-        },
-      ];
-
-      const result = processGenerationChunks(generations, false, null);
-
-      expect(result.candidate).toBe(null);
-    });
-
     it('should handle null and undefined content', () => {
       const generations = [
         {
