@@ -600,7 +600,7 @@ export const processGenerationChunks = (
     } else if (
       generation?.content !== undefined &&
       generation?.content !== null &&
-      generation.content.trim() !== ''
+      generation.content !== ''
     ) {
       candidates.push(createTextCandidate(generation.content));
     }

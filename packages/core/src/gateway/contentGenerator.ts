@@ -317,7 +317,7 @@ export class GatewayContentGenerator implements ContentGenerator {
       // Transform content if transformer is available
       const processedGenerations = model.transformContent
         ? generations.map((gen) => {
-            if (gen.content && gen.content.trim()) {
+            if (gen.content) {
               const transformedContent = model.transformContent!(
                 gen.content,
                 isFirstContentChunk,
