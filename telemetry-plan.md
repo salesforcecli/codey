@@ -27,14 +27,18 @@ We’ll keep OpenTelemetry as the in-process instrumentation layer but route exp
 
 - Introduce a new telemetry target: `forcedotcom`.
 - Add a provider module `packages/core/src/telemetry/providers/forcedotcom.ts` that:
-  - Initializes a singleton `TelemetryReporter` (init/start/stop), based on config.
+  - Defines `class ForcedotcomBypassReporter extends TelemetryReporter` overriding `isSfdxTelemetryEnabled()` to always return `true` (external gate is CLI flag).
+  - Initializes a singleton reporter via `await ForcedotcomBypassReporter.create(options)`.
+    - Use `const` values in code for `APP_INSIGHTS_KEY` and `O11Y_UPLOAD_ENDPOINT`.
+    - Pass `enableAppInsights: true` and `enableO11y: true` in options.
+    - Set `project`, `userId`, `sessionId`, and optionally `contextTags/commonProperties` as needed.
   - Exposes minimal OTel bridge exporters: ONLY metrics and an exception-only trace exporter.
-    - Metrics → `sendTelemetryMetric`
-    - Exceptions (extracted from span events) → `sendTelemetryException`
+    - Metrics → `TelemetryService.sendTelemetryMetric(name, value, properties)`
+    - Exceptions (extracted from span events) → `reporter.sendTelemetryException(error, properties)`
     - Do NOT export general traces or logs for this target.
   - Provides a small contract back to `sdk.ts`:
     - `setupForcedotcomTelemetry(config) => { exceptionTraceExporter, metricExporter, stop }`
-    - `stop` flushes and disposes the reporter.
+    - `stop` flushes and disposes the reporter (`await reporter.dispose()`).
 - In `sdk.ts`, when target = `forcedotcom`:
   - Call `setupForcedotcomTelemetry` to obtain exporters and register them with the Node SDK.
   - On shutdown, call `stop()` then shut down OTel as usual.
@@ -62,25 +66,19 @@ Rationale: isolates provider-specific logic; minimal diffs in `sdk.ts`; no calle
 
 - Single gate: `telemetry.enabled` (from CLI flag / settings) decides whether we initialize the forcedotcom provider at all.
 - New target value: `telemetry.target = "forcedotcom"`.
-- Provider-specific options (reduced):
-  - `telemetry.forcedotcom.appInsightsKey` (AppInsights instrumentation key)
-  - `telemetry.forcedotcom.o11yUploadEndpoint` (endpoint URL for O11y uploads)
-  - `telemetry.forcedotcom.o11yHeaders` (optional auth / tenant headers map)
-- We ALWAYS attempt to enable both AppInsights and O11y.
-  - Missing key → warn, continue with O11y only.
-  - Missing endpoint → warn, continue with AppInsights only.
-  - Missing both → skip initialization (no-op exporters) with a single error log.
-- No secondary gating: we intentionally bypass internal `TelemetryReporter.isSfdxTelemetryEnabled()` logic.
-  - Achieved by subclassing `TelemetryReporter` and overriding `isSfdxTelemetryEnabled()` to always return true:
-    ```ts
-    class ForcedotcomBypassReporter extends TelemetryReporter {
-      // Always enabled; external gate is our CLI flag.
-      public isSfdxTelemetryEnabled(): boolean {
-        return true;
-      }
+- Provider secrets/endpoint are hardcoded constants in code (no new config keys):
+  - `const APP_INSIGHTS_KEY = "..."`
+  - `const O11Y_UPLOAD_ENDPOINT = "..."`
+- We ALWAYS attempt to enable both AppInsights and O11y (via options):
+  - `enableAppInsights: true`, `enableO11y: true`.
+- No secondary gating: the external gate is our CLI `telemetry.enabled`. We WILL subclass `TelemetryReporter` to override `isSfdxTelemetryEnabled()` to always return `true`; initialization uses `ForcedotcomBypassReporter.create(options)`.
+  ```ts
+  class ForcedotcomBypassReporter extends TelemetryReporter {
+    public isSfdxTelemetryEnabled(): boolean {
+      return true;
     }
-    ```
-- Environment variables still acceptable for secrets; config remains source of truth for deterministic behavior.
+  }
+  ```
 
 Notes:
 
@@ -90,6 +88,7 @@ Notes:
 
 - New provider module: `packages/core/src/telemetry/providers/forcedotcom.ts`
   - Owns reporter lifecycle and OTel-to-reporter mapping.
+  - Initializes reporter using `await ForcedotcomBypassReporter.create({ project, key: APP_INSIGHTS_KEY, o11yUploadEndpoint: O11Y_UPLOAD_ENDPOINT, enableO11y: true, enableAppInsights: true, userId, sessionId, extensionName })`.
   - Returns an exception-only trace exporter, a metric exporter, and a `stop()` function.
 - Minimal change in `packages/core/src/telemetry/sdk.ts`:
   - Add `forcedotcom` branch that imports and invokes `setupForcedotcomTelemetry`.
@@ -110,7 +109,7 @@ packages/core/src/telemetry/
 ## Shutdown and lifecycle
 
 - On shutdown (`shutdownTelemetry`):
-  - Call `reporter.stop()` (which flushes and disposes) and await completion.
+  - Call `await reporter.dispose()` to flush and close channels.
   - Ensure OTel SDK shutdown still occurs to flush processors.
 
 ## Risks and mitigations
@@ -130,14 +129,14 @@ packages/core/src/telemetry/
 Core config & wiring
 
 - [ ] Restrict targets to `local` and `forcedotcom` in config schema / validation.
-- [ ] Add provider-specific config keys: `telemetry.forcedotcom.appInsightsKey`, `telemetry.forcedotcom.o11yUploadEndpoint`, optional `telemetry.forcedotcom.o11yHeaders`.
+- [ ] No new settings keys; secrets and endpoint are `const`s in code.
 - [ ] Add dependency on telemetry library (`@salesforce/telemetry`).
 
-Provider module & subclass
+Provider module & instantiation
 
 - [ ] Subclass `TelemetryReporter` (`ForcedotcomBypassReporter`) overriding `isSfdxTelemetryEnabled()`.
 - [ ] Implement provider module `providers/forcedotcom.ts` exporting `setupForcedotcomTelemetry(config)` and `stop()`.
-- [ ] In setup: initialize reporter (attempt both channels), warn if one missing, error+no-op if both missing.
+- [ ] In setup: `await ForcedotcomBypassReporter.create(options)` using `const` keys; enable both channels.
 
 Exporters (limited scope)
 
