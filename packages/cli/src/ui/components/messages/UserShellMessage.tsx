@@ -16,7 +16,7 @@
 
 import type React from 'react';
 import { Box, Text } from 'ink';
-import { Colors } from '../../colors.js';
+import { theme } from '../../semantic-colors.js';
 
 interface UserShellMessageProps {
   text: string;
@@ -28,8 +28,8 @@ export const UserShellMessage: React.FC<UserShellMessageProps> = ({ text }) => {
 
   return (
     <Box>
-      <Text color={Colors.AccentCyan}>$ </Text>
-      <Text>{commandToDisplay}</Text>
+      <Text color={theme.text.link}>$ </Text>
+      <Text color={theme.text.primary}>{commandToDisplay}</Text>
     </Box>
   );
 };

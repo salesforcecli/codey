@@ -20,6 +20,7 @@ import { Box, Text } from 'ink';
 import { useConfig } from '../contexts/ConfigContext.js';
 import { type McpClient, MCPServerStatus } from '@salesforce/codey-core';
 import { GeminiSpinner } from './GeminiRespondingSpinner.js';
+import { theme } from '../semantic-colors.js';
 
 export const ConfigInitDisplay = () => {
   const config = useConfig();
@@ -49,7 +50,7 @@ export const ConfigInitDisplay = () => {
   return (
     <Box marginTop={1}>
       <Text>
-        <GeminiSpinner /> {message}
+        <GeminiSpinner /> <Text color={theme.text.primary}>{message}</Text>
       </Text>
     </Box>
   );

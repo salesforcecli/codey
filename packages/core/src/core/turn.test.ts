@@ -107,6 +107,7 @@ describe('Turn', () => {
       const events = [];
       const reqParts: Part[] = [{ text: 'Hi' }];
       for await (const event of turn.run(
+        'test-model',
         reqParts,
         new AbortController().signal,
       )) {
@@ -114,6 +115,7 @@ describe('Turn', () => {
       }
 
       expect(mockSendMessageStream).toHaveBeenCalledWith(
+        'test-model',
         {
           message: reqParts,
           config: { abortSignal: expect.any(AbortSignal) },
@@ -154,6 +156,7 @@ describe('Turn', () => {
       const events = [];
       const reqParts: Part[] = [{ text: 'Use tools' }];
       for await (const event of turn.run(
+        'test-model',
         reqParts,
         new AbortController().signal,
       )) {
@@ -216,7 +219,11 @@ describe('Turn', () => {
 
       const events = [];
       const reqParts: Part[] = [{ text: 'Test abort' }];
-      for await (const event of turn.run(reqParts, abortController.signal)) {
+      for await (const event of turn.run(
+        'test-model',
+        reqParts,
+        abortController.signal,
+      )) {
         events.push(event);
       }
       expect(events).toEqual([
@@ -237,6 +244,7 @@ describe('Turn', () => {
       mockMaybeIncludeSchemaDepthContext.mockResolvedValue(undefined);
       const events = [];
       for await (const event of turn.run(
+        'test-model',
         reqParts,
         new AbortController().signal,
       )) {
@@ -277,6 +285,7 @@ describe('Turn', () => {
 
       const events = [];
       for await (const event of turn.run(
+        'test-model',
         [{ text: 'Test undefined tool parts' }],
         new AbortController().signal,
       )) {
@@ -333,6 +342,7 @@ describe('Turn', () => {
 
       const events = [];
       for await (const event of turn.run(
+        'test-model',
         [{ text: 'Test finish reason' }],
         new AbortController().signal,
       )) {
@@ -380,6 +390,7 @@ describe('Turn', () => {
       const events = [];
       const reqParts: Part[] = [{ text: 'Generate long text' }];
       for await (const event of turn.run(
+        'test-model',
         reqParts,
         new AbortController().signal,
       )) {
@@ -417,6 +428,7 @@ describe('Turn', () => {
       const events = [];
       const reqParts: Part[] = [{ text: 'Test safety' }];
       for await (const event of turn.run(
+        'test-model',
         reqParts,
         new AbortController().signal,
       )) {
@@ -453,6 +465,7 @@ describe('Turn', () => {
       const events = [];
       const reqParts: Part[] = [{ text: 'Test no finish reason' }];
       for await (const event of turn.run(
+        'test-model',
         reqParts,
         new AbortController().signal,
       )) {
@@ -497,6 +510,7 @@ describe('Turn', () => {
       const events = [];
       const reqParts: Part[] = [{ text: 'Test multiple responses' }];
       for await (const event of turn.run(
+        'test-model',
         reqParts,
         new AbortController().signal,
       )) {
@@ -539,6 +553,7 @@ describe('Turn', () => {
 
       const events = [];
       for await (const event of turn.run(
+        'test-model',
         [{ text: 'Test citations' }],
         new AbortController().signal,
       )) {
@@ -588,6 +603,7 @@ describe('Turn', () => {
 
       const events = [];
       for await (const event of turn.run(
+        'test-model',
         [{ text: 'test' }],
         new AbortController().signal,
       )) {
@@ -634,6 +650,7 @@ describe('Turn', () => {
 
       const events = [];
       for await (const event of turn.run(
+        'test-model',
         [{ text: 'test' }],
         new AbortController().signal,
       )) {
@@ -679,6 +696,7 @@ describe('Turn', () => {
 
       const events = [];
       for await (const event of turn.run(
+        'test-model',
         [{ text: 'test' }],
         new AbortController().signal,
       )) {
@@ -715,7 +733,11 @@ describe('Turn', () => {
       const events = [];
       const reqParts: Part[] = [{ text: 'Test malformed error handling' }];
 
-      for await (const event of turn.run(reqParts, abortController.signal)) {
+      for await (const event of turn.run(
+        'test-model',
+        reqParts,
+        abortController.signal,
+      )) {
         events.push(event);
       }
 
@@ -737,7 +759,11 @@ describe('Turn', () => {
       mockSendMessageStream.mockResolvedValue(mockResponseStream);
 
       const events = [];
-      for await (const event of turn.run([], new AbortController().signal)) {
+      for await (const event of turn.run(
+        'test-model',
+        [],
+        new AbortController().signal,
+      )) {
         events.push(event);
       }
 
@@ -762,7 +788,11 @@ describe('Turn', () => {
       })();
       mockSendMessageStream.mockResolvedValue(mockResponseStream);
       const reqParts: Part[] = [{ text: 'Hi' }];
-      for await (const _ of turn.run(reqParts, new AbortController().signal)) {
+      for await (const _ of turn.run(
+        'test-model',
+        reqParts,
+        new AbortController().signal,
+      )) {
         // consume stream
       }
       expect(turn.getDebugResponses()).toEqual([resp1, resp2]);

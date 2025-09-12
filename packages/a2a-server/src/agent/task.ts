@@ -35,6 +35,7 @@ import type {
   ToolCallConfirmationDetails,
   Config,
   UserTierId,
+  AnsiOutput,
 } from '@salesforce/codey-core';
 import type { RequestContext } from '@a2a-js/sdk/server';
 import { type ExecutionEventBus } from '@a2a-js/sdk/server';
@@ -142,7 +143,7 @@ export class Task {
       id: this.id,
       contextId: this.contextId,
       taskState: this.taskState,
-      model: this.config.getContentGeneratorConfig().model,
+      model: this.config.getModel(),
       mcpServers: servers,
       availableTools,
     };
@@ -294,20 +295,29 @@ export class Task {
 
   private _schedulerOutputUpdate(
     toolCallId: string,
-    outputChunk: string,
+    outputChunk: string | AnsiOutput,
   ): void {
+    let outputAsText: string;
+    if (typeof outputChunk === 'string') {
+      outputAsText = outputChunk;
+    } else {
+      outputAsText = outputChunk
+        .map((line) => line.map((token) => token.text).join(''))
+        .join('\n');
+    }
+
     logger.info(
       '[Task] Scheduler output update for tool call ' +
         toolCallId +
         ': ' +
-        outputChunk,
+        outputAsText,
     );
     const artifact: Artifact = {
       artifactId: `tool-${toolCallId}-output`,
       parts: [
         {
           kind: 'text',
-          text: outputChunk,
+          text: outputAsText,
         } as Part,
       ],
     };

@@ -18,7 +18,7 @@ import type React from 'react';
 import { useState, useEffect } from 'react';
 import { Box, Text } from 'ink';
 import Spinner from 'ink-spinner';
-import { Colors } from '../colors.js';
+import { theme } from '../semantic-colors.js';
 import { useKeypress } from '../hooks/useKeypress.js';
 
 interface AuthInProgressProps {
@@ -51,13 +51,13 @@ export function AuthInProgress({
   return (
     <Box
       borderStyle="round"
-      borderColor={Colors.Gray}
+      borderColor={theme.border.default}
       flexDirection="column"
       padding={1}
       width="100%"
     >
       {timedOut ? (
-        <Text color={Colors.AccentRed}>
+        <Text color={theme.status.error}>
           Authentication timed out. Please try again.
         </Text>
       ) : (

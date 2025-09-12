@@ -25,6 +25,7 @@ import { getErrorMessage } from '../../utils/errors.js';
 interface InstallArgs {
   source?: string;
   path?: string;
+  ref?: string;
 }
 
 export async function handleInstall(args: InstallArgs) {
@@ -41,6 +42,7 @@ export async function handleInstall(args: InstallArgs) {
         installMetadata = {
           source,
           type: 'git',
+          ref: args.ref,
         };
       } else {
         throw new Error(`The source "${source}" is not a valid URL format.`);
@@ -76,7 +78,12 @@ export const installCommand: CommandModule = {
         describe: 'Path to a local extension directory.',
         type: 'string',
       })
+      .option('ref', {
+        describe: 'The git ref to install from.',
+        type: 'string',
+      })
       .conflicts('source', 'path')
+      .conflicts('path', 'ref')
       .check((argv) => {
         if (!argv.source && !argv.path) {
           throw new Error('Either source or --path must be provided.');
@@ -87,6 +94,7 @@ export const installCommand: CommandModule = {
     await handleInstall({
       source: argv['source'] as string | undefined,
       path: argv['path'] as string | undefined,
+      ref: argv['ref'] as string | undefined,
     });
   },
 };

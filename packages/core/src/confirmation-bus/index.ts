@@ -14,12 +14,5 @@
  * limitations under the License.
  */
 
-import { ideContext } from '../ide/ideContext.js';
-
-/**
- * Gets the workspace trust from the IDE if available.
- * @returns A boolean if the IDE provides a trust value, otherwise undefined.
- */
-export function getIdeTrust(): boolean | undefined {
-  return ideContext.getIdeContext()?.workspaceState?.isTrusted;
-}
+export * from './message-bus.js';
+export * from './types.js';

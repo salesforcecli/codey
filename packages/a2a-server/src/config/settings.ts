@@ -37,6 +37,7 @@ export interface Settings {
   telemetry?: TelemetrySettings;
   showMemoryUsage?: boolean;
   checkpointing?: CheckpointingSettings;
+  folderTrust?: boolean;
 
   // Git-aware file filtering settings
   fileFiltering?: {

@@ -59,7 +59,7 @@ describe('OAuthCredentialStorage', () => {
     updatedAt: expect.any(Number),
   };
 
-  const oldFilePath = '/mock/home/.gemini/oauth.json';
+  const oldFilePath = '/mock/home/.codey/oauth.json';
 
   beforeEach(() => {
     storage = new HybridTokenStorage('');

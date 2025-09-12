@@ -16,7 +16,7 @@
 
 import type React from 'react';
 import { Box, Text } from 'ink';
-import { Colors } from '../colors.js';
+import { theme } from '../semantic-colors.js';
 import { ApprovalMode } from '@salesforce/codey-core';
 
 interface AutoAcceptIndicatorProps {
@@ -32,12 +32,12 @@ export const AutoAcceptIndicator: React.FC<AutoAcceptIndicatorProps> = ({
 
   switch (approvalMode) {
     case ApprovalMode.AUTO_EDIT:
-      textColor = Colors.AccentGreen;
+      textColor = theme.status.warning;
       textContent = 'accepting edits';
       subText = ' (shift + tab to toggle)';
       break;
     case ApprovalMode.YOLO:
-      textColor = Colors.AccentRed;
+      textColor = theme.status.error;
       textContent = 'YOLO mode';
       subText = ' (ctrl + y to toggle)';
       break;
@@ -50,7 +50,7 @@ export const AutoAcceptIndicator: React.FC<AutoAcceptIndicatorProps> = ({
     <Box>
       <Text color={textColor}>
         {textContent}
-        {subText && <Text color={Colors.Gray}>{subText}</Text>}
+        {subText && <Text color={theme.text.secondary}>{subText}</Text>}
       </Text>
     </Box>
   );

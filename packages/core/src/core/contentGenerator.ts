@@ -30,8 +30,6 @@ import type { Config } from '../config/config.js';
 import type { UserTierId } from '../code_assist/types.js';
 import { LoggingContentGenerator } from './loggingContentGenerator.js';
 import { InstallationManager } from '../utils/installationManager.js';
-import { DEFAULT_GATEWAY_MODEL } from '../gateway/models.js';
-import { DEFAULT_GEMINI_MODEL } from '../config/models.js';
 
 /**
  * Interface abstracting the core functionalities for generating content and counting tokens.
@@ -63,7 +61,6 @@ export enum AuthType {
 }
 
 export type ContentGeneratorConfig = {
-  model: string;
   apiKey?: string;
   vertexai?: boolean;
   authType?: AuthType;
@@ -79,14 +76,7 @@ export function createContentGeneratorConfig(
   const googleCloudProject = process.env['GOOGLE_CLOUD_PROJECT'] || undefined;
   const googleCloudLocation = process.env['GOOGLE_CLOUD_LOCATION'] || undefined;
 
-  const effectiveModel =
-    authType === AuthType.USE_SF_LLMG
-      ? DEFAULT_GATEWAY_MODEL.displayId
-      : // Use runtime model from config if available; otherwise, fall back by auth type
-        config.getModel() || DEFAULT_GEMINI_MODEL;
-
   const contentGeneratorConfig: ContentGeneratorConfig = {
-    model: effectiveModel,
     authType,
     proxy: config?.getProxy(),
   };

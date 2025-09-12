@@ -184,7 +184,6 @@ export function recordApiResponseMetrics(
   model: string,
   durationMs: number,
   statusCode?: number | string,
-  error?: string,
 ): void {
   if (
     !apiRequestCounter ||
@@ -195,7 +194,7 @@ export function recordApiResponseMetrics(
   const metricAttributes: Attributes = {
     ...getCommonAttributes(config),
     model,
-    status_code: statusCode ?? (error ? 'error' : 'ok'),
+    status_code: statusCode ?? 'ok',
   };
   apiRequestCounter.add(1, metricAttributes);
   apiRequestLatencyHistogram.record(durationMs, {

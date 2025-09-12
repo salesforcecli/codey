@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import React from 'react';
 import { render } from 'ink';
 import { AppContainer } from './ui/AppContainer.js';
 import { loadCliConfig, parseArguments } from './config/config.js';
@@ -187,15 +186,10 @@ export async function startInteractiveUI(
     );
   };
 
-  const instance = render(
-    <React.StrictMode>
-      <AppWrapper />
-    </React.StrictMode>,
-    {
-      exitOnCtrlC: false,
-      isScreenReaderEnabled: config.getScreenReader(),
-    },
-  );
+  const instance = render(<AppWrapper />, {
+    exitOnCtrlC: false,
+    isScreenReaderEnabled: config.getScreenReader(),
+  });
 
   checkForUpdates()
     .then((info) => {

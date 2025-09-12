@@ -216,9 +216,7 @@ describe('Server Config (config.ts)', () => {
     it('should refresh auth and update config', async () => {
       const config = new Config(baseParams);
       const authType = AuthType.USE_GEMINI;
-      const newModel = 'gemini-flash';
       const mockContentConfig = {
-        model: newModel,
         apiKey: 'test-key',
       };
 
@@ -236,10 +234,8 @@ describe('Server Config (config.ts)', () => {
         config,
         authType,
       );
-      // Verify that contentGeneratorConfig is updated with the new model
+      // Verify that contentGeneratorConfig is updated
       expect(config.getContentGeneratorConfig()).toEqual(mockContentConfig);
-      expect(config.getContentGeneratorConfig().model).toBe(newModel);
-      expect(config.getModel()).toBe(newModel); // getModel() should return the updated model
       expect(GeminiClient).toHaveBeenCalledWith(config);
       // Verify that fallback mode is reset
       expect(config.isInFallbackMode()).toBe(false);
@@ -504,21 +500,12 @@ describe('Server Config (config.ts)', () => {
   });
 
   describe('UseRipgrep Configuration', () => {
-    it('should default useRipgrep to false when not provided', () => {
+    it('should default useRipgrep to true when not provided', () => {
       const config = new Config(baseParams);
-      expect(config.getUseRipgrep()).toBe(false);
-    });
-
-    it('should set useRipgrep to true when provided as true', () => {
-      const paramsWithRipgrep: ConfigParameters = {
-        ...baseParams,
-        useRipgrep: true,
-      };
-      const config = new Config(paramsWithRipgrep);
       expect(config.getUseRipgrep()).toBe(true);
     });
 
-    it('should set useRipgrep to false when explicitly provided as false', () => {
+    it('should set useRipgrep to false when provided as false', () => {
       const paramsWithRipgrep: ConfigParameters = {
         ...baseParams,
         useRipgrep: false,
@@ -527,13 +514,22 @@ describe('Server Config (config.ts)', () => {
       expect(config.getUseRipgrep()).toBe(false);
     });
 
-    it('should default useRipgrep to false when undefined', () => {
+    it('should set useRipgrep to true when explicitly provided as true', () => {
+      const paramsWithRipgrep: ConfigParameters = {
+        ...baseParams,
+        useRipgrep: true,
+      };
+      const config = new Config(paramsWithRipgrep);
+      expect(config.getUseRipgrep()).toBe(true);
+    });
+
+    it('should default useRipgrep to true when undefined', () => {
       const paramsWithUndefinedRipgrep: ConfigParameters = {
         ...baseParams,
         useRipgrep: undefined,
       };
       const config = new Config(paramsWithUndefinedRipgrep);
-      expect(config.getUseRipgrep()).toBe(false);
+      expect(config.getUseRipgrep()).toBe(true);
     });
   });
 

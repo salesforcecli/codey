@@ -440,6 +440,7 @@ export class SubAgentScope {
         };
 
         const responseStream = await chat.sendMessageStream(
+          this.modelConfig.model,
           messageParams,
           promptId,
         );

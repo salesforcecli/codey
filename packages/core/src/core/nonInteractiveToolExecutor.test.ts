@@ -56,6 +56,10 @@ describe('executeToolCall', () => {
         model: 'test-model',
         authType: 'oauth-personal',
       }),
+      getShellExecutionConfig: () => ({
+        terminalWidth: 90,
+        terminalHeight: 30,
+      }),
       storage: {
         getProjectTempDir: () => '/tmp',
       },
@@ -98,6 +102,10 @@ describe('executeToolCall', () => {
       errorType: undefined,
       outputFile: undefined,
       resultDisplay: 'Success!',
+      contentLength:
+        typeof toolResult.llmContent === 'string'
+          ? toolResult.llmContent.length
+          : undefined,
       responseParts: [
         {
           functionResponse: {
@@ -137,6 +145,7 @@ describe('executeToolCall', () => {
       error: new Error(expectedErrorMessage),
       errorType: ToolErrorType.TOOL_NOT_REGISTERED,
       resultDisplay: expectedErrorMessage,
+      contentLength: expectedErrorMessage.length,
       responseParts: [
         {
           functionResponse: {
@@ -186,6 +195,7 @@ describe('executeToolCall', () => {
         },
       ],
       resultDisplay: 'Invalid parameters',
+      contentLength: 'Invalid parameters'.length,
     });
   });
 
@@ -229,6 +239,7 @@ describe('executeToolCall', () => {
         },
       ],
       resultDisplay: 'Execution failed',
+      contentLength: 'Execution failed'.length,
     });
   });
 
@@ -256,6 +267,7 @@ describe('executeToolCall', () => {
       error: new Error('Something went very wrong'),
       errorType: ToolErrorType.UNHANDLED_EXCEPTION,
       resultDisplay: 'Something went very wrong',
+      contentLength: 'Something went very wrong'.length,
       responseParts: [
         {
           functionResponse: {
@@ -298,6 +310,7 @@ describe('executeToolCall', () => {
       errorType: undefined,
       outputFile: undefined,
       resultDisplay: 'Image processed',
+      contentLength: undefined,
       responseParts: [
         {
           functionResponse: {
@@ -311,5 +324,57 @@ describe('executeToolCall', () => {
         imageDataPart,
       ],
     });
+  });
+
+  it('should calculate contentLength for a string llmContent', async () => {
+    const request: ToolCallRequestInfo = {
+      callId: 'call7',
+      name: 'testTool',
+      args: {},
+      isClientInitiated: false,
+      prompt_id: 'prompt-id-7',
+    };
+    const toolResult: ToolResult = {
+      llmContent: 'This is a test string.',
+      returnDisplay: 'String returned',
+    };
+    vi.mocked(mockToolRegistry.getTool).mockReturnValue(mockTool);
+    mockTool.executeFn.mockReturnValue(toolResult);
+
+    const response = await executeToolCall(
+      mockConfig,
+      request,
+      abortController.signal,
+    );
+
+    expect(response.contentLength).toBe(
+      typeof toolResult.llmContent === 'string'
+        ? toolResult.llmContent.length
+        : undefined,
+    );
+  });
+
+  it('should have undefined contentLength for array llmContent with no string parts', async () => {
+    const request: ToolCallRequestInfo = {
+      callId: 'call8',
+      name: 'testTool',
+      args: {},
+      isClientInitiated: false,
+      prompt_id: 'prompt-id-8',
+    };
+    const toolResult: ToolResult = {
+      llmContent: [{ inlineData: { mimeType: 'image/png', data: 'fakedata' } }],
+      returnDisplay: 'Image data returned',
+    };
+    vi.mocked(mockToolRegistry.getTool).mockReturnValue(mockTool);
+    mockTool.executeFn.mockReturnValue(toolResult);
+
+    const response = await executeToolCall(
+      mockConfig,
+      request,
+      abortController.signal,
+    );
+
+    expect(response.contentLength).toBeUndefined();
   });
 });

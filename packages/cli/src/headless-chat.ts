@@ -110,6 +110,7 @@ export async function initClient(
       useSmartEdit: false,
       sessionSummary: undefined,
       promptWords: undefined,
+      outputFormat: undefined,
       ...opts,
     },
     workspaceRoot,

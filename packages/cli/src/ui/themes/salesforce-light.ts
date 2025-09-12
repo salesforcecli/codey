@@ -15,7 +15,6 @@
  */
 
 import { type ColorsTheme, Theme } from './theme.js';
-import { lightSemanticColors } from './semantic-tokens.js';
 import { SalesforceColorPalette } from './salesforce-color-palette.js';
 
 const salesforceLightColors: ColorsTheme = {
@@ -134,5 +133,4 @@ export const SalesforceLight: Theme = new Theme(
     },
   },
   salesforceLightColors,
-  lightSemanticColors,
 );

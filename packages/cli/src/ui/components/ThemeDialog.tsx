@@ -17,7 +17,7 @@
 import type React from 'react';
 import { useCallback, useState } from 'react';
 import { Box, Text } from 'ink';
-import { Colors } from '../colors.js';
+import { theme } from '../semantic-colors.js';
 import { themeManager, DEFAULT_THEME } from '../themes/theme-manager.js';
 import { RadioButtonSelect } from './shared/RadioButtonSelect.js';
 import { DiffRenderer } from './messages/DiffRenderer.js';
@@ -193,7 +193,7 @@ export function ThemeDialog({
   return (
     <Box
       borderStyle="round"
-      borderColor={Colors.Gray}
+      borderColor={theme.border.default}
       flexDirection="column"
       paddingTop={includePadding ? 1 : 0}
       paddingBottom={includePadding ? 1 : 0}
@@ -207,7 +207,9 @@ export function ThemeDialog({
           <Box flexDirection="column" width="45%" paddingRight={2}>
             <Text bold={mode === 'theme'} wrap="truncate">
               {mode === 'theme' ? '> ' : '  '}Select Theme{' '}
-              <Text color={Colors.Gray}>{otherScopeModifiedMessage}</Text>
+              <Text color={theme.text.secondary}>
+                {otherScopeModifiedMessage}
+              </Text>
             </Text>
             <RadioButtonSelect
               items={themeItems}
@@ -223,7 +225,9 @@ export function ThemeDialog({
 
           {/* Right Column: Preview */}
           <Box flexDirection="column" width="55%" paddingLeft={2}>
-            <Text bold>Preview</Text>
+            <Text bold color={theme.text.primary}>
+              Preview
+            </Text>
             {/* Get the Theme object for the highlighted theme, fall back to default if not found */}
             {(() => {
               const previewTheme =
@@ -233,7 +237,7 @@ export function ThemeDialog({
               return (
                 <Box
                   borderStyle="single"
-                  borderColor={Colors.Gray}
+                  borderColor={theme.border.default}
                   paddingTop={includePadding ? 1 : 0}
                   paddingBottom={includePadding ? 1 : 0}
                   paddingLeft={1}
@@ -277,7 +281,7 @@ def fibonacci(n):
         />
       )}
       <Box marginTop={1}>
-        <Text color={Colors.Gray} wrap="truncate">
+        <Text color={theme.text.secondary} wrap="truncate">
           (Use Enter to {mode === 'theme' ? 'select' : 'apply scope'}, Tab to{' '}
           {mode === 'theme' ? 'configure scope' : 'select theme'})
         </Text>

@@ -15,7 +15,7 @@
  */
 
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
-import { IdeClient, ideContext } from '@salesforce/codey-core';
+import { IdeClient, ideContextStore } from '@salesforce/codey-core';
 
 /**
  * This hook listens for trust status updates from the IDE companion extension.
@@ -36,8 +36,7 @@ export function useIdeTrustListener() {
     };
   }, []);
 
-  const getSnapshot = () =>
-    ideContext.getIdeContext()?.workspaceState?.isTrusted;
+  const getSnapshot = () => ideContextStore.get()?.workspaceState?.isTrusted;
 
   const isIdeTrusted = useSyncExternalStore(subscribe, getSnapshot);
 

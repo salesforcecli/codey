@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { Colors } from '../colors.js';
+import { theme } from '../semantic-colors.js';
 
 // --- Thresholds ---
 export const TOOL_SUCCESS_RATE_HIGH = 95;
@@ -33,10 +33,10 @@ export const getStatusColor = (
   options: { defaultColor?: string } = {},
 ) => {
   if (value >= thresholds.green) {
-    return Colors.AccentGreen;
+    return theme.status.success;
   }
   if (value >= thresholds.yellow) {
-    return Colors.AccentYellow;
+    return theme.status.warning;
   }
-  return options.defaultColor || Colors.AccentRed;
+  return options.defaultColor || theme.status.error;
 };

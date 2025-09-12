@@ -109,6 +109,16 @@ export async function bfsFileSearch(
     for (const { currentDir, entries } of results) {
       for (const entry of entries) {
         const fullPath = path.join(currentDir, entry.name);
+        const isDirectory = entry.isDirectory();
+        const isMatchingFile = entry.isFile() && entry.name === fileName;
+
+        if (!isDirectory && !isMatchingFile) {
+          continue;
+        }
+        if (isDirectory && ignoreDirsSet.has(entry.name)) {
+          continue;
+        }
+
         if (
           fileService?.shouldIgnoreFile(fullPath, {
             respectGitIgnore: options.fileFilteringOptions?.respectGitIgnore,
@@ -119,11 +129,9 @@ export async function bfsFileSearch(
           continue;
         }
 
-        if (entry.isDirectory()) {
-          if (!ignoreDirsSet.has(entry.name)) {
-            queue.push(fullPath);
-          }
-        } else if (entry.isFile() && entry.name === fileName) {
+        if (isDirectory) {
+          queue.push(fullPath);
+        } else {
           foundFiles.push(fullPath);
         }
       }

@@ -20,7 +20,7 @@ import {
   performWorkspaceExtensionMigration,
 } from '../../config/extension.js';
 import { RadioButtonSelect } from './shared/RadioButtonSelect.js';
-import { Colors } from '../colors.js';
+import { theme } from '../semantic-colors.js';
 import { useState } from 'react';
 
 export function WorkspaceMigrationDialog(props: {
@@ -50,15 +50,15 @@ export function WorkspaceMigrationDialog(props: {
       <Box
         flexDirection="column"
         borderStyle="round"
-        borderColor={Colors.Gray}
+        borderColor={theme.border.default}
         padding={1}
       >
         {failedExtensions.length > 0 ? (
           <>
-            <Text>
+            <Text color={theme.text.primary}>
               The following extensions failed to migrate. Please try installing
               them manually. To see other changes, Gemini CLI must be restarted.
-              Press {"'q'"} to quit.
+              Press &apos;q&apos; to quit.
             </Text>
             <Box flexDirection="column" marginTop={1} marginLeft={2}>
               {failedExtensions.map((failed) => (
@@ -67,9 +67,9 @@ export function WorkspaceMigrationDialog(props: {
             </Box>
           </>
         ) : (
-          <Text>
+          <Text color={theme.text.primary}>
             Migration complete. To see changes, Gemini CLI must be restarted.
-            Press {"'q'"} to quit.
+            Press &apos;q&apos; to quit.
           </Text>
         )}
       </Box>
@@ -80,15 +80,19 @@ export function WorkspaceMigrationDialog(props: {
     <Box
       flexDirection="column"
       borderStyle="round"
-      borderColor={Colors.Gray}
+      borderColor={theme.border.default}
       padding={1}
     >
-      <Text bold>Workspace-level extensions are deprecated{'\n'}</Text>
-      <Text>Would you like to install them at the user level?</Text>
-      <Text>
+      <Text bold color={theme.text.primary}>
+        Workspace-level extensions are deprecated{'\n'}
+      </Text>
+      <Text color={theme.text.primary}>
+        Would you like to install them at the user level?
+      </Text>
+      <Text color={theme.text.primary}>
         The extension definition will remain in your workspace directory.
       </Text>
-      <Text>
+      <Text color={theme.text.primary}>
         If you opt to skip, you can install them manually using the extensions
         install command.
       </Text>
