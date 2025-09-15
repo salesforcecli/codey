@@ -40,6 +40,14 @@ import { WebFetchTool } from '../tools/web-fetch.js';
 import { ReadManyFilesTool } from '../tools/read-many-files.js';
 import { MemoryTool, setGeminiMdFilename } from '../tools/memoryTool.js';
 import { WebSearchTool } from '../tools/web-search.js';
+import { GetScaleCenterStatusTool } from '../tools/scaleCenterStatus.js';
+import { CreateDevopsWorkItemTool } from '../tools/createDevopsWorkItem.js';
+import { SfDeployMetadataTool } from '../tools/sfDeployMetadata.js';
+import { RunCodeAnalyzerTool } from '../tools/runCodeAnalyzer.js';
+import {
+  SlackCanvasAppendTool,
+  SlackCanvasCreateTool,
+} from '../tools/slack-canvas.js';
 import { GeminiClient } from '../core/client.js';
 import { BaseLlmClient } from '../core/baseLlmClient.js';
 import { FileDiscoveryService } from '../services/fileDiscoveryService.js';
@@ -1025,6 +1033,14 @@ export class Config {
     registerCoreTool(ShellTool, this);
     registerCoreTool(MemoryTool);
     registerCoreTool(WebSearchTool, this);
+    if (process.env['CODEY_ENABLE_SLACK_DEMO_TOOLS']) {
+      registerCoreTool(GetScaleCenterStatusTool);
+      registerCoreTool(CreateDevopsWorkItemTool);
+      registerCoreTool(SfDeployMetadataTool);
+      registerCoreTool(RunCodeAnalyzerTool);
+      registerCoreTool(SlackCanvasCreateTool, this);
+      registerCoreTool(SlackCanvasAppendTool, this);
+    }
 
     await registry.discoverAllTools();
     return registry;
