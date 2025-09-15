@@ -19,7 +19,7 @@ export enum TelemetryTarget {
   SALESFORCE = 'salesforce',
 }
 
-const DEFAULT_TELEMETRY_TARGET = TelemetryTarget.LOCAL;
+const DEFAULT_TELEMETRY_TARGET = TelemetryTarget.SALESFORCE;
 const DEFAULT_OTLP_ENDPOINT = 'http://localhost:4317';
 
 export { DEFAULT_TELEMETRY_TARGET, DEFAULT_OTLP_ENDPOINT };

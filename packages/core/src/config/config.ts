@@ -694,7 +694,7 @@ export class Config {
   }
 
   getTelemetryEnabled(): boolean {
-    return this.telemetrySettings.enabled ?? false;
+    return this.telemetrySettings.enabled ?? true;
   }
 
   getTelemetryLogPromptsEnabled(): boolean {

@@ -66,6 +66,10 @@ const KEY_TRANSFORMATIONS: Record<
   string,
   (key: string, value: Value) => { key: string; value: Value }
 > = {
+  'session.id': (_, value: Value) => ({
+    key: 'sessionId',
+    value,
+  }),
   model: (_, value: Value) => ({
     key: 'model',
     value:

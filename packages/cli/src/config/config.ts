@@ -171,7 +171,7 @@ export async function parseArguments(settings: Settings): Promise<CliArgs> {
         .option('telemetry', {
           type: 'boolean',
           description:
-            'Enable telemetry? This flag specifically controls if telemetry is sent. Other --telemetry-* flags set specific values but do not enable telemetry on their own.',
+            'Enable or disable telemetry. Telemetry is enabled by default and helps improve the product. Use --no-telemetry to opt out.',
         })
         .option('telemetry-target', {
           type: 'string',
@@ -601,7 +601,7 @@ export async function loadCliConfig(
       screenReader,
     },
     telemetry: {
-      enabled: argv.telemetry ?? settings.telemetry?.enabled,
+      enabled: argv.telemetry ?? settings.telemetry?.enabled ?? true,
       target: (argv.telemetryTarget ??
         settings.telemetry?.target) as TelemetryTarget,
       otlpEndpoint:

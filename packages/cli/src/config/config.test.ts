@@ -458,12 +458,12 @@ describe('loadCliConfig telemetry', () => {
     vi.restoreAllMocks();
   });
 
-  it('should set telemetry to false by default when no flag or setting is present', async () => {
+  it('should set telemetry to true by default when no flag or setting is present', async () => {
     process.argv = ['node', 'script.js'];
     const argv = await parseArguments({} as Settings);
     const settings: Settings = {};
     const config = await loadCliConfig(settings, [], 'test-session', argv);
-    expect(config.getTelemetryEnabled()).toBe(false);
+    expect(config.getTelemetryEnabled()).toBe(true);
   });
 
   it('should set telemetry to true when --telemetry flag is present', async () => {
