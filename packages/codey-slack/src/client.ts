@@ -28,17 +28,14 @@ export class ClientError extends Error {
 
 export class Client {
   private readonly baseUrl: string;
-  private readonly token: string;
 
-  constructor(baseUrl: string, token: string) {
+  constructor(baseUrl: string) {
     this.baseUrl = baseUrl.replace(/\/$/, '');
-    this.token = token;
   }
 
   private headers(): Record<string, string> {
     return {
       'Content-Type': 'application/json',
-      authorization: `Bearer ${this.token}`,
     };
   }
 

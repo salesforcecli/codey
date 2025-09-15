@@ -1472,8 +1472,7 @@ async function main(): Promise<void> {
   const { Client, ClientError } = await import('./client');
   const { formatSlackMessage } = await import('./markdown-converter');
   const hostedBaseUrl = requireEnv('CODEY_HOSTED_BASE_URL');
-  const hostedToken = requireEnv('CODEY_HOSTED_TOKEN');
-  const hosted = new Client(hostedBaseUrl, hostedToken);
+  const hosted = new Client(hostedBaseUrl);
 
   // Default workspace root required for POC
   const defaultWorkspaceRoot = requireEnv('CODEY_DEFAULT_WORKSPACE_ROOT');
