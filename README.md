@@ -4,7 +4,7 @@
 
 **This project is under active development and is not available yet.**
 
-Codey is an open-source AI agent that brings the power and trust of Salesforce's LLM Gateway directly into your terminal.
+Codey is an open-source Agentic CLI that brings the power and trust of Salesforce's LLM Gateway directly into your terminal. This project is a fork of Google's gemini-cli(https://github.com/google-gemini/gemini-cli).
 
 ## Run Locally
 
@@ -44,3 +44,13 @@ Finally, run Codey in any project directory
 ```
 node ~/path/to/codey-private/scripts/start.js
 ```
+
+## CODEY.md
+
+Codey will look for a `CODEY.md` file in the root directory of the project. If it exists, Codey will use it to guide his actions.
+
+## MCP
+
+See Google's documentation [here](https://github.com/google-gemini/gemini-cli/blob/main/docs/tools/mcp-server.md)
+
+Instead of `.gemini` use `.codey`.

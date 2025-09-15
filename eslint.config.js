@@ -285,15 +285,19 @@ export default tseslint.config(
       ],
     },
   },
-  // extra settings for server package scripts
+  // extra settings for codey-server package scripts
   {
-    files: ['packages/server/scripts/**/*.js'],
+    files: ['packages/codey-server/scripts/**/*.js'],
     languageOptions: {
       globals: {
         ...globals.node,
         process: 'readonly',
         console: 'readonly',
         fetch: 'readonly', // Node.js 18+ global fetch
+        AbortController: 'readonly', // Node.js 18+ global AbortController
+        TextDecoder: 'readonly', // Node.js global TextDecoder
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
       },
     },
   },

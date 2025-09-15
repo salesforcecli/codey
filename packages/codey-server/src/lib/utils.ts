@@ -17,6 +17,7 @@
 import type { Context } from 'hono';
 import { withContext, type LogContext } from './logger.js';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
+import { AuthType } from '@salesforce/codey-core';
 
 export function validateRequired(value: unknown, name: string): string | null {
   if (!value || typeof value !== 'string' || !value.trim()) {
@@ -52,6 +53,88 @@ export function createErrorResponse(
     withContext(context).error({ error: message, ...context }, 'API Error');
   }
   return c.json({ error: message }, status);
+}
+
+export function validateAuthType(body: Record<string, unknown>): {
+  authType: AuthType | null;
+  error: string | null;
+} {
+  const authType = body['authType'];
+
+  if (!authType || typeof authType !== 'string') {
+    return { authType: null, error: 'authType is required' };
+  }
+
+  const trimmed = authType.trim();
+  if (trimmed === 'gemini') {
+    // Check if GEMINI_API_KEY is set
+    if (!process.env['GEMINI_API_KEY']) {
+      return {
+        authType: null,
+        error:
+          'GEMINI_API_KEY environment variable is required when authType is "gemini"',
+      };
+    }
+    return { authType: AuthType.USE_GEMINI, error: null };
+  } else if (trimmed === 'gateway') {
+    // Check if org is available either in CODEY_ORG_USERNAME env var or org param
+    const envOrg = process.env['CODEY_ORG_USERNAME'];
+    const requestOrg = body['org'];
+    const hasValidOrg =
+      envOrg ||
+      (requestOrg && typeof requestOrg === 'string' && requestOrg.trim());
+
+    if (!hasValidOrg) {
+      return {
+        authType: null,
+        error:
+          'org is required when authType is "gateway" (provide via CODEY_ORG_USERNAME environment variable or org parameter)',
+      };
+    }
+    return { authType: AuthType.USE_SF_LLMG, error: null };
+  } else {
+    return {
+      authType: null,
+      error: 'authType must be either "gemini" or "gateway"',
+    };
+  }
+}
+
+export function validateOrg(
+  body: Record<string, unknown>,
+  authType: AuthType,
+): { org: string | null; error: string | null } {
+  const requestOrg = body['org'];
+  const envOrg = process.env['CODEY_ORG_USERNAME'];
+
+  // If authType is gateway, determine which org to use
+  if (authType === AuthType.USE_SF_LLMG) {
+    // Prefer request org over environment org if both are provided
+    if (requestOrg && typeof requestOrg === 'string' && requestOrg.trim()) {
+      return { org: requestOrg.trim(), error: null };
+    }
+
+    // Fall back to environment org if request org is not provided
+    if (envOrg && envOrg.trim()) {
+      return { org: envOrg.trim(), error: null };
+    }
+
+    // This should not happen since validateAuthType already checked for this
+    return { org: null, error: 'org is required when authType is "gateway"' };
+  }
+
+  // For other auth types, org is optional but if provided should be a string
+  if (
+    requestOrg !== undefined &&
+    (typeof requestOrg !== 'string' || !requestOrg.trim())
+  ) {
+    return { org: null, error: null }; // Ignore invalid org for non-gateway auth types
+  }
+
+  return {
+    org: typeof requestOrg === 'string' ? requestOrg.trim() : null,
+    error: null,
+  };
 }
 
 export function createSuccessResponse(

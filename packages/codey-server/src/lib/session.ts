@@ -15,7 +15,7 @@
  */
 
 import {
-  AuthType,
+  type AuthType,
   type Config,
   type GeminiClient,
   type ServerGeminiStreamEvent,
@@ -25,6 +25,7 @@ import {
   sendMessage,
   sendMessageStreaming,
 } from '@salesforce/codey/headless-chat';
+import { randomUUID } from 'node:crypto';
 
 type SessionId = string;
 
@@ -53,14 +54,17 @@ if (typeof globalThis !== 'undefined') {
   }, CLEANUP_INTERVAL_MS).unref?.();
 }
 
-export async function createSession(workspaceRoot: string, model?: string) {
-  const id = Math.random().toString(36).slice(2);
-  const { client, config } = await initClient(
-    workspaceRoot,
-    id,
-    AuthType.USE_GEMINI,
-    { model },
-  );
+export async function createSession(
+  workspaceRoot: string,
+  authType: AuthType,
+  model?: string,
+  org?: string,
+) {
+  const id = randomUUID();
+  const { client, config } = await initClient(workspaceRoot, id, authType, {
+    model,
+    org,
+  });
   const now = Date.now();
   sessions.set(id, { client, config, createdAt: now, lastUsed: now });
   return { id };

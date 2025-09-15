@@ -67,9 +67,9 @@ Rationale: isolates provider-specific logic; minimal diffs in `sdk.ts`; no calle
 - New target value: `telemetry.target = "forcedotcom"`.
 - Provider secrets/endpoint are hardcoded constants in code (no new config keys):
   - `const APP_INSIGHTS_KEY =
-  'InstrumentationKey=2ca64abb-6123-4c7b-bd9e-4fe73e71fe9c;IngestionEndpoint=https://eastus-1.in.applicationinsights.azure.com/;LiveEndpoint=https://eastus.livediagnostics.monitor.azure.com/;ApplicationId=ecd8fa7a-0e0d-4109-94db-4d7878ada862';`
+'InstrumentationKey=2ca64abb-6123-4c7b-bd9e-4fe73e71fe9c;IngestionEndpoint=https://eastus-1.in.applicationinsights.azure.com/;LiveEndpoint=https://eastus.livediagnostics.monitor.azure.com/;ApplicationId=ecd8fa7a-0e0d-4109-94db-4d7878ada862';`
   - `const O11Y_UPLOAD_ENDPOINT =
-    'https://794testsite.my.site.com/byolwr/webruntime/log/metrics';`
+'https://794testsite.my.site.com/byolwr/webruntime/log/metrics';`
 - We ALWAYS attempt to enable both AppInsights and O11y (via options):
   - `enableAppInsights: true`, `enableO11y: true`.
 - No secondary gating: the external gate is our CLI `telemetry.enabled`. We WILL subclass `TelemetryReporter` to override `isSfdxTelemetryEnabled()` to always return `true`; initialization uses `ForcedotcomBypassReporter.create(options)`.
@@ -179,6 +179,7 @@ Notes:
 **Note**: For the `forcedotcom` target, only the following events are exported (all others are filtered out):
 
 Allow-listed events:
+
 - `gemini_cli.config`
 - `gemini_cli.user_prompt` (excluding `user.email` field)
 - `gemini_cli.tool_call`

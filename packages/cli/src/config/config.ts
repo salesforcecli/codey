@@ -629,9 +629,10 @@ export async function loadCliConfig(
     cwd,
     fileDiscoveryService: fileService,
     bugCommand: settings.advanced?.bugCommand,
-    model: process.env['CODEY_ORG_USERNAME']
-      ? DEFAULT_GATEWAY_MODEL.displayId
-      : DEFAULT_GEMINI_MODEL,
+    model:
+      argv.model || process.env['CODEY_ORG_USERNAME']
+        ? DEFAULT_GATEWAY_MODEL.displayId
+        : DEFAULT_GEMINI_MODEL,
     extensionContextFilePaths,
     maxSessionTurns: settings.model?.maxSessionTurns ?? -1,
     experimentalZedIntegration: argv.experimentalAcp || false,

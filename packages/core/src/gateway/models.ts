@@ -136,8 +136,16 @@ export const GPT4oMini: GatewayModel = {
   },
 };
 
-export const DEFAULT_GATEWAY_MODEL = GPT4oMini;
-export const DEFAULT_GATEWAY_FALLBACK_MODEL = QWEN;
+const getModelFromEnv = (envVar: string): GatewayModel | undefined => {
+  const model = process.env[envVar];
+  if (model) return findGatewayModel(model);
+  return;
+};
+
+export const DEFAULT_GATEWAY_MODEL =
+  getModelFromEnv('CODEY_DEFAULT_MODEL') ?? GPT4oMini;
+export const DEFAULT_GATEWAY_FALLBACK_MODEL =
+  getModelFromEnv('CODEY_DEFAULT_FALLBACK_MODEL') ?? QWEN;
 
 const GATEWAY_MODELS: GatewayModel[] = [
   QWEN,

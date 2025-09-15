@@ -29,6 +29,7 @@ import {
   ToolErrorType,
 } from '@salesforce/codey-core';
 import { type Content, type FunctionCall, type Part } from '@google/genai';
+import { handleOrgFlag } from './utils/handleOrgFlag.js';
 
 export async function initClient(
   workspaceRoot: string,
@@ -75,13 +76,18 @@ export async function initClient(
   }
 
   const settings = loadSettings(workspaceRoot);
+  if (opts?.org) {
+    handleOrgFlag(opts.org, settings);
+  }
+
   const extensions = loadExtensions(workspaceRoot);
   const config = await loadCliConfig(
     settings.merged,
     extensions,
     sessionId,
     {
-      org: 'test-org', // TODO: this is a placeholder until we productionize headless-chat
+      // org and model are provided by the spread operator below
+      org: undefined,
       model: undefined,
       sandbox: undefined,
       sandboxImage: undefined,

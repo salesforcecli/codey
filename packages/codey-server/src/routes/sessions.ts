@@ -26,6 +26,8 @@ import {
   createSuccessResponse,
   validateMessage,
   validateWorkspaceRoot,
+  validateAuthType,
+  validateOrg,
 } from '../lib/utils.js';
 import { withContext } from '../lib/logger.js';
 
@@ -47,13 +49,42 @@ sessions.post('/sessions', async (c: Context) => {
         requestId,
       });
     }
+
+    const { authType, error } = validateAuthType(body);
+    if (error) {
+      return createErrorResponse(c, error, 400, {
+        requestId,
+      });
+    }
+
+    if (!authType) {
+      return createErrorResponse(c, 'authType is required', 400, {
+        requestId,
+      });
+    }
+
+    const { org, error: orgError } = validateOrg(body, authType);
+    if (orgError) {
+      return createErrorResponse(c, orgError, 400, {
+        requestId,
+      });
+    }
+
     const model = typeof body.model === 'string' ? body.model : undefined;
 
-    log.info({ requestId, workspaceRoot, model }, 'Creating session');
-    const { id } = await createSession(workspaceRoot, model);
+    log.info(
+      { requestId, workspaceRoot, authType, org, model },
+      'Creating session',
+    );
+    const { id } = await createSession(
+      workspaceRoot,
+      authType,
+      model,
+      org || undefined,
+    );
     const duration = Date.now() - start;
     log.info(
-      { requestId, workspaceRoot, model, duration, id },
+      { requestId, workspaceRoot, authType, org, model, duration, id },
       'Session created',
     );
 
