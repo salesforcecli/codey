@@ -33,6 +33,7 @@ export const WITTY_LOADING_PHRASES = [
   'Fetching some bear-y cool data...',
   'Your request is being bear-handled...',
   "I'm just getting my bearings...",
+  'The anticipation is unbearable...',
 
   // paw puns
   "Paws for a moment, I'm on it...",
