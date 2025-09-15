@@ -25,9 +25,11 @@ This document specifies a minimal, safe-by-default file system API for Codey Ser
 ### Endpoints
 
 #### GET /api/sessions/:id/fs
+
 Returns server capabilities and defaults for this POC.
 
 Response 200:
+
 ```json
 {
   "service": "codey-server/fs",
@@ -56,12 +58,15 @@ Response 200:
 ```
 
 #### GET /api/sessions/:id/fs/stat?path=...
+
 Returns metadata for a file or directory.
 
 Query params:
+
 - `path` (string, required)
 
 Response 200:
+
 ```json
 {
   "path": "src/index.ts",
@@ -74,9 +79,11 @@ Response 200:
 ```
 
 #### GET /api/sessions/:id/fs/list?path=...&recursive=false&respect_git_ignore=true&respect_codey_ignore=true&page=1&page_size=1000
+
 Lists direct children of a directory. With `recursive=true`, returns a flattened listing under that directory (still subject to ignore settings). Large lists may paginate.
 
 Query params:
+
 - `path` (string, required)
 - `recursive` (boolean, default false)
 - `respect_git_ignore` (boolean, default true)
@@ -85,11 +92,24 @@ Query params:
 - `page_size` (number, optional)
 
 Response 200:
+
 ```json
 {
   "entries": [
-    { "name": "src", "path": "src", "isDir": true, "size": 0, "mtime": "2025-09-15T10:00:00.000Z" },
-    { "name": "README.md", "path": "README.md", "isDir": false, "size": 2048, "mtime": "2025-09-15T09:55:00.000Z" }
+    {
+      "name": "src",
+      "path": "src",
+      "isDir": true,
+      "size": 0,
+      "mtime": "2025-09-15T10:00:00.000Z"
+    },
+    {
+      "name": "README.md",
+      "path": "README.md",
+      "isDir": false,
+      "size": 2048,
+      "mtime": "2025-09-15T09:55:00.000Z"
+    }
   ],
   "page": 1,
   "pageSize": 1000,
@@ -98,15 +118,18 @@ Response 200:
 ```
 
 #### GET /api/sessions/:id/fs/tree?path=...&depth=2&respect_git_ignore=true&respect_codey_ignore=true
+
 Returns a compact directory tree structure up to `depth`.
 
 Query params:
+
 - `path` (string, required)
 - `depth` (number, default 2)
 - `respect_git_ignore` (boolean, default true)
 - `respect_codey_ignore` (boolean, default true)
 
 Response 200:
+
 ```json
 {
   "path": "src",
@@ -120,15 +143,18 @@ Response 200:
 ```
 
 #### GET /api/sessions/:id/fs/read?path=...&offset=0&limit=500&as=text|base64
+
 Reads a file. Supports line slicing for text and base64 for binary.
 
 Query params:
+
 - `path` (string, required)
 - `offset` (number, optional; for text)
 - `limit` (number, optional; for text)
 - `as` (string, one of `text`|`base64`, default `text`)
 
 Response 200 (text):
+
 ```json
 {
   "content": "export const x = 1\n",
@@ -139,6 +165,7 @@ Response 200 (text):
 ```
 
 Response 200 (base64):
+
 ```json
 {
   "encoding": "base64",
@@ -149,12 +176,15 @@ Response 200 (base64):
 ```
 
 #### GET /api/sessions/:id/fs/download?path=...
+
 Streams the file as `application/octet-stream` with standard download headers. Rejects if outside root.
 
 #### POST /api/sessions/:id/fs/write
+
 Creates or overwrites a file. Parent directories are created as needed.
 
 Body:
+
 ```json
 {
   "path": "src/new.ts",
@@ -165,15 +195,25 @@ Body:
 ```
 
 Responses:
+
 - 201 on create, 200 on overwrite
+
 ```json
-{ "path": "src/new.ts", "bytesWritten": 16, "etag": "W/\"c1a9...\"", "mtime": "2025-09-15T10:10:00.000Z", "created": true }
+{
+  "path": "src/new.ts",
+  "bytesWritten": 16,
+  "etag": "W/\"c1a9...\"",
+  "mtime": "2025-09-15T10:10:00.000Z",
+  "created": true
+}
 ```
 
 #### POST /api/sessions/:id/fs/replace
+
 Single-file in-place edit (search/replace once). If `old_string` appears multiple times, fail by default unless `allowMultiple=true` is provided, in which case all are replaced and the count is returned.
 
 Body:
+
 ```json
 {
   "path": "src/a.ts",
@@ -185,76 +225,107 @@ Body:
 ```
 
 Response 200:
+
 ```json
 { "path": "src/a.ts", "replacements": 1, "etag": "W/\"d3b2...\"" }
 ```
 
 #### POST /api/sessions/:id/fs/mkdir
+
 Create a directory.
 
 Body:
+
 ```json
 { "path": "src/utils", "recursive": true }
 ```
 
 Response 201:
+
 ```json
 { "path": "src/utils", "created": true }
 ```
 
 #### POST /api/sessions/:id/fs/move
+
 Move/rename a file or directory within the root.
 
 Body:
+
 ```json
-{ "from": "src/old.ts", "to": "src/new.ts", "overwrite": false, "ifMatchEtag": "optional" }
+{
+  "from": "src/old.ts",
+  "to": "src/new.ts",
+  "overwrite": false,
+  "ifMatchEtag": "optional"
+}
 ```
 
 Response 200:
+
 ```json
 { "from": "src/old.ts", "to": "src/new.ts" }
 ```
 
 #### POST /api/sessions/:id/fs/copy
+
 Copy a file or directory within the root.
 
 Body:
+
 ```json
 { "from": "assets/logo.png", "to": "public/logo.png", "overwrite": false }
 ```
 
 Response 200:
+
 ```json
 { "from": "assets/logo.png", "to": "public/logo.png" }
 ```
 
 #### DELETE /api/sessions/:id/fs/file?path=...&force=false
+
 Delete a single file. If `If-Match` is provided and mismatches, return `409`.
 
 Response 200:
+
 ```json
 { "path": "src/tmp.txt", "deleted": true }
 ```
 
 #### DELETE /api/sessions/:id/fs/dir?path=...&recursive=false&force=false
+
 Delete a directory. If `recursive=false` and the directory is not empty, return `400`.
 
 Response 200:
+
 ```json
 { "path": "dist", "deleted": true }
 ```
 
 #### POST /api/sessions/:id/fs/upload
+
 Create or overwrite a file via JSON payload. Use for small/medium content; prefer `download/upload` streaming for very large files.
 
 Body:
+
 ```json
-{ "path": "assets/logo.png", "content": "iVBORw0KGgoAAA...", "contentEncoding": "base64" }
+{
+  "path": "assets/logo.png",
+  "content": "iVBORw0KGgoAAA...",
+  "contentEncoding": "base64"
+}
 ```
 
 Response 201/200:
+
 ```json
-{ "path": "assets/logo.png", "bytesWritten": 12345, "etag": "W/\"ab12...\"", "mtime": "2025-09-15T10:30:00.000Z" }
+{
+  "path": "assets/logo.png",
+  "bytesWritten": 12345,
+  "etag": "W/\"ab12...\"",
+  "mtime": "2025-09-15T10:30:00.000Z"
+}
 ```
 
 ### Error responses
@@ -266,6 +337,7 @@ Response 201/200:
 - 500: Unexpected server error.
 
 Shapes:
+
 ```json
 { "error": "Message describing the issue" }
 ```
@@ -274,5 +346,3 @@ Shapes:
 
 - These endpoints are designed to align with Codey Core tool semantics (read, write, edit) without requiring the model or CLI to be in the loop.
 - This is a POC: no authentication/authorization is enforced. Add auth before production use.
-
-

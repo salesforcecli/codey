@@ -15,8 +15,8 @@
  */
 
 export enum TelemetryTarget {
-  GCP = 'gcp',
   LOCAL = 'local',
+  SALESFORCE = 'salesforce',
 }
 
 const DEFAULT_TELEMETRY_TARGET = TelemetryTarget.LOCAL;

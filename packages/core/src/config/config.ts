@@ -437,7 +437,8 @@ export class Config {
     }
 
     if (this.telemetrySettings.enabled) {
-      initializeTelemetry(this);
+      // Initialize telemetry asynchronously without blocking constructor
+      void initializeTelemetry(this);
     }
 
     if (this.getProxy()) {

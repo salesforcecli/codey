@@ -47,12 +47,16 @@ import {
   FileMetricExporter,
   FileSpanExporter,
 } from './file-exporters.js';
+import { TelemetryTarget } from './index.js';
+import type { SalesforceTelemetrySetup } from './providers/salesforce.js';
+import { setupSalesforceTelemetry } from './providers/salesforce.js';
 
 // For troubleshooting, set the log level to DiagLogLevel.DEBUG
 diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.INFO);
 
 let sdk: NodeSDK | undefined;
 let telemetryInitialized = false;
+let salesforceTelemetrySetup: SalesforceTelemetrySetup | undefined;
 
 export function isTelemetrySdkInitialized(): boolean {
   return telemetryInitialized;
@@ -83,7 +87,7 @@ function parseOtlpEndpoint(
   }
 }
 
-export function initializeTelemetry(config: Config): void {
+export async function initializeTelemetry(config: Config): Promise<void> {
   if (telemetryInitialized || !config.getTelemetryEnabled()) {
     return;
   }
@@ -94,6 +98,46 @@ export function initializeTelemetry(config: Config): void {
     'session.id': config.getSessionId(),
   });
 
+  const telemetryTarget = config.getTelemetryTarget();
+
+  // Handle salesforce target
+  if (telemetryTarget === TelemetryTarget.SALESFORCE) {
+    try {
+      salesforceTelemetrySetup = await setupSalesforceTelemetry(config);
+
+      sdk = new NodeSDK({
+        resource,
+        spanProcessors: [
+          new BatchSpanProcessor(
+            salesforceTelemetrySetup.exceptionTraceExporter,
+          ),
+        ],
+        logRecordProcessors: [
+          new BatchLogRecordProcessor(salesforceTelemetrySetup.logExporter),
+        ],
+        // No metric reader for salesforce target as per plan
+        instrumentations: [new HttpInstrumentation()],
+      });
+
+      sdk.start();
+      if (config.getDebugMode()) {
+        console.log(
+          'OpenTelemetry SDK started successfully with salesforce target.',
+        );
+      }
+      telemetryInitialized = true;
+      initializeMetrics(config);
+      return;
+    } catch (error) {
+      console.error(
+        'Error starting OpenTelemetry SDK with salesforce target:',
+        error,
+      );
+      return;
+    }
+  }
+
+  // Handle local target (existing logic)
   const otlpEndpoint = config.getTelemetryOtlpEndpoint();
   const otlpProtocol = config.getTelemetryOtlpProtocol();
   const parsedEndpoint = parseOtlpEndpoint(otlpEndpoint, otlpProtocol);
@@ -192,6 +236,12 @@ export async function shutdownTelemetry(config: Config): Promise<void> {
     return;
   }
   try {
+    // Shutdown salesforce telemetry setup if it exists
+    if (salesforceTelemetrySetup) {
+      await salesforceTelemetrySetup.stop();
+      salesforceTelemetrySetup = undefined;
+    }
+
     ClearcutLogger.getInstance()?.shutdown();
     await sdk.shutdown();
     if (config.getDebugMode()) {

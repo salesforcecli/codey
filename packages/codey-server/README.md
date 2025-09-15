@@ -12,12 +12,12 @@ A lightweight HTTP API server built with [Hono](https://hono.dev/) and [Pino](ht
 - [Architecture](#architecture)
 - [Session Management](#session-management)
 
-
 ## Overview
 
 This project is an HTTP server that wraps the Codey CLI (Google gemini-cli fork) and exposes HTTP endpoints for chat sessions.
 
 The basic flow is:
+
 - Create a session using `POST /api/sessions`
 - Stream messages using `POST /api/sessions/{sessionId}/messages/stream`
 
@@ -72,6 +72,7 @@ Creates a new chat session with the specified authentication and configuration.
 The `model` and `org` parameters are only applied when `authType` is `gateway`.
 
 Valid Models:
+
 - `llmgateway__OpenAIGPT4oMini` (default model if not provided)
 - `llmgateway__BedrockAnthropicClaude4Sonnet`
 - `llmgateway__BedrockAnthropicClaude37Sonnet`

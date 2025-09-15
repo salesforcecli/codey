@@ -100,11 +100,11 @@ export interface CliArgs {
 export async function parseArguments(settings: Settings): Promise<CliArgs> {
   const yargsInstance = yargs(hideBin(process.argv))
     .locale('en')
-    .scriptName('gemini')
+    .scriptName('codey')
     .usage(
-      'Usage: gemini [options] [command]\n\nGemini CLI - Launch an interactive CLI, use -p/--prompt for non-interactive mode',
+      'Usage: codey [options] [command]\n\\Codey CLI - Launch an interactive CLI, use -p/--prompt for non-interactive mode',
     )
-    .command('$0 [promptWords...]', 'Launch Gemini CLI', (yargsInstance) =>
+    .command('$0 [promptWords...]', 'Launch Codey CLI', (yargsInstance) =>
       yargsInstance
         // Current product direction is to prevent users from switching models
         // .option('model', {
@@ -175,9 +175,9 @@ export async function parseArguments(settings: Settings): Promise<CliArgs> {
         })
         .option('telemetry-target', {
           type: 'string',
-          choices: ['local', 'gcp'],
+          choices: ['local', 'salesforce'],
           description:
-            'Set the telemetry target (local or gcp). Overrides settings files.',
+            'Set the telemetry target (local or salesforce). Overrides settings files.',
         })
         .option('telemetry-otlp-endpoint', {
           type: 'string',
@@ -234,7 +234,7 @@ export async function parseArguments(settings: Settings): Promise<CliArgs> {
         .option('proxy', {
           type: 'string',
           description:
-            'Proxy for gemini client, like schema://user:password@host:port',
+            'Proxy for codey client, like schema://user:password@host:port',
         })
         .option('include-directories', {
           type: 'array',
