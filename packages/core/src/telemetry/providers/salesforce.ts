@@ -23,6 +23,23 @@ import type { ReadableSpan } from '@opentelemetry/sdk-trace-base';
 import { ExportResultCode } from '@opentelemetry/core';
 import type { Config } from '../../config/config.js';
 import { findGatewayModel } from '../../gateway/models.js';
+import {
+  EVENT_API_ERROR,
+  EVENT_API_REQUEST,
+  EVENT_API_RESPONSE,
+  EVENT_CHAT_COMPRESSION,
+  EVENT_CLI_CONFIG,
+  EVENT_CONTENT_RETRY,
+  EVENT_CONTENT_RETRY_FAILURE,
+  EVENT_CONVERSATION_FINISHED,
+  EVENT_FILE_OPERATION,
+  EVENT_INVALID_CHUNK,
+  EVENT_MALFORMED_JSON_RESPONSE,
+  EVENT_SLASH_COMMAND,
+  EVENT_TOOL_CALL,
+  EVENT_FLASH_FALLBACK,
+  EVENT_USER_PROMPT,
+} from '../constants.js';
 
 const SERVICE_NAME = 'salesforce-codey';
 const APP_INSIGHTS_KEY =
@@ -32,21 +49,21 @@ const O11Y_UPLOAD_ENDPOINT =
 
 // Allow-listed events from the telemetry plan
 const ALLOWED_EVENTS = new Set([
-  'gemini_cli.config',
-  'gemini_cli.user_prompt',
-  'gemini_cli.tool_call',
-  'gemini_cli.api_request',
-  'gemini_cli.api_response',
-  'gemini_cli.api_error',
-  'gemini_cli.flash_fallback',
-  'gemini_cli.slash_command',
-  'gemini_cli.conversation_finished',
-  'gemini_cli.chat_compression',
-  'gemini_cli.malformed_json_response',
-  'gemini_cli.chat.invalid_chunk',
-  'gemini_cli.chat.content_retry',
-  'gemini_cli.chat.content_retry_failure',
-  'gemini_cli.file_operation',
+  EVENT_CLI_CONFIG,
+  EVENT_USER_PROMPT,
+  EVENT_TOOL_CALL,
+  EVENT_API_REQUEST,
+  EVENT_API_RESPONSE,
+  EVENT_API_ERROR,
+  EVENT_FLASH_FALLBACK,
+  EVENT_SLASH_COMMAND,
+  EVENT_CONVERSATION_FINISHED,
+  EVENT_CHAT_COMPRESSION,
+  EVENT_MALFORMED_JSON_RESPONSE,
+  EVENT_INVALID_CHUNK,
+  EVENT_CONTENT_RETRY,
+  EVENT_CONTENT_RETRY_FAILURE,
+  EVENT_FILE_OPERATION,
   'tool_output_truncated',
   'loop_detected',
 ]);

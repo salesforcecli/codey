@@ -34,13 +34,11 @@ import type { StructuredError } from './turn.js';
 import {
   logContentRetry,
   logContentRetryFailure,
-  logInvalidChunk,
 } from '../telemetry/loggers.js';
 import { ChatRecordingService } from '../services/chatRecordingService.js';
 import {
   ContentRetryEvent,
   ContentRetryFailureEvent,
-  InvalidChunkEvent,
 } from '../telemetry/types.js';
 import { handleFallback } from '../fallback/handler.js';
 import { isFunctionResponse } from '../utils/messageInspectors.js';
@@ -511,10 +509,6 @@ export class GeminiChat {
           modelResponseParts.push(...content.parts);
         }
       } else {
-        logInvalidChunk(
-          this.config,
-          new InvalidChunkEvent('Invalid chunk received from stream.'),
-        );
         lastChunkIsInvalid = true;
       }
 
