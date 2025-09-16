@@ -320,7 +320,7 @@ export interface SalesforceTelemetrySetup {
 }
 
 /**
- * Sets up the forcedotcom telemetry provider with TelemetryReporter integration.
+ * Sets up the Salesforce telemetry provider with TelemetryReporter integration.
  * Returns OTel bridge exporters and a stop function for lifecycle management.
  */
 export async function setupSalesforceTelemetry(
