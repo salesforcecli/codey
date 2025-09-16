@@ -20,6 +20,7 @@ import { Tips } from './Tips.js';
 import { useSettings } from '../contexts/SettingsContext.js';
 import { useConfig } from '../contexts/ConfigContext.js';
 import { useUIState } from '../contexts/UIStateContext.js';
+import { TelemetryNotice } from './TelemetryNotice.js';
 
 interface AppHeaderProps {
   version: string;
@@ -40,6 +41,7 @@ export const AppHeader = ({ version }: AppHeaderProps) => {
         <Header version={version} nightly={nightly} />
       )}
       {showTips && <Tips config={config} />}
+      {config.getTelemetryEnabled() && <TelemetryNotice />}
     </Box>
   );
 };
