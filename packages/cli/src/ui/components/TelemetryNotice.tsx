@@ -19,11 +19,13 @@ import { Box, Text } from 'ink';
 import { theme } from '../semantic-colors.js';
 
 export const TelemetryNotice: React.FC = () => (
-    <Box marginTop={1}>
-      <Text color={theme.ui.comment}>
-      You acknowledge and agree that the Codey CLI may collect usage information, user environment, and crash reports for the purposes of providing services or functions that are relevant to use of the Codey CLI and product improvements. Use --no-telemetry or set telemetry.enabled to false to opt out.
-      </Text>
-    </Box>
-  );
-
-
+  <Box marginTop={1}>
+    <Text color={theme.ui.comment}>
+      You acknowledge and agree that the Codey CLI may collect usage
+      information, user environment, and crash reports for the purposes of
+      providing services or functions that are relevant to use of the Codey CLI
+      and product improvements. Use --no-telemetry or set telemetry.enabled to
+      false to opt out.
+    </Text>
+  </Box>
+);

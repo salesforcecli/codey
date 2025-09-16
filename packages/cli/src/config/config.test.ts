@@ -322,7 +322,7 @@ describe('loadCliConfig', () => {
     vi.restoreAllMocks();
   });
 
-  it.skip('should set showMemoryUsage to true when --show-memory-usage flag is present', async () => {
+  it('should set showMemoryUsage to true when --show-memory-usage flag is present', async () => {
     process.argv = ['node', 'script.js', '--show-memory-usage'];
     const argv = await parseArguments({} as Settings);
     const settings: Settings = {};
