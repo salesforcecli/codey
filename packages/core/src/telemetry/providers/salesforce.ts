@@ -326,16 +326,36 @@ export interface SalesforceTelemetrySetup {
 export async function setupSalesforceTelemetry(
   config: Config,
 ): Promise<SalesforceTelemetrySetup> {
+  // Temporarily silence noisy transitive console.log calls from @salesforce/o11y-reporter
+  const silenceO11yInitLogs = async <T>(fn: () => Promise<T>): Promise<T> => {
+    const originalLog = console.log;
+    // Narrow suppression to initialization chatter that prefixes or includes "O11y"
+    console.log = (...args: unknown[]) => {
+      const firstArg = typeof args[0] === 'string' ? args[0] : '';
+      if (firstArg.includes('O11y') || firstArg.includes('o11y')) {
+        return;
+      }
+      (originalLog as (...args: unknown[]) => void)(...args);
+    };
+    try {
+      return await fn();
+    } finally {
+      console.log = originalLog;
+    }
+  };
+
   // Initialize the bypass reporter with required options
-  const reporter = await SalesforceReporter.create({
-    project: SERVICE_NAME,
-    key: APP_INSIGHTS_KEY,
-    o11yUploadEndpoint: O11Y_UPLOAD_ENDPOINT,
-    enableAppInsights: true,
-    enableO11y: true,
-    userId: getUserId(),
-    sessionId: config.getSessionId(),
-  });
+  const reporter = await silenceO11yInitLogs(() =>
+    SalesforceReporter.create({
+      project: SERVICE_NAME,
+      key: APP_INSIGHTS_KEY,
+      o11yUploadEndpoint: O11Y_UPLOAD_ENDPOINT,
+      enableAppInsights: true,
+      enableO11y: true,
+      userId: getUserId(),
+      sessionId: config.getSessionId(),
+    }),
+  );
 
   // Create the bridge exporters
   const exceptionTraceExporter = new ExceptionOnlyTraceExporter(reporter);
