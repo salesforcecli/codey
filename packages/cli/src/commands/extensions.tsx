@@ -26,7 +26,7 @@ import { newCommand } from './extensions/new.js';
 
 export const extensionsCommand: CommandModule = {
   command: 'extensions <command>',
-  describe: 'Manage Gemini CLI extensions.',
+  describe: 'Manage Codey extensions.',
   builder: (yargs) =>
     yargs
       .command(installCommand)
