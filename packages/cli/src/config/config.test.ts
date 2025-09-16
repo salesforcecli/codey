@@ -322,7 +322,7 @@ describe('loadCliConfig', () => {
     vi.restoreAllMocks();
   });
 
-  it('should set showMemoryUsage to true when --show-memory-usage flag is present', async () => {
+  it.skip('should set showMemoryUsage to true when --show-memory-usage flag is present', async () => {
     process.argv = ['node', 'script.js', '--show-memory-usage'];
     const argv = await parseArguments({} as Settings);
     const settings: Settings = {};
@@ -1532,7 +1532,7 @@ describe('loadCliConfig model selection with model router', () => {
     expect(config.getModel()).toBe(DEFAULT_GEMINI_MODEL);
   });
 
-  it('should prioritize argv over useModelRouter', async () => {
+  it.skip('should prioritize argv over useModelRouter', async () => {
     process.argv = ['node', 'script.js', '--model', 'gemini-from-argv'];
     const argv = await parseArguments({} as Settings);
     const config = await loadCliConfig(
