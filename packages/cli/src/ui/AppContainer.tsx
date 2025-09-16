@@ -476,7 +476,7 @@ Logging in with Google... Please restart Gemini CLI to continue.
     historyManager.addItem(
       {
         type: MessageType.INFO,
-        text: 'Refreshing hierarchical memory (GEMINI.md or other context files)...',
+        text: 'Refreshing hierarchical memory (CODEY.md or other context files)...',
       },
       Date.now(),
     );
