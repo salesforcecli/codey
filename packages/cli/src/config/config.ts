@@ -34,12 +34,13 @@ import {
   setGeminiMdFilename as setServerGeminiMdFilename,
   getCurrentGeminiMdFilename,
   ApprovalMode,
+  DEFAULT_GEMINI_MODEL,
+  DEFAULT_GEMINI_MODEL_AUTO,
   DEFAULT_MEMORY_FILE_FILTERING_OPTIONS,
   FileDiscoveryService,
   ShellTool,
   EditTool,
   WriteFileTool,
-  DEFAULT_GEMINI_MODEL,
   DEFAULT_GATEWAY_MODEL,
   getModel,
 } from '@salesforce/codey-core';
@@ -568,6 +569,15 @@ export async function loadCliConfig(
     );
   }
 
+  const useModelRouter = settings.experimental?.useModelRouter ?? false;
+  const defaultModel = useModelRouter
+    ? DEFAULT_GEMINI_MODEL_AUTO
+    : DEFAULT_GEMINI_MODEL;
+  const resolvedModel: string =
+    argv.model || process.env['CODEY_ORG_USERNAME']
+      ? DEFAULT_GATEWAY_MODEL.displayId
+      : process.env['GEMINI_MODEL'] || settings.model?.name || defaultModel;
+
   const sandboxConfig = await loadSandboxConfig(settings, argv);
   const screenReader =
     argv.screenReader !== undefined
@@ -629,10 +639,7 @@ export async function loadCliConfig(
     cwd,
     fileDiscoveryService: fileService,
     bugCommand: settings.advanced?.bugCommand,
-    model:
-      argv.model || process.env['CODEY_ORG_USERNAME']
-        ? DEFAULT_GATEWAY_MODEL.displayId
-        : DEFAULT_GEMINI_MODEL,
+    model: resolvedModel,
     extensionContextFilePaths,
     maxSessionTurns: settings.model?.maxSessionTurns ?? -1,
     experimentalZedIntegration: argv.experimentalAcp || false,
@@ -658,6 +665,7 @@ export async function loadCliConfig(
     output: {
       format: (argv.outputFormat ?? settings.output?.format) as OutputFormat,
     },
+    useModelRouter,
   });
 }
 

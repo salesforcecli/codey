@@ -23,6 +23,7 @@ import { DefaultStrategy } from './strategies/defaultStrategy.js';
 import { CompositeStrategy } from './strategies/compositeStrategy.js';
 import { FallbackStrategy } from './strategies/fallbackStrategy.js';
 import { OverrideStrategy } from './strategies/overrideStrategy.js';
+import { ClassifierStrategy } from './strategies/classifierStrategy.js';
 
 vi.mock('../config/config.js');
 vi.mock('../core/baseLlmClient.js');
@@ -30,6 +31,7 @@ vi.mock('./strategies/defaultStrategy.js');
 vi.mock('./strategies/compositeStrategy.js');
 vi.mock('./strategies/fallbackStrategy.js');
 vi.mock('./strategies/overrideStrategy.js');
+vi.mock('./strategies/classifierStrategy.js');
 
 describe('ModelRouterService', () => {
   let service: ModelRouterService;
@@ -46,7 +48,12 @@ describe('ModelRouterService', () => {
     vi.spyOn(mockConfig, 'getBaseLlmClient').mockReturnValue(mockBaseLlmClient);
 
     mockCompositeStrategy = new CompositeStrategy(
-      [new FallbackStrategy(), new OverrideStrategy(), new DefaultStrategy()],
+      [
+        new FallbackStrategy(),
+        new OverrideStrategy(),
+        new ClassifierStrategy(),
+        new DefaultStrategy(),
+      ],
       'agent-router',
     );
     vi.mocked(CompositeStrategy).mockImplementation(
@@ -72,10 +79,11 @@ describe('ModelRouterService', () => {
     const compositeStrategyArgs = vi.mocked(CompositeStrategy).mock.calls[0];
     const childStrategies = compositeStrategyArgs[0];
 
-    expect(childStrategies.length).toBe(3);
+    expect(childStrategies.length).toBe(4);
     expect(childStrategies[0]).toBeInstanceOf(FallbackStrategy);
     expect(childStrategies[1]).toBeInstanceOf(OverrideStrategy);
-    expect(childStrategies[2]).toBeInstanceOf(DefaultStrategy);
+    expect(childStrategies[2]).toBeInstanceOf(ClassifierStrategy);
+    expect(childStrategies[3]).toBeInstanceOf(DefaultStrategy);
     expect(compositeStrategyArgs[1]).toBe('agent-router');
   });
 

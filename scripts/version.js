@@ -85,7 +85,7 @@ if (cliPackageJson.config?.sandboxImageUri) {
   writeJson(cliPackageJsonPath, cliPackageJson);
 }
 
-// 6. Run `npm install` to update package-lock.json.
+// 6. Run `npm install` to update npm-shrinkwrap.json.
 run('npm install');
 
 console.log(`Successfully bumped versions to v${newVersion}.`);

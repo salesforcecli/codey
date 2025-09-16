@@ -51,6 +51,7 @@ import type {
   FlashFallbackEvent,
   NextSpeakerCheckEvent,
   LoopDetectedEvent,
+  LoopDetectionDisabledEvent,
   SlashCommandEvent,
   ConversationFinishedEvent,
   KittySequenceOverflowEvent,
@@ -449,6 +450,13 @@ export function logLoopDetected(
     attributes,
   };
   logger.emit(logRecord);
+}
+
+export function logLoopDetectionDisabled(
+  config: Config,
+  _event: LoopDetectionDisabledEvent,
+): void {
+  ClearcutLogger.getInstance(config)?.logLoopDetectionDisabledEvent();
 }
 
 export function logNextSpeakerCheck(

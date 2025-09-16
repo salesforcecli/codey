@@ -165,6 +165,10 @@ export type HistoryItemCompression = HistoryItemBase & {
   compression: CompressionProps;
 };
 
+export type HistoryItemExtensionsList = HistoryItemBase & {
+  type: 'extensions_list';
+};
+
 // Using Omit<HistoryItem, 'id'> seems to have some issues with typescript's
 // type inference e.g. historyItem.type === 'tool_group' isn't auto-inferring that
 // 'tools' in historyItem.
@@ -183,7 +187,8 @@ export type HistoryItemWithoutId =
   | HistoryItemModelStats
   | HistoryItemToolStats
   | HistoryItemQuit
-  | HistoryItemCompression;
+  | HistoryItemCompression
+  | HistoryItemExtensionsList;
 
 export type HistoryItem = HistoryItemWithoutId & { id: number };
 
@@ -200,6 +205,7 @@ export enum MessageType {
   QUIT = 'quit',
   GEMINI = 'gemini',
   COMPRESSION = 'compression',
+  EXTENSIONS_LIST = 'extensions_list',
 }
 
 // Simplified message structure for internal feedback
