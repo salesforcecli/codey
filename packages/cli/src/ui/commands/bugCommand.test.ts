@@ -86,7 +86,7 @@ describe('bugCommand', () => {
 * **IDE Client:** VSCode
 `;
     const expectedUrl =
-      'https://github.com/google-gemini/gemini-cli/issues/new?template=bug_report.yml&title=A%20test%20bug&info=' +
+      'https://github.com/salesforcecli/codey/issues/new?template=bug_report.yml&title=A%20test%20bug&info=' +
       encodeURIComponent(expectedInfo);
 
     expect(open).toHaveBeenCalledWith(expectedUrl);
