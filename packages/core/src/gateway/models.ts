@@ -136,6 +136,26 @@ export const GPT4oMini: GatewayModel = {
   },
 };
 
+export const Gemini25FlashLite: GatewayModel = {
+  description: 'Gemini 2.5 Flash Lite',
+  displayId: 'Gemini 2.5 Flash Lite',
+  model: 'llmgateway__VertexAIGemini25FlashLite001',
+  supportsMcp: true,
+  maxInputTokens: 1048576, // refer to https://git.soma.salesforce.com/pages/tech-enablement/einstein/docs/gateway/models-and-providers/#comparison-table
+  maxOutputTokens: 65535,
+  extractUsage: (data: ChatGenerations) => {
+    const usage = data.generation_details?.parameters?.usage;
+    if (usage) {
+      return {
+        inputTokens: usage['inputTokenCount'],
+        outputTokens: usage['outputTokenCount'],
+        totalTokens: usage['totalTokenCount'],
+      };
+    }
+    return;
+  },
+};
+
 const getModelFromEnv = (envVar: string): GatewayModel | undefined => {
   const model = process.env[envVar];
   if (model) return findGatewayModel(model);
@@ -143,7 +163,7 @@ const getModelFromEnv = (envVar: string): GatewayModel | undefined => {
 };
 
 export const DEFAULT_GATEWAY_MODEL =
-  getModelFromEnv('CODEY_DEFAULT_MODEL') ?? GPT4oMini;
+  getModelFromEnv('CODEY_DEFAULT_MODEL') ?? Gemini25FlashLite;
 export const DEFAULT_GATEWAY_FALLBACK_MODEL =
   getModelFromEnv('CODEY_DEFAULT_FALLBACK_MODEL') ?? QWEN;
 
@@ -152,6 +172,7 @@ const GATEWAY_MODELS: GatewayModel[] = [
   Claude37Sonnet,
   Claude4Sonnet,
   GPT4oMini,
+  Gemini25FlashLite,
 ];
 
 /**

@@ -59,10 +59,6 @@ function shouldSkipEvent(
     return true;
   }
   if (!data) return true;
-  const trimmedData = data.trim();
-  if (trimmedData === '[DONE]' || trimmedData === 'DONE') {
-    return true;
-  }
   return false;
 }
 
@@ -272,7 +268,37 @@ export class GatewayClient {
       // Create the parser
       const parser = createParser({
         onEvent: ({ event, data }) => {
+          if (!data) return;
           if (shouldSkipEvent(event, data)) return;
+          const trimmed = data.trim();
+          // Treat provider DONE sentinel as a terminal JSON chunk so downstream can finalize cleanly
+          if (trimmed === '[DONE]' || trimmed === 'DONE') {
+            try {
+              const terminalChunk =
+                endpoint === '/chat/generations/stream'
+                  ? ({
+                      id: 'terminal',
+                      generation_details: {
+                        generations: [
+                          {
+                            role: 'assistant',
+                            content: '',
+                            parameters: { finish_reason: 'stop' },
+                          },
+                        ],
+                        parameters: {},
+                      },
+                    } as unknown as T)
+                  : ({ id: 'terminal', generations: [] } as unknown as T);
+              queue.push(terminalChunk);
+            } catch (e) {
+              console.warn(
+                `Failed to synthesize terminal chunk from DONE sentinel`,
+                e,
+              );
+            }
+            return;
+          }
           try {
             queue.push(JSON.parse(data));
           } catch (e) {

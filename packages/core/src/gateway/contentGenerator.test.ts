@@ -84,7 +84,8 @@ describe('GatewayContentGenerator (happy paths)', () => {
       });
 
       const request: GenerateContentParameters = {
-        model: 'ignored-by-mock',
+        // Use a model whose usage mapping matches prompt_tokens/completion_tokens/total_tokens
+        model: 'llmgateway__OpenAIGPT4OmniMini',
         contents: { role: 'user', parts: [{ text: 'Ping' }] },
         config: {
           systemInstruction: {
@@ -149,7 +150,7 @@ describe('GatewayContentGenerator (happy paths)', () => {
       });
 
       const requestWithTools: GenerateContentParameters = {
-        model: 'ignored',
+        model: 'llmgateway__OpenAIGPT4OmniMini',
         contents: { role: 'user', parts: [{ text: 'Call tool' }] },
         config: {
           tools: [
@@ -217,7 +218,7 @@ describe('GatewayContentGenerator (happy paths)', () => {
       mockGenerateChatCompletionStream.mockResolvedValue(stream());
 
       const request: GenerateContentParameters = {
-        model: 'ignored',
+        model: 'llmgateway__OpenAIGPT4OmniMini',
         contents: { role: 'user', parts: [{ text: 'Hi' }] },
       };
 
@@ -275,7 +276,7 @@ describe('GatewayContentGenerator (happy paths)', () => {
       });
       await gen.generateContent(
         {
-          model: 'ignored',
+          model: 'llmgateway__OpenAIGPT4OmniMini',
           contents: { role: 'user', parts: [{ text: 'Count?' }] },
         },
         'id',
@@ -297,7 +298,7 @@ describe('GatewayContentGenerator (happy paths)', () => {
       });
 
       const req: EmbedContentParameters = {
-        model: 'ignored',
+        model: 'llmgateway__OpenAIGPT4OmniMini',
         contents: { role: 'user', parts: [{ text: 'Vectorize me' }] },
       };
 
