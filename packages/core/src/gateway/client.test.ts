@@ -337,7 +337,7 @@ describe('GatewayClient', () => {
       ).rejects.toThrow('Gateway API Error: 400 - Bad Request');
     });
 
-  it('should skip irrelevant events but still emit terminal chunk on DONE', async () => {
+    it('should skip irrelevant events but still emit terminal chunk on DONE', async () => {
       const mockParser = {
         feed: vi.fn(),
       };
@@ -375,15 +375,15 @@ describe('GatewayClient', () => {
         body: mockAsyncIterator,
       } as unknown as Awaited<ReturnType<typeof request>>);
 
-  const generator = await client.generateCompletionStream(mockRequest);
-  const results = [];
+      const generator = await client.generateCompletionStream(mockRequest);
+      const results = [];
 
       for await (const chunk of generator) {
         results.push(chunk);
       }
-  // Irrelevant events (scores) are skipped, but DONE sentinel produces a terminal chunk
-  expect(results).toHaveLength(1);
-  expect(results[0]).toEqual({ id: 'terminal', generations: [] });
+      // Irrelevant events (scores) are skipped, but DONE sentinel produces a terminal chunk
+      expect(results).toHaveLength(1);
+      expect(results[0]).toEqual({ id: 'terminal', generations: [] });
     });
   });
 
