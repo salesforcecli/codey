@@ -41,6 +41,7 @@ import {
 import { resolveEnvVarsInObject } from '../utils/envVarResolver.js';
 import { customDeepMerge } from '../utils/deepMerge.js';
 import { updateSettingsFilePreservingFormat } from '../utils/commentJson.js';
+import { BUILTIN_SYSTEM_DEFAULTS } from './builtinSystemDefaults.js';
 
 function getMergeStrategyForPath(path: string[]): MergeStrategy | undefined {
   let current: SettingDefinition | undefined = undefined;
@@ -677,7 +678,14 @@ export function loadSettings(
 
   // Environment variables for runtime use
   systemSettings = resolveEnvVarsInObject(systemResult.settings);
-  systemDefaultSettings = resolveEnvVarsInObject(systemDefaultsResult.settings);
+  systemDefaultSettings = resolveEnvVarsInObject(
+    customDeepMerge(
+      getMergeStrategyForPath,
+      {},
+      BUILTIN_SYSTEM_DEFAULTS,
+      systemDefaultsResult.settings,
+    ) as Settings,
+  );
   userSettings = resolveEnvVarsInObject(userResult.settings);
   workspaceSettings = resolveEnvVarsInObject(workspaceResult.settings);
 
