@@ -329,18 +329,18 @@ export async function setupSalesforceTelemetry(
   // Temporarily silence noisy transitive console.log calls from @salesforce/o11y-reporter
   const silenceO11yInitLogs = async <T>(fn: () => Promise<T>): Promise<T> => {
     const originalLog = console.log;
-    // Narrow suppression to initialization chatter that prefixes or includes "O11y"
-    console.log = (...args: unknown[]) => {
-      const firstArg = typeof args[0] === 'string' ? args[0] : '';
-      if (firstArg.includes('O11y') || firstArg.includes('o11y')) {
-        return;
-      }
-      (originalLog as (...args: unknown[]) => void)(...args);
+    const originalError = console.error;
+    console.log = () => {
+      // no-op
+    };
+    console.error = () => {
+      // no-op
     };
     try {
       return await fn();
     } finally {
       console.log = originalLog;
+      console.error = originalError;
     }
   };
 
