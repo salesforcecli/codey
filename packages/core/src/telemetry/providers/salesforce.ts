@@ -337,7 +337,10 @@ export async function setupSalesforceTelemetry(
       // no-op
     };
     try {
-      return await fn();
+      const result = await fn();
+      // Brief sleep to ensure the logs are silenced
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      return result;
     } finally {
       console.log = originalLog;
       console.error = originalError;
