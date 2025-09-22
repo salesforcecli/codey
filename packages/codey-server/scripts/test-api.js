@@ -26,7 +26,7 @@
  *
  * Usage:
  *   node test-api.js --auth-type gemini --model gemini-pro
- *   node test-api.js --auth-type gateway --org user@example.com --model claude-3
+ *   node test-api.js --auth-type gateway --org user@example.com --model llmgateway__OpenAIGPT4OmniMini
  *   node test-api.js --auth-type gemini --message "Hello, what is 2+2?"
  *
  * Environment Variables:
@@ -159,7 +159,7 @@ Environment Variables:
 
 Examples:
   # Test with Gemini auth
-  node test-api.js --auth-type gemini --model gemini-pro
+  node test-api.js --auth-type gemini
 
   # Test with Gateway auth
   node test-api.js --auth-type gateway --org user@example.com
