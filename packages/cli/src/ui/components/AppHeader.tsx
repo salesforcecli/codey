@@ -21,6 +21,11 @@ import { useSettings } from '../contexts/SettingsContext.js';
 import { useConfig } from '../contexts/ConfigContext.js';
 import { useUIState } from '../contexts/UIStateContext.js';
 import { TelemetryNotice } from './TelemetryNotice.js';
+import { useEffect, useMemo } from 'react';
+import {
+  hasSeenTelemetryNotice,
+  markTelemetryNoticeSeen,
+} from '../../utils/telemetryNotice.js';
 
 interface AppHeaderProps {
   version: string;
@@ -31,6 +36,20 @@ export const AppHeader = ({ version }: AppHeaderProps) => {
   const config = useConfig();
   const { nightly } = useUIState();
 
+  const shouldShowTelemetryNotice = useMemo(
+    () =>
+      config.getTelemetryEnabled() &&
+      !config.getScreenReader() &&
+      !hasSeenTelemetryNotice(),
+    [config],
+  );
+
+  useEffect(() => {
+    if (shouldShowTelemetryNotice) {
+      markTelemetryNoticeSeen();
+    }
+  }, [shouldShowTelemetryNotice]);
+
   return (
     <Box flexDirection="column">
       {!(settings.merged.ui?.hideBanner || config.getScreenReader()) && (
@@ -39,7 +58,7 @@ export const AppHeader = ({ version }: AppHeaderProps) => {
       {!(settings.merged.ui?.hideTips || config.getScreenReader()) && (
         <Tips config={config} />
       )}
-      {config.getTelemetryEnabled() && <TelemetryNotice />}
+      {shouldShowTelemetryNotice && <TelemetryNotice />}
     </Box>
   );
 };

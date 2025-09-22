@@ -52,6 +52,14 @@ export class Storage {
     return path.join(Storage.getGlobalGeminiDir(), 'installation_id');
   }
 
+  static getFlagsDir(): string {
+    return path.join(Storage.getGlobalGeminiDir(), 'flags');
+  }
+
+  static getTelemetryNoticeSeenPath(): string {
+    return path.join(Storage.getFlagsDir(), 'telemetry_notice_seen');
+  }
+
   static getGoogleAccountsPath(): string {
     return path.join(Storage.getGlobalGeminiDir(), GOOGLE_ACCOUNTS_FILENAME);
   }
