@@ -109,7 +109,7 @@ export async function initClient(
       includeDirectories: undefined,
       screenReader: false,
       useSmartEdit: false,
-      sessionSummary: undefined,
+      useWriteTodos: undefined,
       promptWords: undefined,
       outputFormat: undefined,
       ...opts,

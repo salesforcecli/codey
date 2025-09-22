@@ -22,7 +22,7 @@ import { ToolCallStatus } from '../../types.js';
 import { ToolMessage } from './ToolMessage.js';
 import { ToolConfirmationMessage } from './ToolConfirmationMessage.js';
 import { theme } from '../../semantic-colors.js';
-import { SHELL_COMMAND_NAME } from '../../constants.js';
+import { SHELL_COMMAND_NAME, SHELL_NAME } from '../../constants.js';
 import { useConfig } from '../../contexts/ConfigContext.js';
 
 interface ToolGroupMessageProps {
@@ -32,7 +32,7 @@ interface ToolGroupMessageProps {
   terminalWidth: number;
   isFocused?: boolean;
   activeShellPtyId?: number | null;
-  shellFocused?: boolean;
+  embeddedShellFocused?: boolean;
   onShellInputSubmit?: (input: string) => void;
 }
 
@@ -43,10 +43,10 @@ export const ToolGroupMessage: React.FC<ToolGroupMessageProps> = ({
   terminalWidth,
   isFocused = true,
   activeShellPtyId,
-  shellFocused,
+  embeddedShellFocused,
 }) => {
-  const isShellFocused =
-    shellFocused &&
+  const isEmbeddedShellFocused =
+    embeddedShellFocused &&
     toolCalls.some(
       (t) =>
         t.ptyId === activeShellPtyId && t.status === ToolCallStatus.Executing,
@@ -57,11 +57,15 @@ export const ToolGroupMessage: React.FC<ToolGroupMessageProps> = ({
   );
 
   const config = useConfig();
-  const isShellCommand = toolCalls.some((t) => t.name === SHELL_COMMAND_NAME);
+  const isShellCommand = toolCalls.some(
+    (t) => t.name === SHELL_COMMAND_NAME || t.name === SHELL_NAME,
+  );
   const borderColor =
-    hasPending || isShellCommand || isShellFocused
-      ? theme.status.warning
-      : theme.border.default;
+    isShellCommand || isEmbeddedShellFocused
+      ? theme.ui.symbol
+      : hasPending
+        ? theme.status.warning
+        : theme.border.default;
 
   const staticHeight = /* border */ 2 + /* marginBottom */ 1;
   // This is a bit of a magic number, but it accounts for the border and
@@ -104,7 +108,9 @@ export const ToolGroupMessage: React.FC<ToolGroupMessageProps> = ({
       */
       width="100%"
       marginLeft={1}
-      borderDimColor={hasPending}
+      borderDimColor={
+        hasPending && (!isShellCommand || !isEmbeddedShellFocused)
+      }
       borderColor={borderColor}
       gap={1}
     >
@@ -125,7 +131,7 @@ export const ToolGroupMessage: React.FC<ToolGroupMessageProps> = ({
                       : 'medium'
                 }
                 activeShellPtyId={activeShellPtyId}
-                shellFocused={shellFocused}
+                embeddedShellFocused={embeddedShellFocused}
                 config={config}
               />
             </Box>

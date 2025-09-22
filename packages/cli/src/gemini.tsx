@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import React from 'react';
 import { render } from 'ink';
 import { AppContainer } from './ui/AppContainer.js';
 import { loadCliConfig, parseArguments } from './config/config.js';
@@ -25,7 +26,12 @@ import dns from 'node:dns';
 import { spawn } from 'node:child_process';
 import { start_sandbox } from './utils/sandbox.js';
 import type { DnsResolutionOrder, LoadedSettings } from './config/settings.js';
-import { loadSettings, SettingScope } from './config/settings.js';
+import { RELAUNCH_EXIT_CODE } from './utils/processUtils.js';
+import {
+  loadSettings,
+  migrateDeprecatedSettings,
+  SettingScope,
+} from './config/settings.js';
 import { themeManager } from './ui/themes/theme-manager.js';
 import { getStartupWarnings } from './utils/startupWarnings.js';
 import { getUserStartupWarnings } from './utils/userStartupWarnings.js';
@@ -44,7 +50,6 @@ import {
   logUserPrompt,
   AuthType,
   getOauthClient,
-  uiTelemetryService,
 } from '@salesforce/codey-core';
 import {
   initializeApp,
@@ -58,7 +63,7 @@ import { checkForUpdates } from './ui/utils/updateCheck.js';
 import { handleAutoUpdate } from './utils/handleAutoUpdate.js';
 import { appEvents, AppEvent } from './utils/events.js';
 import { SettingsContext } from './ui/contexts/SettingsContext.js';
-import { writeFileSync } from 'node:fs';
+
 import { SessionStatsProvider } from './ui/contexts/SessionContext.js';
 import { VimModeProvider } from './ui/contexts/VimModeContext.js';
 import { KeypressProvider } from './ui/contexts/KeypressContext.js';
@@ -112,17 +117,50 @@ function getNodeMemoryArgs(config: Config): string[] {
   return [];
 }
 
-async function relaunchWithAdditionalArgs(additionalArgs: string[]) {
-  const nodeArgs = [...additionalArgs, ...process.argv.slice(1)];
-  const newEnv = { ...process.env, GEMINI_CLI_NO_RELAUNCH: 'true' };
+async function relaunchOnExitCode(runner: () => Promise<number>) {
+  while (true) {
+    try {
+      const exitCode = await runner();
 
-  const child = spawn(process.execPath, nodeArgs, {
-    stdio: 'inherit',
-    env: newEnv,
-  });
+      if (exitCode !== RELAUNCH_EXIT_CODE) {
+        process.exit(exitCode);
+      }
+    } catch (error) {
+      process.stdin.resume();
+      console.error('Fatal error: Failed to relaunch the CLI process.', error);
+      process.exit(1);
+    }
+  }
+}
 
-  await new Promise((resolve) => child.on('close', resolve));
-  process.exit(0);
+async function relaunchAppInChildProcess(additionalArgs: string[]) {
+  if (process.env['GEMINI_CLI_NO_RELAUNCH']) {
+    return;
+  }
+
+  const runner = () => {
+    const nodeArgs = [...additionalArgs, ...process.argv.slice(1)];
+    const newEnv = { ...process.env, GEMINI_CLI_NO_RELAUNCH: 'true' };
+
+    // The parent process should not be reading from stdin while the child is running.
+    process.stdin.pause();
+
+    const child = spawn(process.execPath, nodeArgs, {
+      stdio: 'inherit',
+      env: newEnv,
+    });
+
+    return new Promise<number>((resolve, reject) => {
+      child.on('error', reject);
+      child.on('close', (code) => {
+        // Resume stdin before the parent process exits.
+        process.stdin.resume();
+        resolve(code ?? 1);
+      });
+    });
+  };
+
+  await relaunchOnExitCode(runner);
 }
 
 import { runZedIntegration } from './zed-integration/zedIntegration.js';
@@ -186,10 +224,19 @@ export async function startInteractiveUI(
     );
   };
 
-  const instance = render(<AppWrapper />, {
-    exitOnCtrlC: false,
-    isScreenReaderEnabled: config.getScreenReader(),
-  });
+  const instance = render(
+    process.env['DEBUG'] ? (
+      <React.StrictMode>
+        <AppWrapper />
+      </React.StrictMode>
+    ) : (
+      <AppWrapper />
+    ),
+    {
+      exitOnCtrlC: false,
+      isScreenReaderEnabled: config.getScreenReader(),
+    },
+  );
 
   checkForUpdates()
     .then((info) => {
@@ -208,7 +255,7 @@ export async function startInteractiveUI(
 export async function main() {
   setupUnhandledRejectionHandler();
   const settings = loadSettings();
-
+  migrateDeprecatedSettings(settings);
   await cleanupCheckpoints();
 
   const argv = await parseArguments(settings.merged);
@@ -248,15 +295,6 @@ export async function main() {
 
     // Detect and enable Kitty keyboard protocol once at startup.
     kittyProtocolDetectionComplete = detectAndEnableKittyProtocol();
-  }
-  if (argv.sessionSummary) {
-    registerCleanup(() => {
-      const metrics = uiTelemetryService.getMetrics();
-      writeFileSync(
-        argv.sessionSummary!,
-        JSON.stringify({ sessionMetrics: metrics }, null, 2),
-      );
-    });
   }
 
   const consolePatcher = new ConsolePatcher({
@@ -359,15 +397,14 @@ export async function main() {
 
       const sandboxArgs = injectStdinIntoArgs(process.argv, stdinData);
 
-      await start_sandbox(sandboxConfig, memoryArgs, config, sandboxArgs);
+      await relaunchOnExitCode(() =>
+        start_sandbox(sandboxConfig, memoryArgs, config, sandboxArgs),
+      );
       process.exit(0);
     } else {
-      // Not in a sandbox and not entering one, so relaunch with additional
-      // arguments to control memory usage if needed.
-      if (memoryArgs.length > 0) {
-        await relaunchWithAdditionalArgs(memoryArgs);
-        process.exit(0);
-      }
+      // Relaunch app so we always have a child process that can be internally
+      // restarted if needed.
+      await relaunchAppInChildProcess(memoryArgs);
     }
   }
 
@@ -442,7 +479,7 @@ export async function main() {
     console.log('Session ID: %s', sessionId);
   }
 
-  await runNonInteractive(nonInteractiveConfig, input, prompt_id);
+  await runNonInteractive(nonInteractiveConfig, settings, input, prompt_id);
   // Call cleanup before process.exit, which causes cleanup to not run
   await runExitCleanup();
   process.exit(0);

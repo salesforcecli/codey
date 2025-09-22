@@ -59,6 +59,7 @@ import {
 import * as fs from 'node:fs'; // fs will be mocked separately
 import stripJsonComments from 'strip-json-comments'; // Will be mocked separately
 import { isWorkspaceTrusted } from './trustedFolders.js';
+import { disableExtension } from './extension.js';
 
 // These imports will get the versions from the vi.mock('./settings.js', ...) factory.
 import {
@@ -71,8 +72,11 @@ import {
   needsMigration,
   type Settings,
   loadEnvironment,
+  migrateDeprecatedSettings,
+  SettingScope,
 } from './settings.js';
 import { FatalConfigError, GEMINI_DIR, AuthType } from '@salesforce/codey-core';
+import { BUILTIN_SYSTEM_DEFAULTS } from './builtinSystemDefaults.js';
 
 const MOCK_WORKSPACE_DIR = '/mock/workspace';
 // Use the (mocked) SETTINGS_DIRECTORY_NAME for consistency
@@ -99,6 +103,10 @@ vi.mock('fs', async (importOriginal) => {
     realpathSync: (p: string) => p,
   };
 });
+
+vi.mock('./extension.js', () => ({
+  disableExtension: vi.fn(),
+}));
 
 vi.mock('strip-json-comments', () => ({
   default: vi.fn((content) => content),
@@ -136,7 +144,7 @@ describe('Settings Loading and Merging', () => {
       expect(settings.system.settings).toEqual({});
       expect(settings.user.settings).toEqual({});
       expect(settings.workspace.settings).toEqual({});
-      expect(settings.merged).toEqual({});
+      expect(settings.merged).toEqual({ ...BUILTIN_SYSTEM_DEFAULTS });
     });
 
     it('should load system settings if only system file exists', () => {
@@ -144,6 +152,7 @@ describe('Settings Loading and Merging', () => {
         (p: fs.PathLike) => p === getSystemSettingsPath(),
       );
       const systemSettingsContent = {
+        ...BUILTIN_SYSTEM_DEFAULTS,
         ui: {
           theme: 'system-default',
         },
@@ -204,6 +213,7 @@ describe('Settings Loading and Merging', () => {
       expect(settings.user.settings).toEqual(userSettingsContent);
       expect(settings.workspace.settings).toEqual({});
       expect(settings.merged).toEqual({
+        ...BUILTIN_SYSTEM_DEFAULTS,
         ...userSettingsContent,
       });
     });
@@ -237,6 +247,7 @@ describe('Settings Loading and Merging', () => {
       expect(settings.user.settings).toEqual({});
       expect(settings.workspace.settings).toEqual(workspaceSettingsContent);
       expect(settings.merged).toEqual({
+        ...BUILTIN_SYSTEM_DEFAULTS,
         ...workspaceSettingsContent,
       });
     });
@@ -302,6 +313,7 @@ describe('Settings Loading and Merging', () => {
       expect(settings.user.settings).toEqual(userSettingsContent);
       expect(settings.workspace.settings).toEqual(workspaceSettingsContent);
       expect(settings.merged).toEqual({
+        ...BUILTIN_SYSTEM_DEFAULTS,
         ui: {
           theme: 'system-theme',
         },
@@ -368,6 +380,7 @@ describe('Settings Loading and Merging', () => {
           name: 'gemini-pro',
         },
         mcpServers: {
+          ...BUILTIN_SYSTEM_DEFAULTS.mcpServers,
           'legacy-server-1': {
             command: 'npm',
             args: ['run', 'start:server1'],
@@ -454,6 +467,7 @@ describe('Settings Loading and Merging', () => {
     it('should merge all settings files with the correct precedence', () => {
       (mockFsExistsSync as Mock).mockReturnValue(true);
       const systemDefaultsContent = {
+        ...BUILTIN_SYSTEM_DEFAULTS,
         ui: {
           theme: 'default-theme',
         },
@@ -514,6 +528,7 @@ describe('Settings Loading and Merging', () => {
       expect(settings.user.settings).toEqual(userSettingsContent);
       expect(settings.workspace.settings).toEqual(workspaceSettingsContent);
       expect(settings.merged).toEqual({
+        ...BUILTIN_SYSTEM_DEFAULTS,
         context: {
           fileName: 'WORKSPACE_CONTEXT.md',
           includeDirectories: [
@@ -813,7 +828,6 @@ describe('Settings Loading and Merging', () => {
       const settings = loadSettings(MOCK_WORKSPACE_DIR);
       expect(settings.merged.telemetry).toBeUndefined();
       expect(settings.merged.ui).toBeUndefined();
-      expect(settings.merged.mcpServers).toBeUndefined();
     });
 
     it('should merge MCP servers correctly, with workspace taking precedence', () => {
@@ -863,6 +877,7 @@ describe('Settings Loading and Merging', () => {
       expect(settings.user.settings).toEqual(userSettingsContent);
       expect(settings.workspace.settings).toEqual(workspaceSettingsContent);
       expect(settings.merged.mcpServers).toEqual({
+        ...BUILTIN_SYSTEM_DEFAULTS.mcpServers,
         'user-server': {
           command: 'user-command',
           args: ['--user-arg'],
@@ -902,6 +917,7 @@ describe('Settings Loading and Merging', () => {
 
       const settings = loadSettings(MOCK_WORKSPACE_DIR);
       expect(settings.merged.mcpServers).toEqual({
+        ...BUILTIN_SYSTEM_DEFAULTS.mcpServers,
         'user-only-server': {
           command: 'user-only-command',
           description: 'User only server',
@@ -931,6 +947,7 @@ describe('Settings Loading and Merging', () => {
 
       const settings = loadSettings(MOCK_WORKSPACE_DIR);
       expect(settings.merged.mcpServers).toEqual({
+        ...BUILTIN_SYSTEM_DEFAULTS.mcpServers,
         'workspace-only-server': {
           command: 'workspace-only-command',
           description: 'Workspace only server',
@@ -942,7 +959,9 @@ describe('Settings Loading and Merging', () => {
       (mockFsExistsSync as Mock).mockReturnValue(false); // No settings files exist
       (fs.readFileSync as Mock).mockReturnValue('{}');
       const settings = loadSettings(MOCK_WORKSPACE_DIR);
-      expect(settings.merged.mcpServers).toBeUndefined();
+      expect(settings.merged.mcpServers).toEqual({
+        ...BUILTIN_SYSTEM_DEFAULTS.mcpServers,
+      });
     });
 
     it('should merge MCP servers from system, user, and workspace with system taking precedence', () => {
@@ -996,6 +1015,7 @@ describe('Settings Loading and Merging', () => {
       const settings = loadSettings(MOCK_WORKSPACE_DIR);
 
       expect(settings.merged.mcpServers).toEqual({
+        ...BUILTIN_SYSTEM_DEFAULTS.mcpServers,
         'user-server': {
           command: 'user-command',
         },
@@ -1668,6 +1688,7 @@ describe('Settings Loading and Merging', () => {
         expect(settings.system.path).toBe(MOCK_ENV_SYSTEM_SETTINGS_PATH);
         expect(settings.system.settings).toEqual(systemSettingsContent);
         expect(settings.merged).toEqual({
+          ...BUILTIN_SYSTEM_DEFAULTS,
           ...systemSettingsContent,
         });
       });
@@ -2110,7 +2131,7 @@ describe('Settings Loading and Merging', () => {
       const settings = loadSettings(MOCK_WORKSPACE_DIR);
 
       // Verify initial state is empty
-      expect(settings.merged).toEqual({});
+      expect(settings.merged).toEqual({ ...BUILTIN_SYSTEM_DEFAULTS });
 
       // Set environment variable
       process.env['CODEY_ORG_USERNAME'] = 'test@example.com';
@@ -2451,6 +2472,18 @@ describe('Settings Loading and Merging', () => {
         allowMCPServers: ['serverA'],
       });
     });
+
+    it('should correctly migrate customWittyPhrases', () => {
+      const v2Settings: Partial<Settings> = {
+        ui: {
+          customWittyPhrases: ['test phrase'],
+        },
+      };
+      const v1Settings = migrateSettingsToV1(v2Settings as Settings);
+      expect(v1Settings).toEqual({
+        customWittyPhrases: ['test phrase'],
+      });
+    });
   });
 
   describe('loadEnvironment', () => {
@@ -2509,7 +2542,7 @@ describe('Settings Loading and Merging', () => {
     });
 
     it('should return false for settings that are already in V2 format', () => {
-      const v2Settings = {
+      const v2Settings: Partial<Settings> = {
         ui: {
           theme: 'dark',
         },
@@ -2567,6 +2600,124 @@ describe('Settings Loading and Merging', () => {
         someUnrecognizedKey: 'value',
       };
       expect(needsMigration(settings)).toBe(false);
+    });
+  });
+
+  describe('migrateDeprecatedSettings', () => {
+    let mockFsExistsSync: Mocked<typeof fs.existsSync>;
+    let mockFsReadFileSync: Mocked<typeof fs.readFileSync>;
+    let mockDisableExtension: Mocked<typeof disableExtension>;
+
+    beforeEach(() => {
+      vi.resetAllMocks();
+
+      mockFsExistsSync = vi.mocked(fs.existsSync);
+      mockFsReadFileSync = vi.mocked(fs.readFileSync);
+      mockDisableExtension = vi.mocked(disableExtension);
+
+      (mockFsExistsSync as Mock).mockReturnValue(true);
+      vi.mocked(isWorkspaceTrusted).mockReturnValue(true);
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('should migrate disabled extensions from user and workspace settings', () => {
+      const userSettingsContent = {
+        extensions: {
+          disabled: ['user-ext-1', 'shared-ext'],
+        },
+      };
+      const workspaceSettingsContent = {
+        extensions: {
+          disabled: ['workspace-ext-1', 'shared-ext'],
+        },
+      };
+
+      (mockFsReadFileSync as Mock).mockImplementation(
+        (p: fs.PathOrFileDescriptor) => {
+          if (p === USER_SETTINGS_PATH)
+            return JSON.stringify(userSettingsContent);
+          if (p === MOCK_WORKSPACE_SETTINGS_PATH)
+            return JSON.stringify(workspaceSettingsContent);
+          return '{}';
+        },
+      );
+
+      const loadedSettings = loadSettings(MOCK_WORKSPACE_DIR);
+      const setValueSpy = vi.spyOn(loadedSettings, 'setValue');
+
+      migrateDeprecatedSettings(loadedSettings, MOCK_WORKSPACE_DIR);
+
+      // Check user settings migration
+      expect(mockDisableExtension).toHaveBeenCalledWith(
+        'user-ext-1',
+        SettingScope.User,
+        MOCK_WORKSPACE_DIR,
+      );
+      expect(mockDisableExtension).toHaveBeenCalledWith(
+        'shared-ext',
+        SettingScope.User,
+        MOCK_WORKSPACE_DIR,
+      );
+
+      // Check workspace settings migration
+      expect(mockDisableExtension).toHaveBeenCalledWith(
+        'workspace-ext-1',
+        SettingScope.Workspace,
+        MOCK_WORKSPACE_DIR,
+      );
+      expect(mockDisableExtension).toHaveBeenCalledWith(
+        'shared-ext',
+        SettingScope.Workspace,
+        MOCK_WORKSPACE_DIR,
+      );
+
+      // Check that setValue was called to remove the deprecated setting
+      expect(setValueSpy).toHaveBeenCalledWith(
+        SettingScope.User,
+        'extensions',
+        {
+          disabled: undefined,
+        },
+      );
+      expect(setValueSpy).toHaveBeenCalledWith(
+        SettingScope.Workspace,
+        'extensions',
+        {
+          disabled: undefined,
+        },
+      );
+    });
+
+    it('should not do anything if there are no deprecated settings', () => {
+      const userSettingsContent = {
+        extensions: {
+          enabled: ['user-ext-1'],
+        },
+      };
+      const workspaceSettingsContent = {
+        someOtherSetting: 'value',
+      };
+
+      (mockFsReadFileSync as Mock).mockImplementation(
+        (p: fs.PathOrFileDescriptor) => {
+          if (p === USER_SETTINGS_PATH)
+            return JSON.stringify(userSettingsContent);
+          if (p === MOCK_WORKSPACE_SETTINGS_PATH)
+            return JSON.stringify(workspaceSettingsContent);
+          return '{}';
+        },
+      );
+
+      const loadedSettings = loadSettings(MOCK_WORKSPACE_DIR);
+      const setValueSpy = vi.spyOn(loadedSettings, 'setValue');
+
+      migrateDeprecatedSettings(loadedSettings, MOCK_WORKSPACE_DIR);
+
+      expect(mockDisableExtension).not.toHaveBeenCalled();
+      expect(setValueSpy).not.toHaveBeenCalled();
     });
   });
 });

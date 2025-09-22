@@ -17,6 +17,7 @@
 export enum TelemetryTarget {
   LOCAL = 'local',
   SALESFORCE = 'salesforce',
+  GCP = 'gcp',
 }
 
 const DEFAULT_TELEMETRY_TARGET = TelemetryTarget.SALESFORCE;
@@ -28,6 +29,11 @@ export {
   shutdownTelemetry,
   isTelemetrySdkInitialized,
 } from './sdk.js';
+export {
+  GcpTraceExporter,
+  GcpMetricExporter,
+  GcpLogExporter,
+} from './gcp-exporters.js';
 export {
   logCliConfiguration,
   logUserPrompt,
@@ -41,6 +47,9 @@ export {
   logKittySequenceOverflow,
   logChatCompression,
   logToolOutputTruncated,
+  logExtensionEnable,
+  logExtensionInstallEvent,
+  logExtensionUninstall,
 } from './loggers.js';
 export type { SlashCommandEvent, ChatCompressionEvent } from './types.js';
 export {
@@ -64,3 +73,10 @@ export { SemanticAttributes } from '@opentelemetry/semantic-conventions';
 export * from './uiTelemetry.js';
 export { HighWaterMarkTracker } from './high-water-mark-tracker.js';
 export { RateLimiter } from './rate-limiter.js';
+export { ActivityType } from './activity-types.js';
+export {
+  ActivityDetector,
+  getActivityDetector,
+  recordUserActivity,
+  isUserActive,
+} from './activity-detector.js';

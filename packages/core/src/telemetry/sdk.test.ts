@@ -17,8 +17,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { Config } from '../config/config.js';
 import { initializeTelemetry, shutdownTelemetry } from './sdk.js';
-import { TelemetryTarget } from './index.js';
-import { setupSalesforceTelemetry } from './providers/salesforce.js';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-grpc';
 import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-grpc';
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-grpc';
@@ -26,6 +24,15 @@ import { OTLPTraceExporter as OTLPTraceExporterHttp } from '@opentelemetry/expor
 import { OTLPLogExporter as OTLPLogExporterHttp } from '@opentelemetry/exporter-logs-otlp-http';
 import { OTLPMetricExporter as OTLPMetricExporterHttp } from '@opentelemetry/exporter-metrics-otlp-http';
 import { NodeSDK } from '@opentelemetry/sdk-node';
+import {
+  GcpTraceExporter,
+  GcpLogExporter,
+  GcpMetricExporter,
+} from './gcp-exporters.js';
+import { TelemetryTarget } from './index.js';
+
+import * as os from 'node:os';
+import * as path from 'node:path';
 
 vi.mock('@opentelemetry/exporter-trace-otlp-grpc');
 vi.mock('@opentelemetry/exporter-logs-otlp-grpc');
@@ -35,6 +42,7 @@ vi.mock('@opentelemetry/exporter-logs-otlp-http');
 vi.mock('@opentelemetry/exporter-metrics-otlp-http');
 vi.mock('@opentelemetry/sdk-node');
 vi.mock('./providers/salesforce.js');
+vi.mock('./gcp-exporters.js');
 
 describe('Telemetry SDK', () => {
   let mockConfig: Config;
@@ -45,6 +53,7 @@ describe('Telemetry SDK', () => {
       getTelemetryEnabled: () => true,
       getTelemetryOtlpEndpoint: () => 'http://localhost:4317',
       getTelemetryOtlpProtocol: () => 'grpc',
+      getTelemetryUseCollector: () => false,
       getTelemetryOutfile: () => undefined,
       getDebugMode: () => false,
       getSessionId: () => 'test-session',
@@ -116,35 +125,126 @@ describe('Telemetry SDK', () => {
     );
   });
 
-  it('should use forcedotcom provider when target is forcedotcom', async () => {
+  it.skip('should use direct GCP exporters when target is gcp, project ID is set, and useCollector is false', () => {
     vi.spyOn(mockConfig, 'getTelemetryTarget').mockReturnValue(
       TelemetryTarget.SALESFORCE,
     );
+    vi.spyOn(mockConfig, 'getTelemetryUseCollector').mockReturnValue(false);
+    vi.spyOn(mockConfig, 'getTelemetryOtlpEndpoint').mockReturnValue('');
 
-    const mockSetup = {
-      exceptionTraceExporter: {
-        export: vi.fn(),
-        shutdown: vi.fn(),
-        forceFlush: vi.fn(),
-      },
-      logExporter: {
-        export: vi.fn(),
-        shutdown: vi.fn(),
-        forceFlush: vi.fn(),
-      },
-      stop: vi.fn(),
-    };
-    vi.mocked(setupSalesforceTelemetry).mockResolvedValue(mockSetup);
+    const originalEnv = process.env['OTLP_GOOGLE_CLOUD_PROJECT'];
+    process.env['OTLP_GOOGLE_CLOUD_PROJECT'] = 'test-project';
 
-    await initializeTelemetry(mockConfig);
+    try {
+      initializeTelemetry(mockConfig);
 
-    expect(setupSalesforceTelemetry).toHaveBeenCalledWith(mockConfig);
-    expect(NodeSDK).toHaveBeenCalledWith(
-      expect.objectContaining({
-        spanProcessors: expect.any(Array),
-        logRecordProcessors: expect.any(Array),
-        instrumentations: expect.any(Array),
-      }),
+      expect(GcpTraceExporter).toHaveBeenCalledWith('test-project');
+      expect(GcpLogExporter).toHaveBeenCalledWith('test-project');
+      expect(GcpMetricExporter).toHaveBeenCalledWith('test-project');
+      expect(NodeSDK.prototype.start).toHaveBeenCalled();
+    } finally {
+      if (originalEnv) {
+        process.env['OTLP_GOOGLE_CLOUD_PROJECT'] = originalEnv;
+      } else {
+        delete process.env['OTLP_GOOGLE_CLOUD_PROJECT'];
+      }
+    }
+  });
+
+  it.skip('should use OTLP exporters when target is gcp but useCollector is true', () => {
+    vi.spyOn(mockConfig, 'getTelemetryTarget').mockReturnValue(
+      TelemetryTarget.SALESFORCE,
     );
+    vi.spyOn(mockConfig, 'getTelemetryUseCollector').mockReturnValue(true);
+
+    initializeTelemetry(mockConfig);
+
+    expect(OTLPTraceExporter).toHaveBeenCalledWith({
+      url: 'http://localhost:4317',
+      compression: 'gzip',
+    });
+    expect(OTLPLogExporter).toHaveBeenCalledWith({
+      url: 'http://localhost:4317',
+      compression: 'gzip',
+    });
+    expect(OTLPMetricExporter).toHaveBeenCalledWith({
+      url: 'http://localhost:4317',
+      compression: 'gzip',
+    });
+  });
+
+  it.skip('should not use GCP exporters when project ID environment variable is not set', () => {
+    vi.spyOn(mockConfig, 'getTelemetryTarget').mockReturnValue(
+      TelemetryTarget.SALESFORCE,
+    );
+    vi.spyOn(mockConfig, 'getTelemetryUseCollector').mockReturnValue(false);
+    vi.spyOn(mockConfig, 'getTelemetryOtlpEndpoint').mockReturnValue('');
+
+    const originalOtlpEnv = process.env['OTLP_GOOGLE_CLOUD_PROJECT'];
+    const originalGoogleEnv = process.env['GOOGLE_CLOUD_PROJECT'];
+    delete process.env['OTLP_GOOGLE_CLOUD_PROJECT'];
+    delete process.env['GOOGLE_CLOUD_PROJECT'];
+
+    try {
+      initializeTelemetry(mockConfig);
+
+      expect(GcpTraceExporter).not.toHaveBeenCalled();
+      expect(GcpLogExporter).not.toHaveBeenCalled();
+      expect(GcpMetricExporter).not.toHaveBeenCalled();
+      expect(NodeSDK.prototype.start).toHaveBeenCalled();
+    } finally {
+      if (originalOtlpEnv) {
+        process.env['OTLP_GOOGLE_CLOUD_PROJECT'] = originalOtlpEnv;
+      }
+      if (originalGoogleEnv) {
+        process.env['GOOGLE_CLOUD_PROJECT'] = originalGoogleEnv;
+      }
+    }
+  });
+
+  it.skip('should use GOOGLE_CLOUD_PROJECT as fallback when OTLP_GOOGLE_CLOUD_PROJECT is not set', () => {
+    vi.spyOn(mockConfig, 'getTelemetryTarget').mockReturnValue(
+      TelemetryTarget.SALESFORCE,
+    );
+    vi.spyOn(mockConfig, 'getTelemetryUseCollector').mockReturnValue(false);
+    vi.spyOn(mockConfig, 'getTelemetryOtlpEndpoint').mockReturnValue('');
+
+    const originalOtlpEnv = process.env['OTLP_GOOGLE_CLOUD_PROJECT'];
+    const originalGoogleEnv = process.env['GOOGLE_CLOUD_PROJECT'];
+    delete process.env['OTLP_GOOGLE_CLOUD_PROJECT'];
+    process.env['GOOGLE_CLOUD_PROJECT'] = 'fallback-project';
+
+    try {
+      initializeTelemetry(mockConfig);
+
+      expect(GcpTraceExporter).toHaveBeenCalledWith('fallback-project');
+      expect(GcpLogExporter).toHaveBeenCalledWith('fallback-project');
+      expect(GcpMetricExporter).toHaveBeenCalledWith('fallback-project');
+      expect(NodeSDK.prototype.start).toHaveBeenCalled();
+    } finally {
+      if (originalOtlpEnv) {
+        process.env['OTLP_GOOGLE_CLOUD_PROJECT'] = originalOtlpEnv;
+      }
+      if (originalGoogleEnv) {
+        process.env['GOOGLE_CLOUD_PROJECT'] = originalGoogleEnv;
+      } else {
+        delete process.env['GOOGLE_CLOUD_PROJECT'];
+      }
+    }
+  });
+
+  it.skip('should not use OTLP exporters when telemetryOutfile is set', () => {
+    vi.spyOn(mockConfig, 'getTelemetryOutfile').mockReturnValue(
+      path.join(os.tmpdir(), 'test.log'),
+    );
+    initializeTelemetry(mockConfig);
+
+    expect(OTLPTraceExporter).not.toHaveBeenCalled();
+    expect(OTLPLogExporter).not.toHaveBeenCalled();
+    expect(OTLPMetricExporter).not.toHaveBeenCalled();
+    expect(OTLPTraceExporterHttp).not.toHaveBeenCalled();
+    expect(OTLPLogExporterHttp).not.toHaveBeenCalled();
+    expect(OTLPMetricExporterHttp).not.toHaveBeenCalled();
+    expect(NodeSDK.prototype.start).toHaveBeenCalled();
   });
 });

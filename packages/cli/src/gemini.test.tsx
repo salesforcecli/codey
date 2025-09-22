@@ -55,7 +55,7 @@ vi.mock('./config/config.js', () => ({
     getSandbox: vi.fn(() => false),
     getQuestion: vi.fn(() => ''),
   } as unknown as Config),
-  parseArguments: vi.fn().mockResolvedValue({ sessionSummary: null }),
+  parseArguments: vi.fn().mockResolvedValue({}),
 }));
 
 vi.mock('read-package-up', () => ({
@@ -173,11 +173,16 @@ describe('gemini.tsx main function', () => {
 });
 
 describe('gemini.tsx main function kitty protocol', () => {
+  let originalEnvNoRelaunch: string | undefined;
   let setRawModeSpy: MockInstance<
     (mode: boolean) => NodeJS.ReadStream & { fd: 0 }
   >;
 
   beforeEach(() => {
+    // Set no relaunch in tests since process spawning causing issues in tests
+    originalEnvNoRelaunch = process.env['GEMINI_CLI_NO_RELAUNCH'];
+    process.env['GEMINI_CLI_NO_RELAUNCH'] = 'true';
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if (!(process.stdin as any).setRawMode) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -193,6 +198,15 @@ describe('gemini.tsx main function kitty protocol', () => {
       value: false,
       configurable: true,
     });
+  });
+
+  afterEach(() => {
+    // Restore original env variables
+    if (originalEnvNoRelaunch !== undefined) {
+      process.env['GEMINI_CLI_NO_RELAUNCH'] = originalEnvNoRelaunch;
+    } else {
+      delete process.env['GEMINI_CLI_NO_RELAUNCH'];
+    }
   });
 
   it('should call setRawMode and detectAndEnableKittyProtocol when isInteractive is true', async () => {
@@ -225,6 +239,7 @@ describe('gemini.tsx main function kitty protocol', () => {
       },
       setValue: vi.fn(),
       refresh: vi.fn(),
+      forScope: () => ({ settings: {}, originalSettings: {}, path: '' }),
     } as never);
     vi.mocked(parseArguments).mockResolvedValue({
       org: 'test-org',
@@ -254,7 +269,7 @@ describe('gemini.tsx main function kitty protocol', () => {
       includeDirectories: undefined,
       screenReader: undefined,
       useSmartEdit: undefined,
-      sessionSummary: undefined,
+      useWriteTodos: undefined,
       promptWords: undefined,
       outputFormat: undefined,
     });

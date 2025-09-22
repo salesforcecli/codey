@@ -398,6 +398,9 @@ export function KeypressProvider({
     };
 
     const handleKeypress = (_: unknown, key: Key) => {
+      if (key.sequence === FOCUS_IN || key.sequence === FOCUS_OUT) {
+        return;
+      }
       if (key.name === 'paste-start') {
         isPaste = true;
         return;

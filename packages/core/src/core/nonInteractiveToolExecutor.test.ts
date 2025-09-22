@@ -67,6 +67,7 @@ describe('executeToolCall', () => {
         DEFAULT_TRUNCATE_TOOL_OUTPUT_THRESHOLD,
       getTruncateToolOutputLines: () => DEFAULT_TRUNCATE_TOOL_OUTPUT_LINES,
       getUseSmartEdit: () => false,
+      getUseModelRouter: () => false,
       getGeminiClient: () => null, // No client needed for these tests
     } as unknown as Config;
 

@@ -25,7 +25,7 @@ export const useStateAndRef = <
 >(
   initialValue: T,
 ) => {
-  const [_, setState] = React.useState<T>(initialValue);
+  const [state, setState] = React.useState<T>(initialValue);
   const ref = React.useRef<T>(initialValue);
 
   const setStateInternal = React.useCallback<typeof setState>(
@@ -42,5 +42,5 @@ export const useStateAndRef = <
     [],
   );
 
-  return [ref, setStateInternal] as const;
+  return [state, ref, setStateInternal] as const;
 };

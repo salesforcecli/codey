@@ -120,7 +120,7 @@ function loadExtension(extensionDir: string): Extension | null {
 
 function getContextFileNames(config: ExtensionConfig): string[] {
   if (!config.contextFileName) {
-    return ['GEMINI.md'];
+    return ['CODEY.md'];
   } else if (!Array.isArray(config.contextFileName)) {
     return [config.contextFileName];
   }

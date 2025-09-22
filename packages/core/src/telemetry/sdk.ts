@@ -47,9 +47,14 @@ import {
   FileMetricExporter,
   FileSpanExporter,
 } from './file-exporters.js';
-import { TelemetryTarget } from './index.js';
 import type { SalesforceTelemetrySetup } from './providers/salesforce.js';
 import { setupSalesforceTelemetry } from './providers/salesforce.js';
+import {
+  GcpTraceExporter,
+  GcpMetricExporter,
+  GcpLogExporter,
+} from './gcp-exporters.js';
+import { TelemetryTarget } from './index.js';
 
 // For troubleshooting, set the log level to DiagLogLevel.DEBUG
 diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.INFO);
@@ -140,23 +145,39 @@ export async function initializeTelemetry(config: Config): Promise<void> {
   // Handle local target (existing logic)
   const otlpEndpoint = config.getTelemetryOtlpEndpoint();
   const otlpProtocol = config.getTelemetryOtlpProtocol();
+  const useCollector = config.getTelemetryUseCollector();
   const parsedEndpoint = parseOtlpEndpoint(otlpEndpoint, otlpProtocol);
-  const useOtlp = !!parsedEndpoint;
   const telemetryOutfile = config.getTelemetryOutfile();
+  const useOtlp = !!parsedEndpoint && !telemetryOutfile;
+
+  const gcpProjectId =
+    process.env['OTLP_GOOGLE_CLOUD_PROJECT'] ||
+    process.env['GOOGLE_CLOUD_PROJECT'];
+  const useDirectGcpExport =
+    telemetryTarget === TelemetryTarget.GCP && !!gcpProjectId && !useCollector;
 
   let spanExporter:
     | OTLPTraceExporter
     | OTLPTraceExporterHttp
+    | GcpTraceExporter
     | FileSpanExporter
     | ConsoleSpanExporter;
   let logExporter:
     | OTLPLogExporter
     | OTLPLogExporterHttp
+    | GcpLogExporter
     | FileLogExporter
     | ConsoleLogRecordExporter;
   let metricReader: PeriodicExportingMetricReader;
 
-  if (useOtlp) {
+  if (useDirectGcpExport) {
+    spanExporter = new GcpTraceExporter(gcpProjectId);
+    logExporter = new GcpLogExporter(gcpProjectId);
+    metricReader = new PeriodicExportingMetricReader({
+      exporter: new GcpMetricExporter(gcpProjectId),
+      exportIntervalMillis: 30000,
+    });
+  } else if (useOtlp) {
     if (otlpProtocol === 'http') {
       spanExporter = new OTLPTraceExporterHttp({
         url: parsedEndpoint,
@@ -227,6 +248,9 @@ export async function initializeTelemetry(config: Config): Promise<void> {
     shutdownTelemetry(config);
   });
   process.on('SIGINT', () => {
+    shutdownTelemetry(config);
+  });
+  process.on('exit', () => {
     shutdownTelemetry(config);
   });
 }

@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-import type { DetectedIde } from '@salesforce/codey-core';
-import { getIdeInfo } from '@salesforce/codey-core';
+import type { IdeInfo } from '@salesforce/codey-core';
 import { Box, Text } from 'ink';
 import type { RadioSelectItem } from './components/shared/RadioButtonSelect.js';
 import { RadioButtonSelect } from './components/shared/RadioButtonSelect.js';
@@ -28,7 +27,7 @@ export type IdeIntegrationNudgeResult = {
 };
 
 interface IdeIntegrationNudgeProps {
-  ide: DetectedIde;
+  ide: IdeInfo;
   onComplete: (result: IdeIntegrationNudgeResult) => void;
 }
 
@@ -48,7 +47,7 @@ export function IdeIntegrationNudge({
     { isActive: true },
   );
 
-  const { displayName: ideName } = getIdeInfo(ide);
+  const { displayName: ideName } = ide;
   // Assume extension is already installed if the env variables are set.
   const isExtensionPreInstalled =
     !!process.env['GEMINI_CLI_IDE_SERVER_PORT'] &&

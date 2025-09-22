@@ -259,11 +259,14 @@ describe('headless-chat', () => {
           testSessionId,
           expect.objectContaining({
             model: undefined,
+            org: undefined,
+            outputFormat: undefined,
             sandbox: undefined,
             sandboxImage: undefined,
             debug: false,
             prompt: undefined,
             promptInteractive: undefined,
+            promptWords: undefined,
             allFiles: false,
             showMemoryUsage: false,
             yolo: true,
@@ -284,7 +287,7 @@ describe('headless-chat', () => {
             includeDirectories: undefined,
             screenReader: false,
             useSmartEdit: false,
-            sessionSummary: undefined,
+            useWriteTodos: undefined,
           }),
           testWorkspaceRoot,
         );

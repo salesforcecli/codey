@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import type { ReactNode } from 'react';
+import type { Dispatch, ReactNode, SetStateAction } from 'react';
 import type { Content, PartListUnion } from '@google/genai';
 import type { HistoryItemWithoutId, HistoryItem } from '../types.js';
 import type { Config, GitService, Logger } from '@salesforce/codey-core';
@@ -73,9 +73,9 @@ export interface CommandContext {
     setGeminiMdFileCount: (count: number) => void;
     reloadCommands: () => void;
     extensionsUpdateState: Map<string, ExtensionUpdateState>;
-    setExtensionsUpdateState: (
-      updateState: Map<string, ExtensionUpdateState>,
-    ) => void;
+    setExtensionsUpdateState: Dispatch<
+      SetStateAction<Map<string, ExtensionUpdateState>>
+    >;
   };
   // Session-specific data
   session: {

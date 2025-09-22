@@ -19,7 +19,11 @@ import { IDEServer } from './ide-server.js';
 import semver from 'semver';
 import { DiffContentProvider, DiffManager } from './diff-manager.js';
 import { createLogger } from './utils/logger.js';
-import { detectIdeFromEnv, DetectedIde } from '@salesforce/codey-core';
+import {
+  detectIdeFromEnv,
+  IDE_DEFINITIONS,
+  type IdeInfo,
+} from '@salesforce/codey-core/src/ide/detect-ide.js';
 
 const CLI_IDE_COMPANION_IDENTIFIER = 'Google.gemini-cli-vscode-ide-companion';
 const INFO_MESSAGE_SHOWN_KEY = 'geminiCliInfoMessageShown';
@@ -30,9 +34,9 @@ export const DIFF_SCHEME = 'gemini-diff';
  * environments we either are pre-installed and the installation message is
  * confusing or we just want to be quiet.
  */
-const HIDE_INSTALLATION_GREETING_IDES: ReadonlySet<DetectedIde> = new Set([
-  DetectedIde.FirebaseStudio,
-  DetectedIde.CloudShell,
+const HIDE_INSTALLATION_GREETING_IDES: ReadonlySet<IdeInfo['name']> = new Set([
+  IDE_DEFINITIONS.firebasestudio.name,
+  IDE_DEFINITIONS.cloudshell.name,
 ]);
 
 let ideServer: IDEServer;
@@ -148,8 +152,9 @@ export async function activate(context: vscode.ExtensionContext) {
     log(`Failed to start IDE server: ${message}`);
   }
 
-  const infoMessageEnabled =
-    !HIDE_INSTALLATION_GREETING_IDES.has(detectIdeFromEnv());
+  const infoMessageEnabled = !HIDE_INSTALLATION_GREETING_IDES.has(
+    detectIdeFromEnv().name,
+  );
 
   if (!context.globalState.get(INFO_MESSAGE_SHOWN_KEY) && infoMessageEnabled) {
     void vscode.window.showInformationMessage(

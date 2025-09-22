@@ -51,14 +51,14 @@ describe('commentJson', () => {
       fs.writeFileSync(testFilePath, originalContent, 'utf-8');
 
       updateSettingsFilePreservingFormat(testFilePath, {
-        model: 'gemini-3.0-ultra',
+        model: 'gemini-2.5-flash',
       });
 
       const updatedContent = fs.readFileSync(testFilePath, 'utf-8');
 
       expect(updatedContent).toContain('// Model configuration');
       expect(updatedContent).toContain('// Theme setting');
-      expect(updatedContent).toContain('"model": "gemini-3.0-ultra"');
+      expect(updatedContent).toContain('"model": "gemini-2.5-flash"');
       expect(updatedContent).toContain('"theme": "dark"');
     });
 
@@ -129,7 +129,7 @@ describe('commentJson', () => {
       fs.writeFileSync(testFilePath, complexContent, 'utf-8');
 
       updateSettingsFilePreservingFormat(testFilePath, {
-        model: 'gemini-3.0-ultra',
+        model: 'gemini-2.5-flash',
         mcpServers: {
           context7: {
             headers: {
@@ -150,7 +150,7 @@ describe('commentJson', () => {
       expect(updatedContent).toContain('// API key');
 
       // Verify updates applied
-      expect(updatedContent).toContain('"model": "gemini-3.0-ultra"');
+      expect(updatedContent).toContain('"model": "gemini-2.5-flash"');
       expect(updatedContent).toContain('"newSection"');
       expect(updatedContent).toContain('"API_KEY": "new-test-key"');
     });
@@ -171,7 +171,7 @@ describe('commentJson', () => {
 
       expect(() => {
         updateSettingsFilePreservingFormat(testFilePath, {
-          model: 'gemini-3.0-ultra',
+          model: 'gemini-2.5-flash',
         });
       }).not.toThrow();
 
