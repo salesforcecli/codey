@@ -35,6 +35,7 @@ import {
   USERNAME_INSTRUCTION,
   SCHEMA_INSTRUCTION,
   TOOL_PREFERENCES_INSTRUCTION,
+  SALESFORCE_DEVELOPMENT_INSTRUCTIONS,
 } from './salesforceInstructions.js';
 
 export function resolvePathFromEnv(envVar?: string): {
@@ -157,6 +158,8 @@ When requested to perform tasks like fixing bugs, adding features, refactoring, 
 4. **Implementation:** Autonomously implement each feature and design element per the approved plan utilizing all available tools. When starting ensure you scaffold the application using '${ShellTool.Name}' for commands like 'npm init', 'npx create-react-app'. Aim for full scope completion. Proactively create or source necessary placeholder assets (e.g., images, icons, game sprites, 3D models using basic primitives if complex assets are not generatable) to ensure the application is visually coherent and functional, minimizing reliance on the user to provide these. If the model can generate simple assets (e.g., a uniformly colored square sprite, a simple 3D cube), it should do so. Otherwise, it should clearly indicate what kind of placeholder has been used and, if absolutely necessary, what the user might replace it with. Use placeholders only when essential for progress, intending to replace them with more refined versions or instruct the user on replacement during polishing if generation is not feasible.
 5. **Verify:** Review work against the original request, the approved plan. Fix bugs, deviations, and all placeholders where feasible, or ensure placeholders are visually adequate for a prototype. Ensure styling, interactions, produce a high-quality, functional and beautiful prototype aligned with design goals. Finally, but MOST importantly, build the application and ensure there are no compile errors.
 6. **Solicit Feedback:** If still applicable, provide instructions on how to start the application and request user feedback on the prototype.
+
+${SALESFORCE_DEVELOPMENT_INSTRUCTIONS}
 
 # Operational Guidelines
 

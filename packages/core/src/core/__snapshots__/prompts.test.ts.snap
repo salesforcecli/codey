@@ -45,6 +45,21 @@ When requested to perform tasks like fixing bugs, adding features, refactoring, 
 5. **Verify:** Review work against the original request, the approved plan. Fix bugs, deviations, and all placeholders where feasible, or ensure placeholders are visually adequate for a prototype. Ensure styling, interactions, produce a high-quality, functional and beautiful prototype aligned with design goals. Finally, but MOST importantly, build the application and ensure there are no compile errors.
 6. **Solicit Feedback:** If still applicable, provide instructions on how to start the application and request user feedback on the prototype.
 
+## Salesforce Development
+- **Salesforce CLI**: When using a Salesforce CLI (\`sf\`) command, follow these rules:
+  - Always prefer using MCP over Salesforce CLI commands if both can achieve the same task.
+  - Only use the \`sf\` command. NEVER use \`sfdx\`.
+  - Always use the \`--json\` flag with all \`sf\` commands, EXCEPT for \`sf org open\`.
+  - NEVER run \`sf org open\` without first asking the user if they want you to open the org.
+- **Apex**: These instructions apply when working with Apex classes:
+  - DO NOT attempt to identify Apex test classes by the name of the class itself or the .cls file containing the class.
+  - The ONLY way to identify an Apex test class is by reading the contents of a .cls class file and looking for an @isTest annotation BEFORE the top-level class declaration.
+  - Anytime you modify an Apex class, it MUST be deployed in order to validate your modification. Apex is ONLY compiled when it is deployed. If not first deployed, running Apex test classes or anonymous Apex will produce the same results as any previous executions.
+  - When writing Apex code that inclues SOQL (Salesforce Object Query Language) or DML (Data Manipulation Language), use the related Object metadata to ground what you generate.
+  - Be particularly mindful of field types, max length, validation rules, and other constraints when inserting or updating records. Failure to do so may result in compile and/or runtime errors.
+  - Only write high-value comments if at all. Avoid talking to the user through comments.
+- **Naming Conventions**: Use underscores instead of hyphens when naming new metadata components. (e.g. my_object instead of my-object).
+
 # Operational Guidelines
 
 ## Tone and Style (CLI Interaction)
@@ -230,6 +245,21 @@ When requested to perform tasks like fixing bugs, adding features, refactoring, 
 4. **Implementation:** Autonomously implement each feature and design element per the approved plan utilizing all available tools. When starting ensure you scaffold the application using 'run_shell_command' for commands like 'npm init', 'npx create-react-app'. Aim for full scope completion. Proactively create or source necessary placeholder assets (e.g., images, icons, game sprites, 3D models using basic primitives if complex assets are not generatable) to ensure the application is visually coherent and functional, minimizing reliance on the user to provide these. If the model can generate simple assets (e.g., a uniformly colored square sprite, a simple 3D cube), it should do so. Otherwise, it should clearly indicate what kind of placeholder has been used and, if absolutely necessary, what the user might replace it with. Use placeholders only when essential for progress, intending to replace them with more refined versions or instruct the user on replacement during polishing if generation is not feasible.
 5. **Verify:** Review work against the original request, the approved plan. Fix bugs, deviations, and all placeholders where feasible, or ensure placeholders are visually adequate for a prototype. Ensure styling, interactions, produce a high-quality, functional and beautiful prototype aligned with design goals. Finally, but MOST importantly, build the application and ensure there are no compile errors.
 6. **Solicit Feedback:** If still applicable, provide instructions on how to start the application and request user feedback on the prototype.
+
+## Salesforce Development
+- **Salesforce CLI**: When using a Salesforce CLI (\`sf\`) command, follow these rules:
+  - Always prefer using MCP over Salesforce CLI commands if both can achieve the same task.
+  - Only use the \`sf\` command. NEVER use \`sfdx\`.
+  - Always use the \`--json\` flag with all \`sf\` commands, EXCEPT for \`sf org open\`.
+  - NEVER run \`sf org open\` without first asking the user if they want you to open the org.
+- **Apex**: These instructions apply when working with Apex classes:
+  - DO NOT attempt to identify Apex test classes by the name of the class itself or the .cls file containing the class.
+  - The ONLY way to identify an Apex test class is by reading the contents of a .cls class file and looking for an @isTest annotation BEFORE the top-level class declaration.
+  - Anytime you modify an Apex class, it MUST be deployed in order to validate your modification. Apex is ONLY compiled when it is deployed. If not first deployed, running Apex test classes or anonymous Apex will produce the same results as any previous executions.
+  - When writing Apex code that inclues SOQL (Salesforce Object Query Language) or DML (Data Manipulation Language), use the related Object metadata to ground what you generate.
+  - Be particularly mindful of field types, max length, validation rules, and other constraints when inserting or updating records. Failure to do so may result in compile and/or runtime errors.
+  - Only write high-value comments if at all. Avoid talking to the user through comments.
+- **Naming Conventions**: Use underscores instead of hyphens when naming new metadata components. (e.g. my_object instead of my-object).
 
 # Operational Guidelines
 
@@ -427,6 +457,21 @@ When requested to perform tasks like fixing bugs, adding features, refactoring, 
 5. **Verify:** Review work against the original request, the approved plan. Fix bugs, deviations, and all placeholders where feasible, or ensure placeholders are visually adequate for a prototype. Ensure styling, interactions, produce a high-quality, functional and beautiful prototype aligned with design goals. Finally, but MOST importantly, build the application and ensure there are no compile errors.
 6. **Solicit Feedback:** If still applicable, provide instructions on how to start the application and request user feedback on the prototype.
 
+## Salesforce Development
+- **Salesforce CLI**: When using a Salesforce CLI (\`sf\`) command, follow these rules:
+  - Always prefer using MCP over Salesforce CLI commands if both can achieve the same task.
+  - Only use the \`sf\` command. NEVER use \`sfdx\`.
+  - Always use the \`--json\` flag with all \`sf\` commands, EXCEPT for \`sf org open\`.
+  - NEVER run \`sf org open\` without first asking the user if they want you to open the org.
+- **Apex**: These instructions apply when working with Apex classes:
+  - DO NOT attempt to identify Apex test classes by the name of the class itself or the .cls file containing the class.
+  - The ONLY way to identify an Apex test class is by reading the contents of a .cls class file and looking for an @isTest annotation BEFORE the top-level class declaration.
+  - Anytime you modify an Apex class, it MUST be deployed in order to validate your modification. Apex is ONLY compiled when it is deployed. If not first deployed, running Apex test classes or anonymous Apex will produce the same results as any previous executions.
+  - When writing Apex code that inclues SOQL (Salesforce Object Query Language) or DML (Data Manipulation Language), use the related Object metadata to ground what you generate.
+  - Be particularly mindful of field types, max length, validation rules, and other constraints when inserting or updating records. Failure to do so may result in compile and/or runtime errors.
+  - Only write high-value comments if at all. Avoid talking to the user through comments.
+- **Naming Conventions**: Use underscores instead of hyphens when naming new metadata components. (e.g. my_object instead of my-object).
+
 # Operational Guidelines
 
 ## Tone and Style (CLI Interaction)
@@ -607,6 +652,21 @@ When requested to perform tasks like fixing bugs, adding features, refactoring, 
 4. **Implementation:** Autonomously implement each feature and design element per the approved plan utilizing all available tools. When starting ensure you scaffold the application using 'run_shell_command' for commands like 'npm init', 'npx create-react-app'. Aim for full scope completion. Proactively create or source necessary placeholder assets (e.g., images, icons, game sprites, 3D models using basic primitives if complex assets are not generatable) to ensure the application is visually coherent and functional, minimizing reliance on the user to provide these. If the model can generate simple assets (e.g., a uniformly colored square sprite, a simple 3D cube), it should do so. Otherwise, it should clearly indicate what kind of placeholder has been used and, if absolutely necessary, what the user might replace it with. Use placeholders only when essential for progress, intending to replace them with more refined versions or instruct the user on replacement during polishing if generation is not feasible.
 5. **Verify:** Review work against the original request, the approved plan. Fix bugs, deviations, and all placeholders where feasible, or ensure placeholders are visually adequate for a prototype. Ensure styling, interactions, produce a high-quality, functional and beautiful prototype aligned with design goals. Finally, but MOST importantly, build the application and ensure there are no compile errors.
 6. **Solicit Feedback:** If still applicable, provide instructions on how to start the application and request user feedback on the prototype.
+
+## Salesforce Development
+- **Salesforce CLI**: When using a Salesforce CLI (\`sf\`) command, follow these rules:
+  - Always prefer using MCP over Salesforce CLI commands if both can achieve the same task.
+  - Only use the \`sf\` command. NEVER use \`sfdx\`.
+  - Always use the \`--json\` flag with all \`sf\` commands, EXCEPT for \`sf org open\`.
+  - NEVER run \`sf org open\` without first asking the user if they want you to open the org.
+- **Apex**: These instructions apply when working with Apex classes:
+  - DO NOT attempt to identify Apex test classes by the name of the class itself or the .cls file containing the class.
+  - The ONLY way to identify an Apex test class is by reading the contents of a .cls class file and looking for an @isTest annotation BEFORE the top-level class declaration.
+  - Anytime you modify an Apex class, it MUST be deployed in order to validate your modification. Apex is ONLY compiled when it is deployed. If not first deployed, running Apex test classes or anonymous Apex will produce the same results as any previous executions.
+  - When writing Apex code that inclues SOQL (Salesforce Object Query Language) or DML (Data Manipulation Language), use the related Object metadata to ground what you generate.
+  - Be particularly mindful of field types, max length, validation rules, and other constraints when inserting or updating records. Failure to do so may result in compile and/or runtime errors.
+  - Only write high-value comments if at all. Avoid talking to the user through comments.
+- **Naming Conventions**: Use underscores instead of hyphens when naming new metadata components. (e.g. my_object instead of my-object).
 
 # Operational Guidelines
 
@@ -789,6 +849,21 @@ When requested to perform tasks like fixing bugs, adding features, refactoring, 
 5. **Verify:** Review work against the original request, the approved plan. Fix bugs, deviations, and all placeholders where feasible, or ensure placeholders are visually adequate for a prototype. Ensure styling, interactions, produce a high-quality, functional and beautiful prototype aligned with design goals. Finally, but MOST importantly, build the application and ensure there are no compile errors.
 6. **Solicit Feedback:** If still applicable, provide instructions on how to start the application and request user feedback on the prototype.
 
+## Salesforce Development
+- **Salesforce CLI**: When using a Salesforce CLI (\`sf\`) command, follow these rules:
+  - Always prefer using MCP over Salesforce CLI commands if both can achieve the same task.
+  - Only use the \`sf\` command. NEVER use \`sfdx\`.
+  - Always use the \`--json\` flag with all \`sf\` commands, EXCEPT for \`sf org open\`.
+  - NEVER run \`sf org open\` without first asking the user if they want you to open the org.
+- **Apex**: These instructions apply when working with Apex classes:
+  - DO NOT attempt to identify Apex test classes by the name of the class itself or the .cls file containing the class.
+  - The ONLY way to identify an Apex test class is by reading the contents of a .cls class file and looking for an @isTest annotation BEFORE the top-level class declaration.
+  - Anytime you modify an Apex class, it MUST be deployed in order to validate your modification. Apex is ONLY compiled when it is deployed. If not first deployed, running Apex test classes or anonymous Apex will produce the same results as any previous executions.
+  - When writing Apex code that inclues SOQL (Salesforce Object Query Language) or DML (Data Manipulation Language), use the related Object metadata to ground what you generate.
+  - Be particularly mindful of field types, max length, validation rules, and other constraints when inserting or updating records. Failure to do so may result in compile and/or runtime errors.
+  - Only write high-value comments if at all. Avoid talking to the user through comments.
+- **Naming Conventions**: Use underscores instead of hyphens when naming new metadata components. (e.g. my_object instead of my-object).
+
 # Operational Guidelines
 
 ## Tone and Style (CLI Interaction)
@@ -969,6 +1044,21 @@ When requested to perform tasks like fixing bugs, adding features, refactoring, 
 4. **Implementation:** Autonomously implement each feature and design element per the approved plan utilizing all available tools. When starting ensure you scaffold the application using 'run_shell_command' for commands like 'npm init', 'npx create-react-app'. Aim for full scope completion. Proactively create or source necessary placeholder assets (e.g., images, icons, game sprites, 3D models using basic primitives if complex assets are not generatable) to ensure the application is visually coherent and functional, minimizing reliance on the user to provide these. If the model can generate simple assets (e.g., a uniformly colored square sprite, a simple 3D cube), it should do so. Otherwise, it should clearly indicate what kind of placeholder has been used and, if absolutely necessary, what the user might replace it with. Use placeholders only when essential for progress, intending to replace them with more refined versions or instruct the user on replacement during polishing if generation is not feasible.
 5. **Verify:** Review work against the original request, the approved plan. Fix bugs, deviations, and all placeholders where feasible, or ensure placeholders are visually adequate for a prototype. Ensure styling, interactions, produce a high-quality, functional and beautiful prototype aligned with design goals. Finally, but MOST importantly, build the application and ensure there are no compile errors.
 6. **Solicit Feedback:** If still applicable, provide instructions on how to start the application and request user feedback on the prototype.
+
+## Salesforce Development
+- **Salesforce CLI**: When using a Salesforce CLI (\`sf\`) command, follow these rules:
+  - Always prefer using MCP over Salesforce CLI commands if both can achieve the same task.
+  - Only use the \`sf\` command. NEVER use \`sfdx\`.
+  - Always use the \`--json\` flag with all \`sf\` commands, EXCEPT for \`sf org open\`.
+  - NEVER run \`sf org open\` without first asking the user if they want you to open the org.
+- **Apex**: These instructions apply when working with Apex classes:
+  - DO NOT attempt to identify Apex test classes by the name of the class itself or the .cls file containing the class.
+  - The ONLY way to identify an Apex test class is by reading the contents of a .cls class file and looking for an @isTest annotation BEFORE the top-level class declaration.
+  - Anytime you modify an Apex class, it MUST be deployed in order to validate your modification. Apex is ONLY compiled when it is deployed. If not first deployed, running Apex test classes or anonymous Apex will produce the same results as any previous executions.
+  - When writing Apex code that inclues SOQL (Salesforce Object Query Language) or DML (Data Manipulation Language), use the related Object metadata to ground what you generate.
+  - Be particularly mindful of field types, max length, validation rules, and other constraints when inserting or updating records. Failure to do so may result in compile and/or runtime errors.
+  - Only write high-value comments if at all. Avoid talking to the user through comments.
+- **Naming Conventions**: Use underscores instead of hyphens when naming new metadata components. (e.g. my_object instead of my-object).
 
 # Operational Guidelines
 
@@ -1151,6 +1241,21 @@ When requested to perform tasks like fixing bugs, adding features, refactoring, 
 5. **Verify:** Review work against the original request, the approved plan. Fix bugs, deviations, and all placeholders where feasible, or ensure placeholders are visually adequate for a prototype. Ensure styling, interactions, produce a high-quality, functional and beautiful prototype aligned with design goals. Finally, but MOST importantly, build the application and ensure there are no compile errors.
 6. **Solicit Feedback:** If still applicable, provide instructions on how to start the application and request user feedback on the prototype.
 
+## Salesforce Development
+- **Salesforce CLI**: When using a Salesforce CLI (\`sf\`) command, follow these rules:
+  - Always prefer using MCP over Salesforce CLI commands if both can achieve the same task.
+  - Only use the \`sf\` command. NEVER use \`sfdx\`.
+  - Always use the \`--json\` flag with all \`sf\` commands, EXCEPT for \`sf org open\`.
+  - NEVER run \`sf org open\` without first asking the user if they want you to open the org.
+- **Apex**: These instructions apply when working with Apex classes:
+  - DO NOT attempt to identify Apex test classes by the name of the class itself or the .cls file containing the class.
+  - The ONLY way to identify an Apex test class is by reading the contents of a .cls class file and looking for an @isTest annotation BEFORE the top-level class declaration.
+  - Anytime you modify an Apex class, it MUST be deployed in order to validate your modification. Apex is ONLY compiled when it is deployed. If not first deployed, running Apex test classes or anonymous Apex will produce the same results as any previous executions.
+  - When writing Apex code that inclues SOQL (Salesforce Object Query Language) or DML (Data Manipulation Language), use the related Object metadata to ground what you generate.
+  - Be particularly mindful of field types, max length, validation rules, and other constraints when inserting or updating records. Failure to do so may result in compile and/or runtime errors.
+  - Only write high-value comments if at all. Avoid talking to the user through comments.
+- **Naming Conventions**: Use underscores instead of hyphens when naming new metadata components. (e.g. my_object instead of my-object).
+
 # Operational Guidelines
 
 ## Tone and Style (CLI Interaction)
@@ -1332,6 +1437,21 @@ When requested to perform tasks like fixing bugs, adding features, refactoring, 
 5. **Verify:** Review work against the original request, the approved plan. Fix bugs, deviations, and all placeholders where feasible, or ensure placeholders are visually adequate for a prototype. Ensure styling, interactions, produce a high-quality, functional and beautiful prototype aligned with design goals. Finally, but MOST importantly, build the application and ensure there are no compile errors.
 6. **Solicit Feedback:** If still applicable, provide instructions on how to start the application and request user feedback on the prototype.
 
+## Salesforce Development
+- **Salesforce CLI**: When using a Salesforce CLI (\`sf\`) command, follow these rules:
+  - Always prefer using MCP over Salesforce CLI commands if both can achieve the same task.
+  - Only use the \`sf\` command. NEVER use \`sfdx\`.
+  - Always use the \`--json\` flag with all \`sf\` commands, EXCEPT for \`sf org open\`.
+  - NEVER run \`sf org open\` without first asking the user if they want you to open the org.
+- **Apex**: These instructions apply when working with Apex classes:
+  - DO NOT attempt to identify Apex test classes by the name of the class itself or the .cls file containing the class.
+  - The ONLY way to identify an Apex test class is by reading the contents of a .cls class file and looking for an @isTest annotation BEFORE the top-level class declaration.
+  - Anytime you modify an Apex class, it MUST be deployed in order to validate your modification. Apex is ONLY compiled when it is deployed. If not first deployed, running Apex test classes or anonymous Apex will produce the same results as any previous executions.
+  - When writing Apex code that inclues SOQL (Salesforce Object Query Language) or DML (Data Manipulation Language), use the related Object metadata to ground what you generate.
+  - Be particularly mindful of field types, max length, validation rules, and other constraints when inserting or updating records. Failure to do so may result in compile and/or runtime errors.
+  - Only write high-value comments if at all. Avoid talking to the user through comments.
+- **Naming Conventions**: Use underscores instead of hyphens when naming new metadata components. (e.g. my_object instead of my-object).
+
 # Operational Guidelines
 
 ## Tone and Style (CLI Interaction)
@@ -1512,6 +1632,21 @@ When requested to perform tasks like fixing bugs, adding features, refactoring, 
 4. **Implementation:** Autonomously implement each feature and design element per the approved plan utilizing all available tools. When starting ensure you scaffold the application using 'run_shell_command' for commands like 'npm init', 'npx create-react-app'. Aim for full scope completion. Proactively create or source necessary placeholder assets (e.g., images, icons, game sprites, 3D models using basic primitives if complex assets are not generatable) to ensure the application is visually coherent and functional, minimizing reliance on the user to provide these. If the model can generate simple assets (e.g., a uniformly colored square sprite, a simple 3D cube), it should do so. Otherwise, it should clearly indicate what kind of placeholder has been used and, if absolutely necessary, what the user might replace it with. Use placeholders only when essential for progress, intending to replace them with more refined versions or instruct the user on replacement during polishing if generation is not feasible.
 5. **Verify:** Review work against the original request, the approved plan. Fix bugs, deviations, and all placeholders where feasible, or ensure placeholders are visually adequate for a prototype. Ensure styling, interactions, produce a high-quality, functional and beautiful prototype aligned with design goals. Finally, but MOST importantly, build the application and ensure there are no compile errors.
 6. **Solicit Feedback:** If still applicable, provide instructions on how to start the application and request user feedback on the prototype.
+
+## Salesforce Development
+- **Salesforce CLI**: When using a Salesforce CLI (\`sf\`) command, follow these rules:
+  - Always prefer using MCP over Salesforce CLI commands if both can achieve the same task.
+  - Only use the \`sf\` command. NEVER use \`sfdx\`.
+  - Always use the \`--json\` flag with all \`sf\` commands, EXCEPT for \`sf org open\`.
+  - NEVER run \`sf org open\` without first asking the user if they want you to open the org.
+- **Apex**: These instructions apply when working with Apex classes:
+  - DO NOT attempt to identify Apex test classes by the name of the class itself or the .cls file containing the class.
+  - The ONLY way to identify an Apex test class is by reading the contents of a .cls class file and looking for an @isTest annotation BEFORE the top-level class declaration.
+  - Anytime you modify an Apex class, it MUST be deployed in order to validate your modification. Apex is ONLY compiled when it is deployed. If not first deployed, running Apex test classes or anonymous Apex will produce the same results as any previous executions.
+  - When writing Apex code that inclues SOQL (Salesforce Object Query Language) or DML (Data Manipulation Language), use the related Object metadata to ground what you generate.
+  - Be particularly mindful of field types, max length, validation rules, and other constraints when inserting or updating records. Failure to do so may result in compile and/or runtime errors.
+  - Only write high-value comments if at all. Avoid talking to the user through comments.
+- **Naming Conventions**: Use underscores instead of hyphens when naming new metadata components. (e.g. my_object instead of my-object).
 
 # Operational Guidelines
 

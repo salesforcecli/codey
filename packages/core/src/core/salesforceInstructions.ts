@@ -20,3 +20,18 @@ export const SCHEMA_INSTRUCTION = `**Schema:** When using a tool, follow the sch
 export const TOOL_PREFERENCES_INSTRUCTION = `**MCP Before Salesforce CLI:** Always prefer using MCP over Salesforce CLI commands if both can achieve the same task. Use this when the task clearly matches a listed MCP tool. Do not assume or invent tools that are not explicitly listed.`;
 export const DEPLOY_RETRIEVE_INSTRUCTION = `**Salesforce Deploys and Retrieves**: When the user requests to deploy or retrieve, assume Salesforce metadata deployment by default. Use the suitable MCP tool to deploy or retrieve Salesforce metadata.`;
 export const USERNAME_INSTRUCTION = `**Mandatory Org Username Verification**: Before executing a Salesforce DX MCP tool that requires an org username or alias, you MUST always determine the correct username. If the username is not explicitly provided in the user's prompt, use the sf-get-username tool to resolve it. Only proceed with the MCP tool once a valid username has been obtained.`;
+
+export const SALESFORCE_DEVELOPMENT_INSTRUCTIONS = `## Salesforce Development
+- **Salesforce CLI**: When using a Salesforce CLI (\`sf\`) command, follow these rules:
+  - Always prefer using MCP over Salesforce CLI commands if both can achieve the same task.
+  - Only use the \`sf\` command. NEVER use \`sfdx\`.
+  - Always use the \`--json\` flag with all \`sf\` commands, EXCEPT for \`sf org open\`.
+  - NEVER run \`sf org open\` without first asking the user if they want you to open the org.
+- **Apex**: These instructions apply when working with Apex classes:
+  - DO NOT attempt to identify Apex test classes by the name of the class itself or the .cls file containing the class.
+  - The ONLY way to identify an Apex test class is by reading the contents of a .cls class file and looking for an @isTest annotation BEFORE the top-level class declaration.
+  - Anytime you modify an Apex class, it MUST be deployed in order to validate your modification. Apex is ONLY compiled when it is deployed. If not first deployed, running Apex test classes or anonymous Apex will produce the same results as any previous executions.
+  - When writing Apex code that inclues SOQL (Salesforce Object Query Language) or DML (Data Manipulation Language), use the related Object metadata to ground what you generate.
+  - Be particularly mindful of field types, max length, validation rules, and other constraints when inserting or updating records. Failure to do so may result in compile and/or runtime errors.
+  - Only write high-value comments if at all. Avoid talking to the user through comments.
+- **Naming Conventions**: Use underscores instead of hyphens when naming new metadata components. (e.g. my_object instead of my-object).`;
