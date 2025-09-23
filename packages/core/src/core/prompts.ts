@@ -28,6 +28,14 @@ import { WriteFileTool } from '../tools/write-file.js';
 import process from 'node:process';
 import { isGitRepository } from '../utils/gitUtils.js';
 import { MemoryTool, GEMINI_CONFIG_DIR } from '../tools/memoryTool.js';
+import {
+  DEPLOY_RETRIEVE_INSTRUCTION,
+  PRIVACY_INSTRUCTION,
+  ROLE_INSTRUCTION,
+  USERNAME_INSTRUCTION,
+  SCHEMA_INSTRUCTION,
+  TOOL_PREFERENCES_INSTRUCTION,
+} from './salesforceInstructions.js';
 
 export function resolvePathFromEnv(envVar?: string): {
   isSwitch: boolean;
@@ -106,7 +114,7 @@ export function getCoreSystemPrompt(userMemory?: string): string {
   const basePrompt = systemMdEnabled
     ? fs.readFileSync(systemMdPath, 'utf8')
     : `
-You are an interactive CLI agent specializing in software engineering tasks. Your primary goal is to help users safely and efficiently, adhering strictly to the following instructions and utilizing your available tools.
+${ROLE_INSTRUCTION}
 
 # Core Mandates
 
@@ -164,6 +172,7 @@ When requested to perform tasks like fixing bugs, adding features, refactoring, 
 ## Security and Safety Rules
 - **Explain Critical Commands:** Before executing commands with '${ShellTool.Name}' that modify the file system, codebase, or system state, you *must* provide a brief explanation of the command's purpose and potential impact. Prioritize user understanding and safety. You should not ask permission to use the tool; the user will be presented with a confirmation dialogue upon use (you do not need to tell them this).
 - **Security First:** Always apply security best practices. Never introduce code that exposes, logs, or commits secrets, API keys, or other sensitive information.
+- ${PRIVACY_INSTRUCTION}
 
 ## Tool Usage
 - **File Paths:** Always use absolute paths when referring to files with tools like '${ReadFileTool.Name}' or '${WriteFileTool.Name}'. Relative paths are not supported. You must provide an absolute path.
@@ -173,6 +182,10 @@ When requested to perform tasks like fixing bugs, adding features, refactoring, 
 - **Interactive Commands:** Try to avoid shell commands that are likely to require user interaction (e.g. \`git rebase -i\`). Use non-interactive versions of commands (e.g. \`npm init -y\` instead of \`npm init\`) when available, and otherwise remind the user that interactive shell commands are not supported and may cause hangs until canceled by the user.
 - **Remembering Facts:** Use the '${MemoryTool.Name}' tool to remember specific, *user-related* facts or preferences when the user explicitly asks, or when they state a clear, concise piece of information that would help personalize or streamline *your future interactions with them* (e.g., preferred coding style, common project paths they use, personal tool aliases). This tool is for user-specific information that should persist across sessions. Do *not* use it for general project context or information. If unsure whether to save something, you can ask the user, "Should I remember that for you?"
 - **Respect User Confirmations:** Most tool calls (also denoted as 'function calls') will first require confirmation from the user, where they will either approve or cancel the function call. If a user cancels a function call, respect their choice and do _not_ try to make the function call again. It is okay to request the tool call again _only_ if the user requests that same tool call on a subsequent prompt. When a user cancels a function call, assume best intentions from the user and consider inquiring if they prefer any alternative paths forward.
+- ${SCHEMA_INSTRUCTION}
+- ${TOOL_PREFERENCES_INSTRUCTION}
+- ${DEPLOY_RETRIEVE_INSTRUCTION}
+- ${USERNAME_INSTRUCTION}
 
 ## Interaction Details
 - **Help Command:** The user can use '/help' to display help information.
