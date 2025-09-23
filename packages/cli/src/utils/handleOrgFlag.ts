@@ -19,14 +19,14 @@ import type { LoadedSettings } from '../config/settings.js';
 /**
  * Handles the --org flag by setting the appropriate environment variable and validating authentication configuration.
  *
- * This function sets the CODEY_ORG_USERNAME environment variable based on the provided org parameter,
- * falling back to existing environment variables. It validates that either CODEY_ORG_USERNAME or
+ * This function sets the CODEY_GATEWAY_ORG environment variable based on the provided org parameter,
+ * falling back to existing environment variables. It validates that either CODEY_GATEWAY_ORG or
  * GEMINI_API_KEY is available for authentication, and refreshes the settings to trigger auth type
  * auto-selection.
  *
  * @param org - The organization username to use, or undefined to use existing environment variable
  * @param settings - The loaded settings instance that will be refreshed after environment setup
- * @throws Will exit the process with code 1 if neither CODEY_ORG_USERNAME nor GEMINI_API_KEY is available
+ * @throws Will exit the process with code 1 if neither CODEY_GATEWAY_ORG nor GEMINI_API_KEY is available
  *
  * @remarks
  * A better solution would be to set the org in the Config instance directly. However, this approach
@@ -36,12 +36,12 @@ export function handleOrgFlag(
   org: string | undefined,
   settings: LoadedSettings,
 ): void {
-  process.env['CODEY_ORG_USERNAME'] =
-    org ?? process.env['CODEY_ORG_USERNAME'] ?? '';
-  // Do not throw if either CODEY_ORG_USERNAME or GEMINI_API_KEY is set
-  if (!process.env['CODEY_ORG_USERNAME'] && !process.env['GEMINI_API_KEY']) {
+  process.env['CODEY_GATEWAY_ORG'] =
+    org ?? process.env['CODEY_GATEWAY_ORG'] ?? '';
+  // Do not throw if either CODEY_GATEWAY_ORG or GEMINI_API_KEY is set
+  if (!process.env['CODEY_GATEWAY_ORG'] && !process.env['GEMINI_API_KEY']) {
     console.error(
-      'Error: No org specified. Please provide an org using the --org flag or set the CODEY_ORG_USERNAME environment variable.',
+      'Error: No org specified. Please provide an org using the --gateway-org flag or set the CODEY_GATEWAY_ORG environment variable.',
     );
     process.exit(1);
   }

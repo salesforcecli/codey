@@ -259,7 +259,7 @@ describe('headless-chat', () => {
           testSessionId,
           expect.objectContaining({
             model: undefined,
-            org: undefined,
+            gatewayOrg: undefined,
             outputFormat: undefined,
             sandbox: undefined,
             sandboxImage: undefined,

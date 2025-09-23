@@ -76,8 +76,8 @@ export async function initClient(
   }
 
   const settings = loadSettings(workspaceRoot);
-  if (opts?.org) {
-    handleOrgFlag(opts.org, settings);
+  if (opts?.gatewayOrg) {
+    handleOrgFlag(opts.gatewayOrg, settings);
   }
 
   const extensions = loadExtensions(workspaceRoot);
@@ -87,7 +87,7 @@ export async function initClient(
     sessionId,
     {
       // org and model are provided by the spread operator below
-      org: undefined,
+      gatewayOrg: undefined,
       model: undefined,
       sandbox: undefined,
       sandboxImage: undefined,

@@ -27,7 +27,7 @@ import { handleOrgFlag } from './handleOrgFlag.js';
 import type { LoadedSettings } from '../config/settings.js';
 
 describe('handleOrgFlag', () => {
-  const originalOrg = process.env['CODEY_ORG_USERNAME'];
+  const originalOrg = process.env['CODEY_GATEWAY_ORG'];
   const originalGemini = process.env['GEMINI_API_KEY'];
 
   let exitSpy: MockInstance;
@@ -36,7 +36,7 @@ describe('handleOrgFlag', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     // Clean target env vars before each test to avoid cross-test pollution
-    delete process.env['CODEY_ORG_USERNAME'];
+    delete process.env['CODEY_GATEWAY_ORG'];
     delete process.env['GEMINI_API_KEY'];
 
     // Mock process.exit to avoid terminating the test process. Throw to stop execution in error path.
@@ -59,9 +59,9 @@ describe('handleOrgFlag', () => {
     vi.restoreAllMocks();
     // Restore original env
     if (originalOrg === undefined) {
-      delete process.env['CODEY_ORG_USERNAME'];
+      delete process.env['CODEY_GATEWAY_ORG'];
     } else {
-      process.env['CODEY_ORG_USERNAME'] = originalOrg;
+      process.env['CODEY_GATEWAY_ORG'] = originalOrg;
     }
     if (originalGemini === undefined) {
       delete process.env['GEMINI_API_KEY'];
@@ -70,24 +70,24 @@ describe('handleOrgFlag', () => {
     }
   });
 
-  it('sets CODEY_ORG_USERNAME from provided org and refreshes settings', () => {
+  it('sets CODEY_GATEWAY_ORG from provided org and refreshes settings', () => {
     const settings = { refresh: vi.fn() } as unknown as LoadedSettings;
 
     handleOrgFlag('user@example.com', settings);
 
-    expect(process.env['CODEY_ORG_USERNAME']).toBe('user@example.com');
+    expect(process.env['CODEY_GATEWAY_ORG']).toBe('user@example.com');
     expect(settings.refresh).toHaveBeenCalledTimes(1);
     expect(errorSpy).not.toHaveBeenCalled();
     expect(exitSpy).not.toHaveBeenCalled();
   });
 
-  it('uses existing CODEY_ORG_USERNAME when org is undefined', () => {
-    process.env['CODEY_ORG_USERNAME'] = 'preexisting@example.com';
+  it('uses existing CODEY_GATEWAY_ORG when org is undefined', () => {
+    process.env['CODEY_GATEWAY_ORG'] = 'preexisting@example.com';
     const settings = { refresh: vi.fn() } as unknown as LoadedSettings;
 
     handleOrgFlag(undefined, settings);
 
-    expect(process.env['CODEY_ORG_USERNAME']).toBe('preexisting@example.com');
+    expect(process.env['CODEY_GATEWAY_ORG']).toBe('preexisting@example.com');
     expect(settings.refresh).toHaveBeenCalledTimes(1);
     expect(errorSpy).not.toHaveBeenCalled();
     expect(exitSpy).not.toHaveBeenCalled();
@@ -99,8 +99,8 @@ describe('handleOrgFlag', () => {
 
     handleOrgFlag(undefined, settings);
 
-    // Implementation sets CODEY_ORG_USERNAME to empty string when not provided
-    expect(process.env['CODEY_ORG_USERNAME']).toBe('');
+    // Implementation sets CODEY_GATEWAY_ORG to empty string when not provided
+    expect(process.env['CODEY_GATEWAY_ORG']).toBe('');
     expect(settings.refresh).toHaveBeenCalledTimes(1);
     expect(errorSpy).not.toHaveBeenCalled();
     expect(exitSpy).not.toHaveBeenCalled();

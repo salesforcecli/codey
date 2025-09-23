@@ -1995,7 +1995,13 @@ describe('loadCliConfig interactive', () => {
 
   it.only('should not be interactive if positional prompt words are provided with other flags', async () => {
     process.stdin.isTTY = true;
-    process.argv = ['node', 'script.js', '--org', 'dreamhouse', 'Hello'];
+    process.argv = [
+      'node',
+      'script.js',
+      '--gateway-org',
+      'dreamhouse',
+      'Hello',
+    ];
     const argv = await parseArguments({} as Settings);
     const config = await loadCliConfig({}, [], 'test-session', argv);
     expect(config.isInteractive()).toBe(false);
@@ -2006,7 +2012,7 @@ describe('loadCliConfig interactive', () => {
     process.argv = [
       'node',
       'script.js',
-      '--org',
+      '--gateway-org',
       'dreamhouse',
       '--sandbox',
       'Hello world',
@@ -2018,7 +2024,7 @@ describe('loadCliConfig interactive', () => {
 
   it('should be interactive if no positional prompt words are provided with flags', async () => {
     process.stdin.isTTY = true;
-    process.argv = ['node', 'script.js', '--org', 'dreamhouse'];
+    process.argv = ['node', 'script.js', '--gateway-org', 'dreamhouse'];
     const argv = await parseArguments({} as Settings);
     const config = await loadCliConfig({}, [], 'test-session', argv);
     expect(config.isInteractive()).toBe(true);

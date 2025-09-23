@@ -430,13 +430,13 @@ export class LoadedSettings {
     }
 
     // Minimal env-driven auth selection: if no selectedType is set, prefer
-    // CODEY_ORG_USERNAME (LLM Gateway) over GEMINI_API_KEY (Gemini API Key).
+    // CODEY_GATEWAY_ORG (LLM Gateway) over GEMINI_API_KEY (Gemini API Key).
     // Do not persist; this only affects the merged, in-memory view.
     try {
       const enforced = merged.security?.auth?.enforcedType;
       const selected = merged.security?.auth?.selectedType;
       if (!selected && !enforced) {
-        const hasOrgUsername = Boolean(process.env['CODEY_ORG_USERNAME']);
+        const hasOrgUsername = Boolean(process.env['CODEY_GATEWAY_ORG']);
         const hasGeminiKey = Boolean(process.env['GEMINI_API_KEY']);
 
         let autoType: AuthType | undefined;

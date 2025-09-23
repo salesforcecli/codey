@@ -29,7 +29,7 @@ export const BUILTIN_SYSTEM_DEFAULTS: Settings = {
         '-y',
         '@salesforce/mcp@latest',
         '--orgs',
-        'DEFAULT_TARGET_ORG',
+        'ALLOW_ALL_ORGS',
         '--toolsets',
         'all',
       ],

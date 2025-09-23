@@ -50,8 +50,8 @@ export function validateAuthMethod(authMethod: string): string | null {
   }
 
   if (authMethod === AuthType.USE_SF_LLMG) {
-    if (!process.env['CODEY_ORG_USERNAME']) {
-      return 'CODEY_ORG_USERNAME environment variable not found. Set it to the username or alias of an authenticated Salesforce org.';
+    if (!process.env['CODEY_GATEWAY_ORG']) {
+      return 'CODEY_GATEWAY_ORG environment variable not found. Set it to the username or alias of an authenticated Salesforce org.';
     }
     return null;
   }

@@ -22,28 +22,31 @@ import { useUIActions } from '../contexts/UIActionsContext.js';
 import { AuthState } from '../types.js';
 
 /**
- * A simple informational dialog that displays the CODEY_ORG_USERNAME env var
+ * A simple informational dialog that displays the CODEY_GATEWAY_ORG env var
  * and mirrors the key handling pattern used in AuthDialog.
  */
 export function CodeyAuthDialog(): React.JSX.Element {
   const uiActions = useUIActions();
 
   // Read raw value to differentiate between set/unset, then compute a display value.
-  const usernameRaw = process.env['CODEY_ORG_USERNAME'];
+  const usernameRaw = process.env['CODEY_GATEWAY_ORG'];
   const username = usernameRaw ?? 'not set';
   const isSet = Boolean(usernameRaw);
 
   const message = isSet ? (
-    <>
-      You are authorized to <Text color={Colors.AccentBlue}>{username}</Text>
-    </>
+    <Text>
+      You are authorized to the Salesforce LLM Gateway using{' '}
+      <Text color={Colors.AccentBlue}>{username}</Text>. To switch orgs, restart
+      Codey and provide a different org using the{' '}
+      <Text color={Colors.AccentYellow}>--gateway-org</Text> flag.
+    </Text>
   ) : (
-    <>
-      You are not authorized. Set the{' '}
-      <Text color={Colors.AccentYellow}>CODEY_ORG_USERNAME</Text> environment
-      variable or use the <Text color={Colors.AccentYellow}>--org</Text> flag to
-      proceed.
-    </>
+    <Text>
+      You are not authorized to the Salesforce LLM Gateway. Set the{' '}
+      <Text color={Colors.AccentYellow}>CODEY_GATEWAY_ORG</Text> environment
+      variable or use the <Text color={Colors.AccentYellow}>--gateway-org</Text>{' '}
+      flag to proceed.
+    </Text>
   );
 
   useKeypress(

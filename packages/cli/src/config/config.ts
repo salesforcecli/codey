@@ -67,7 +67,7 @@ const logger = {
 };
 
 export interface CliArgs {
-  org: string | undefined;
+  gatewayOrg: string | undefined;
   model: string | undefined;
   sandbox: boolean | string | undefined;
   sandboxImage: string | undefined;
@@ -185,10 +185,11 @@ export async function parseArguments(settings: Settings): Promise<CliArgs> {
         //   description: `Model`,
         //   default: process.env['GEMINI_MODEL'],
         // })
-        .option('org', {
+        .option('gateway-org', {
           alias: 'o',
           type: 'string',
-          description: 'Org username or alias to use for authentication.',
+          description:
+            'Org username or alias to use for authentication to the Salesforce LLM Gateway.',
         })
         .option('prompt', {
           alias: 'p',
@@ -588,7 +589,7 @@ export async function loadCliConfig(
     ? DEFAULT_GEMINI_MODEL_AUTO
     : DEFAULT_GEMINI_MODEL;
   const resolvedModel: string =
-    argv.model || process.env['CODEY_ORG_USERNAME']
+    argv.model || process.env['CODEY_GATEWAY_ORG']
       ? DEFAULT_GATEWAY_MODEL.displayId
       : process.env['GEMINI_MODEL'] || settings.model?.name || defaultModel;
 

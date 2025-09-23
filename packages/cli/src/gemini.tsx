@@ -260,7 +260,7 @@ export async function main() {
 
   const argv = await parseArguments(settings.merged);
 
-  handleOrgFlag(argv.org, settings);
+  handleOrgFlag(argv.gatewayOrg, settings);
 
   const extensions = loadExtensions();
   const config = await loadCliConfig(

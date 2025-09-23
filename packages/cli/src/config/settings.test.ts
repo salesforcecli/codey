@@ -1900,13 +1900,13 @@ describe('Settings Loading and Merging', () => {
   describe('LoadedSettings.refresh', () => {
     beforeEach(() => {
       // Reset process.env for each test
-      delete process.env['CODEY_ORG_USERNAME'];
+      delete process.env['CODEY_GATEWAY_ORG'];
       delete process.env['GEMINI_API_KEY'];
     });
 
     afterEach(() => {
       // Clean up process.env
-      delete process.env['CODEY_ORG_USERNAME'];
+      delete process.env['CODEY_GATEWAY_ORG'];
       delete process.env['GEMINI_API_KEY'];
     });
 
@@ -1932,7 +1932,7 @@ describe('Settings Loading and Merging', () => {
       expect(settings.merged.security?.auth?.selectedType).toBeUndefined();
 
       // Set environment variable to simulate having credentials
-      process.env['CODEY_ORG_USERNAME'] = 'test@example.com';
+      process.env['CODEY_GATEWAY_ORG'] = 'test@example.com';
 
       // Call refresh to trigger recomputation with deriveAuth=true
       settings.refresh();
@@ -1943,7 +1943,7 @@ describe('Settings Loading and Merging', () => {
       );
     });
 
-    it('should prefer CODEY_ORG_USERNAME over GEMINI_API_KEY when both are present', () => {
+    it('should prefer CODEY_GATEWAY_ORG over GEMINI_API_KEY when both are present', () => {
       (mockFsExistsSync as Mock).mockImplementation(
         (p: fs.PathLike) => p === USER_SETTINGS_PATH,
       );
@@ -1959,18 +1959,18 @@ describe('Settings Loading and Merging', () => {
       const settings = loadSettings(MOCK_WORKSPACE_DIR);
 
       // Set both environment variables
-      process.env['CODEY_ORG_USERNAME'] = 'test@example.com';
+      process.env['CODEY_GATEWAY_ORG'] = 'test@example.com';
       process.env['GEMINI_API_KEY'] = 'test-api-key';
 
       settings.refresh();
 
-      // Should prefer CODEY_ORG_USERNAME (USE_SF_LLMG) over GEMINI_API_KEY (USE_GEMINI)
+      // Should prefer CODEY_GATEWAY_ORG (USE_SF_LLMG) over GEMINI_API_KEY (USE_GEMINI)
       expect(settings.merged.security?.auth?.selectedType).toBe(
         AuthType.USE_SF_LLMG,
       );
     });
 
-    it('should use GEMINI_API_KEY when CODEY_ORG_USERNAME is not present', () => {
+    it('should use GEMINI_API_KEY when CODEY_GATEWAY_ORG is not present', () => {
       (mockFsExistsSync as Mock).mockImplementation(
         (p: fs.PathLike) => p === USER_SETTINGS_PATH,
       );
@@ -2017,7 +2017,7 @@ describe('Settings Loading and Merging', () => {
       const settings = loadSettings(MOCK_WORKSPACE_DIR);
 
       // Set environment variable
-      process.env['CODEY_ORG_USERNAME'] = 'test@example.com';
+      process.env['CODEY_GATEWAY_ORG'] = 'test@example.com';
 
       settings.refresh();
 
@@ -2049,7 +2049,7 @@ describe('Settings Loading and Merging', () => {
       const settings = loadSettings(MOCK_WORKSPACE_DIR);
 
       // Set environment variable
-      process.env['CODEY_ORG_USERNAME'] = 'test@example.com';
+      process.env['CODEY_GATEWAY_ORG'] = 'test@example.com';
 
       settings.refresh();
 
@@ -2076,7 +2076,7 @@ describe('Settings Loading and Merging', () => {
       const settings = loadSettings(MOCK_WORKSPACE_DIR);
 
       // Ensure no auth environment variables are set
-      delete process.env['CODEY_ORG_USERNAME'];
+      delete process.env['CODEY_GATEWAY_ORG'];
       delete process.env['GEMINI_API_KEY'];
 
       settings.refresh();
@@ -2100,7 +2100,7 @@ describe('Settings Loading and Merging', () => {
       const settings = loadSettings(MOCK_WORKSPACE_DIR);
 
       // Set environment variable
-      process.env['CODEY_ORG_USERNAME'] = 'test@example.com';
+      process.env['CODEY_GATEWAY_ORG'] = 'test@example.com';
 
       // Mock the setNestedProperty behavior to throw an error
       const originalSettings = settings.merged;
@@ -2134,7 +2134,7 @@ describe('Settings Loading and Merging', () => {
       expect(settings.merged).toEqual({ ...BUILTIN_SYSTEM_DEFAULTS });
 
       // Set environment variable
-      process.env['CODEY_ORG_USERNAME'] = 'test@example.com';
+      process.env['CODEY_GATEWAY_ORG'] = 'test@example.com';
 
       settings.refresh();
 
