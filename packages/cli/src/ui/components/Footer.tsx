@@ -15,12 +15,13 @@
  */
 
 import type React from 'react';
+import { useState, useEffect } from 'react';
 import { Box, Text } from 'ink';
 import { theme } from '../semantic-colors.js';
 import { shortenPath, tildeifyPath } from '@salesforce/codey-core';
 import { ConsoleSummaryDisplay } from './ConsoleSummaryDisplay.js';
+import { getDefaultOrgs } from '../../core/orgs.js';
 
-import process from 'node:process';
 import path from 'node:path';
 import Gradient from 'ink-gradient';
 import { MemoryUsageDisplay } from './MemoryUsageDisplay.js';
@@ -62,12 +63,31 @@ export const Footer: React.FC<FooterProps> = ({
   promptTokenCount,
   nightly,
   vimMode,
-  isTrustedFolder,
   hideCWD = false,
-  hideSandboxStatus = false,
   hideModelInfo = false,
 }) => {
   const { columns: terminalWidth } = useTerminalSize();
+  const [defaultTargetOrg, setDefaultTargetOrg] = useState<string | null>(null);
+  const [defaultTargetDevhub, setDefaultTargetDevhub] = useState<string | null>(
+    null,
+  );
+
+  useEffect(() => {
+    const fetchDefaultOrgs = async () => {
+      try {
+        const { defaultTargetOrg, defaultTargetDevhub } =
+          await getDefaultOrgs();
+        setDefaultTargetOrg(defaultTargetOrg);
+        setDefaultTargetDevhub(defaultTargetDevhub);
+      } catch {
+        // Handle error silently or set to null
+        setDefaultTargetOrg(null);
+        setDefaultTargetDevhub(null);
+      }
+    };
+
+    fetchDefaultOrgs();
+  }, []);
 
   const isNarrow = isNarrowWidth(terminalWidth);
 
@@ -80,107 +100,105 @@ export const Footer: React.FC<FooterProps> = ({
   const justifyContent = hideCWD && hideModelInfo ? 'center' : 'space-between';
 
   return (
-    <Box
-      justifyContent={justifyContent}
-      width="100%"
-      flexDirection={isNarrow ? 'column' : 'row'}
-      alignItems={isNarrow ? 'flex-start' : 'center'}
-    >
-      {(debugMode || vimMode || !hideCWD) && (
-        <Box>
-          {debugMode && <DebugProfiler />}
-          {vimMode && <Text color={theme.text.secondary}>[{vimMode}] </Text>}
-          {!hideCWD &&
-            (nightly ? (
-              <Gradient colors={theme.ui.gradient}>
-                <Text>
+    <Box width="100%" flexDirection="column">
+      {/* First Row: CWD and Model Info */}
+      <Box
+        justifyContent={justifyContent}
+        width="100%"
+        flexDirection="row"
+        alignItems="center"
+      >
+        {/* Left Section: CWD, Debug, Vim Mode */}
+        {(debugMode || vimMode || !hideCWD) && (
+          <Box>
+            {debugMode && <DebugProfiler />}
+            {vimMode && <Text color={theme.text.secondary}>[{vimMode}] </Text>}
+            {!hideCWD &&
+              (nightly ? (
+                <Gradient colors={theme.ui.gradient}>
+                  <Text>
+                    {displayPath}
+                    {branchName && <Text> ({branchName}*)</Text>}
+                  </Text>
+                </Gradient>
+              ) : (
+                <Text color={theme.text.link}>
                   {displayPath}
-                  {branchName && <Text> ({branchName}*)</Text>}
+                  {branchName && (
+                    <Text color={theme.text.secondary}> ({branchName}*)</Text>
+                  )}
                 </Text>
-              </Gradient>
-            ) : (
-              <Text color={theme.text.link}>
-                {displayPath}
-                {branchName && (
-                  <Text color={theme.text.secondary}> ({branchName}*)</Text>
-                )}
-              </Text>
-            ))}
-          {debugMode && (
-            <Text color={theme.status.error}>
-              {' ' + (debugMessage || '--debug')}
-            </Text>
-          )}
-        </Box>
-      )}
-
-      {/* Middle Section: Centered Trust/Sandbox Info */}
-      {!hideSandboxStatus && (
-        <Box
-          flexGrow={isNarrow || hideCWD || hideModelInfo ? 0 : 1}
-          alignItems="center"
-          justifyContent={isNarrow || hideCWD ? 'flex-start' : 'center'}
-          display="flex"
-          paddingX={isNarrow ? 0 : 1}
-          paddingTop={isNarrow ? 1 : 0}
-        >
-          {isTrustedFolder === false ? (
-            <Text color={theme.status.warning}>untrusted</Text>
-          ) : process.env['SANDBOX'] &&
-            process.env['SANDBOX'] !== 'sandbox-exec' ? (
-            <Text color="green">
-              {process.env['SANDBOX'].replace(/^gemini-(?:cli-)?/, '')}
-            </Text>
-          ) : process.env['SANDBOX'] === 'sandbox-exec' ? (
-            <Text color={theme.status.warning}>
-              macOS Seatbelt{' '}
-              <Text color={theme.text.secondary}>
-                ({process.env['SEATBELT_PROFILE']})
-              </Text>
-            </Text>
-          ) : (
-            <Text color={theme.status.error}>
-              no sandbox <Text color={theme.text.secondary}>(see /docs)</Text>
-            </Text>
-          )}
-        </Box>
-      )}
-
-      {/* Right Section: Gemini Label and Console Summary */}
-      {(!hideModelInfo ||
-        showMemoryUsage ||
-        corgiMode ||
-        (!showErrorDetails && errorCount > 0)) && (
-        <Box alignItems="center" paddingTop={isNarrow ? 1 : 0}>
-          {!hideModelInfo && (
-            <Box alignItems="center">
-              <Text color={theme.text.accent}>
-                {isNarrow ? '' : ' '}
-                {model}{' '}
-                <ContextUsageDisplay
-                  promptTokenCount={promptTokenCount}
-                  model={model}
-                />
-              </Text>
-              {showMemoryUsage && <MemoryUsageDisplay />}
-            </Box>
-          )}
-          <Box alignItems="center" paddingLeft={2}>
-            {corgiMode && (
-              <Text>
-                {!hideModelInfo && <Text color={theme.ui.comment}>| </Text>}
-                <Text color={theme.status.error}>▼</Text>
-                <Text color={theme.text.primary}>(´</Text>
-                <Text color={theme.status.error}>ᴥ</Text>
-                <Text color={theme.text.primary}>`)</Text>
-                <Text color={theme.status.error}>▼ </Text>
+              ))}
+            {debugMode && (
+              <Text color={theme.status.error}>
+                {' ' + (debugMessage || '--debug')}
               </Text>
             )}
-            {!showErrorDetails && errorCount > 0 && (
-              <Box>
-                {!hideModelInfo && <Text color={theme.ui.comment}>| </Text>}
-                <ConsoleSummaryDisplay errorCount={errorCount} />
+          </Box>
+        )}
+
+        {/* Right Section: Model Info and Console Summary */}
+        {(!hideModelInfo ||
+          showMemoryUsage ||
+          corgiMode ||
+          (!showErrorDetails && errorCount > 0)) && (
+          <Box alignItems="center">
+            {!hideModelInfo && (
+              <Box alignItems="center">
+                <Text color={theme.text.accent}>
+                  {model}{' '}
+                  <ContextUsageDisplay
+                    promptTokenCount={promptTokenCount}
+                    model={model}
+                  />
+                </Text>
+                {showMemoryUsage && <MemoryUsageDisplay />}
               </Box>
+            )}
+            <Box alignItems="center" paddingLeft={2}>
+              {corgiMode && (
+                <Text>
+                  {!hideModelInfo && <Text color={theme.ui.comment}>| </Text>}
+                  <Text color={theme.status.error}>▼</Text>
+                  <Text color={theme.text.primary}>(´</Text>
+                  <Text color={theme.status.error}>ᴥ</Text>
+                  <Text color={theme.text.primary}>`)</Text>
+                  <Text color={theme.status.error}>▼ </Text>
+                </Text>
+              )}
+              {!showErrorDetails && errorCount > 0 && (
+                <Box>
+                  {!hideModelInfo && <Text color={theme.ui.comment}>| </Text>}
+                  <ConsoleSummaryDisplay errorCount={errorCount} />
+                </Box>
+              )}
+            </Box>
+          </Box>
+        )}
+      </Box>
+
+      {/* Second Row: Default Orgs - Only show if at least one org is configured */}
+      {(defaultTargetOrg || defaultTargetDevhub) && (
+        <Box
+          width="100%"
+          flexDirection="column"
+          alignItems="flex-start"
+          justifyContent="flex-start"
+        >
+          <Box flexDirection="column">
+            {defaultTargetOrg && (
+              <Text color={theme.text.primary}>
+                <Text color={theme.text.primary}>
+                  {defaultTargetDevhub ? '» Target: ' : '» Target: '}
+                </Text>
+                <Text color={theme.text.secondary}>{defaultTargetOrg}</Text>
+              </Text>
+            )}
+            {defaultTargetDevhub && (
+              <Text color={theme.text.primary}>
+                <Text color={theme.text.primary}>» Devhub: </Text>
+                <Text color={theme.text.secondary}>{defaultTargetDevhub}</Text>
+              </Text>
             )}
           </Box>
         </Box>

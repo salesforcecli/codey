@@ -17,10 +17,10 @@ npm run build
 
 ### Run with DE Org
 
-Create a Developer Edition org and then set the `CODEY_ORG_USERNAME` in your environment:
+Create a Developer Edition org and then set the `CODEY_GATEWAY_ORG` in your environment:
 
 ```
-export CODEY_ORG_USERNAME="your_username_here"
+export CODEY_GATEWAY_ORG="your_username_here"
 ```
 
 Finally, run Codey in any project directory

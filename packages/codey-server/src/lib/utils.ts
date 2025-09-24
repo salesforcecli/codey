@@ -77,8 +77,8 @@ export function validateAuthType(body: Record<string, unknown>): {
     }
     return { authType: AuthType.USE_GEMINI, error: null };
   } else if (trimmed === 'gateway') {
-    // Check if org is available either in CODEY_ORG_USERNAME env var or org param
-    const envOrg = process.env['CODEY_ORG_USERNAME'];
+    // Check if org is available either in CODEY_GATEWAY_ORG env var or org param
+    const envOrg = process.env['CODEY_GATEWAY_ORG'];
     const requestOrg = body['org'];
     const hasValidOrg =
       envOrg ||
@@ -88,7 +88,7 @@ export function validateAuthType(body: Record<string, unknown>): {
       return {
         authType: null,
         error:
-          'org is required when authType is "gateway" (provide via CODEY_ORG_USERNAME environment variable or org parameter)',
+          'org is required when authType is "gateway" (provide via CODEY_GATEWAY_ORG environment variable or org parameter)',
       };
     }
     return { authType: AuthType.USE_SF_LLMG, error: null };
@@ -105,7 +105,7 @@ export function validateOrg(
   authType: AuthType,
 ): { org: string | null; error: string | null } {
   const requestOrg = body['org'];
-  const envOrg = process.env['CODEY_ORG_USERNAME'];
+  const envOrg = process.env['CODEY_GATEWAY_ORG'];
 
   // If authType is gateway, determine which org to use
   if (authType === AuthType.USE_SF_LLMG) {

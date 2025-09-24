@@ -125,7 +125,6 @@ export type HistoryItemAbout = HistoryItemBase & {
   type: 'about';
   cliVersion: string;
   osVersion: string;
-  sandboxEnv: string;
   modelVersion: string;
   selectedAuthType: string;
   gcpProject: string;
@@ -227,7 +226,6 @@ export type Message =
       timestamp: Date;
       cliVersion: string;
       osVersion: string;
-      sandboxEnv: string;
       modelVersion: string;
       selectedAuthType: string;
       gcpProject: string;

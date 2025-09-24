@@ -36,14 +36,6 @@ export const bugCommand: SlashCommand = {
     const { config } = context.services;
 
     const osVersion = `${process.platform} ${process.version}`;
-    let sandboxEnv = 'no sandbox';
-    if (process.env['SANDBOX'] && process.env['SANDBOX'] !== 'sandbox-exec') {
-      sandboxEnv = process.env['SANDBOX'].replace(/^gemini-(?:code-)?/, '');
-    } else if (process.env['SANDBOX'] === 'sandbox-exec') {
-      sandboxEnv = `sandbox-exec (${
-        process.env['SEATBELT_PROFILE'] || 'unknown'
-      })`;
-    }
     const modelVersion = config?.getModel() || 'Unknown';
     const cliVersion = await getCliVersion();
     const memoryUsage = formatMemoryUsage(process.memoryUsage().rss);
@@ -54,7 +46,6 @@ export const bugCommand: SlashCommand = {
 * **Git Commit:** ${GIT_COMMIT_INFO}
 * **Session ID:** ${sessionId}
 * **Operating System:** ${osVersion}
-* **Sandbox Environment:** ${sandboxEnv}
 * **Model Version:** ${modelVersion}
 * **Memory Usage:** ${memoryUsage}
 `;

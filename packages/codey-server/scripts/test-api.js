@@ -32,7 +32,7 @@
  * Environment Variables:
  *   CODEY_SERVER_URL - Server URL (default: http://localhost:3000)
  *   GEMINI_API_KEY - Required for gemini auth type
- *   CODEY_ORG_USERNAME - Required for gateway auth type
+ *   CODEY_GATEWAY_ORG - Required for gateway auth type
  */
 
 import { parseArgs } from 'node:util';
@@ -155,7 +155,7 @@ Options:
 Environment Variables:
   CODEY_SERVER_URL             Override default server URL
   GEMINI_API_KEY               Required for gemini auth type
-  CODEY_ORG_USERNAME           Required for gateway auth type
+  CODEY_GATEWAY_ORG           Required for gateway auth type
 
 Examples:
   # Test with Gemini auth

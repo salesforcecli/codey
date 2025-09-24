@@ -23,7 +23,7 @@ The basic flow is:
 
 Codey can talk to models via the LLM Gateway or directly to Gemini.
 
-For the LLM Gateway, you need a Developer Edition org and set the `CODEY_ORG_USERNAME` environment variable or pass the `org` parameter in the session creation request.
+For the LLM Gateway, you need a Developer Edition org and set the `CODEY_GATEWAY_ORG` environment variable or pass the `org` parameter in the session creation request.
 
 For Gemini, you need a Gemini API key and set the `GEMINI_API_KEY` environment variable.
 
@@ -172,7 +172,7 @@ The server will start on `http://localhost:3000` by default (configurable via `P
 
 #### For Gateway Authentication (`authType: "gateway"`)
 
-- **`CODEY_ORG_USERNAME`**: Salesforce org username
+- **`CODEY_GATEWAY_ORG`**: Salesforce org username
   - Required when using `authType: "gateway"` (unless provided in request body)
   - Can be overridden by the `org` parameter in the session creation request
 
@@ -203,7 +203,7 @@ LOG_LEVEL=debug
 GEMINI_API_KEY=your_gemini_api_key_here
 
 # Gateway setup (alternative to Gemini)
-# CODEY_ORG_USERNAME=your_username@company.com
+# CODEY_GATEWAY_ORG=your_username@company.com
 ```
 
 ## Test Script

@@ -110,14 +110,14 @@ describe('GatewayClient', () => {
     } as unknown as Awaited<ReturnType<typeof request>>);
 
     // Set environment variable
-    process.env['CODEY_ORG_USERNAME'] = 'test@example.com';
+    process.env['CODEY_GATEWAY_ORG'] = 'test@example.com';
 
     client = new GatewayClient();
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
-    delete process.env['CODEY_ORG_USERNAME'];
+    delete process.env['CODEY_GATEWAY_ORG'];
   });
 
   describe('constructor', () => {
@@ -170,11 +170,11 @@ describe('GatewayClient', () => {
       expect(JSONWebToken).toHaveBeenCalledWith({ jwt: 'refreshed-jwt-token' });
     });
 
-    it('should throw error if CODEY_ORG_USERNAME is not set', async () => {
-      delete process.env['CODEY_ORG_USERNAME'];
+    it('should throw error if CODEY_GATEWAY_ORG is not set', async () => {
+      delete process.env['CODEY_GATEWAY_ORG'];
 
       await expect(client.maybeRequestJWT()).rejects.toThrow(
-        'CODEY_ORG_USERNAME is required for SF LLMG auth',
+        'CODEY_GATEWAY_ORG is required for SF LLMG auth',
       );
     });
 

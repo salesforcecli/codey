@@ -80,7 +80,6 @@ describe('bugCommand', () => {
 * **Git Commit:** ${GIT_COMMIT_INFO}
 * **Session ID:** test-session-id
 * **Operating System:** test-platform v20.0.0
-* **Sandbox Environment:** test
 * **Model Version:** gemini-pro
 * **Memory Usage:** 100 MB
 * **IDE Client:** VSCode
@@ -113,7 +112,6 @@ describe('bugCommand', () => {
 * **Git Commit:** ${GIT_COMMIT_INFO}
 * **Session ID:** test-session-id
 * **Operating System:** test-platform v20.0.0
-* **Sandbox Environment:** test
 * **Model Version:** gemini-pro
 * **Memory Usage:** 100 MB
 * **IDE Client:** VSCode
