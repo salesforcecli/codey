@@ -144,6 +144,8 @@ export const AppContainer = (props: AppContainerProps) => {
   const [themeError, setThemeError] = useState<string | null>(
     initializationResult.themeError,
   );
+  const [isProjectWarningDialogOpen, setIsProjectWarningDialogOpen] =
+    useState<boolean>(!!initializationResult.projectError);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [embeddedShellFocused, setEmbeddedShellFocused] = useState(false);
 
@@ -632,6 +634,15 @@ Logging in with Google... Please restart Gemini CLI to continue.
     refreshStatic();
   }, [historyManager, clearConsoleMessagesState, refreshStatic]);
 
+  const closeProjectWarningDialog = useCallback(() => {
+    setIsProjectWarningDialogOpen(false);
+  }, []);
+
+  const exitFromProjectWarningDialog = useCallback(async () => {
+    await runExitCleanup();
+    process.exit(0);
+  }, []);
+
   const { handleInput: vimHandleInput } = useVim(buffer, handleFinalSubmit);
 
   /**
@@ -710,6 +721,7 @@ Logging in with Google... Please restart Gemini CLI to continue.
       !initialPromptSubmitted.current &&
       !isAuthenticating &&
       !isAuthDialogOpen &&
+      !isProjectWarningDialogOpen &&
       !isThemeDialogOpen &&
       !isEditorDialogOpen &&
       !showPrivacyNotice &&
@@ -724,6 +736,7 @@ Logging in with Google... Please restart Gemini CLI to continue.
     handleFinalSubmit,
     isAuthenticating,
     isAuthDialogOpen,
+    isProjectWarningDialogOpen,
     isThemeDialogOpen,
     isEditorDialogOpen,
     showPrivacyNotice,
@@ -999,7 +1012,8 @@ Logging in with Google... Please restart Gemini CLI to continue.
     isAuthDialogOpen ||
     isEditorDialogOpen ||
     showPrivacyNotice ||
-    !!proQuotaRequest;
+    !!proQuotaRequest ||
+    isProjectWarningDialogOpen;
 
   const pendingHistoryItems = useMemo(
     () => [...pendingSlashCommandHistoryItems, ...pendingGeminiHistoryItems],
@@ -1018,6 +1032,8 @@ Logging in with Google... Please restart Gemini CLI to continue.
       editorError,
       isEditorDialogOpen,
       showPrivacyNotice,
+      isProjectWarningDialogOpen,
+      projectError: initializationResult.projectError,
       corgiMode,
       debugMessage,
       quittingMessages,
@@ -1094,6 +1110,7 @@ Logging in with Google... Please restart Gemini CLI to continue.
       editorError,
       isEditorDialogOpen,
       showPrivacyNotice,
+      isProjectWarningDialogOpen,
       corgiMode,
       debugMessage,
       quittingMessages,
@@ -1158,6 +1175,7 @@ Logging in with Google... Please restart Gemini CLI to continue.
       extensionsUpdateState,
       activePtyId,
       embeddedShellFocused,
+      initializationResult.projectError,
     ],
   );
 
@@ -1184,6 +1202,8 @@ Logging in with Google... Please restart Gemini CLI to continue.
       onWorkspaceMigrationDialogOpen,
       onWorkspaceMigrationDialogClose,
       handleProQuotaChoice,
+      closeProjectWarningDialog,
+      exitFromProjectWarningDialog,
     }),
     [
       handleThemeSelect,
@@ -1206,6 +1226,8 @@ Logging in with Google... Please restart Gemini CLI to continue.
       onWorkspaceMigrationDialogOpen,
       onWorkspaceMigrationDialogClose,
       handleProQuotaChoice,
+      closeProjectWarningDialog,
+      exitFromProjectWarningDialog,
     ],
   );
 

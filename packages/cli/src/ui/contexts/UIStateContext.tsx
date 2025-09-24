@@ -56,6 +56,8 @@ export interface UIState {
   editorError: string | null;
   isEditorDialogOpen: boolean;
   showPrivacyNotice: boolean;
+  isProjectWarningDialogOpen: boolean;
+  projectError: string | null;
   corgiMode: boolean;
   debugMessage: string;
   quittingMessages: HistoryItem[] | null;

@@ -24,10 +24,12 @@ import {
 import { type LoadedSettings } from '../config/settings.js';
 import { performInitialAuth } from './auth.js';
 import { validateTheme } from './theme.js';
+import { validateSalesforceProject } from './project.js';
 
 export interface InitializationResult {
   authError: string | null;
   themeError: string | null;
+  projectError: string | null;
   shouldOpenAuthDialog: boolean;
   geminiMdFileCount: number;
 }
@@ -49,6 +51,12 @@ export async function initializeApp(
   );
   const themeError = validateTheme(settings);
 
+  // Validate Salesforce project
+  const hasValidProject = await validateSalesforceProject();
+  const projectError = hasValidProject
+    ? null
+    : 'No Salesforce project detected';
+
   const shouldOpenAuthDialog =
     settings.merged.security?.auth?.selectedType === undefined || !!authError;
 
@@ -61,6 +69,7 @@ export async function initializeApp(
   return {
     authError,
     themeError,
+    projectError,
     shouldOpenAuthDialog,
     geminiMdFileCount: config.getGeminiMdFileCount(),
   };

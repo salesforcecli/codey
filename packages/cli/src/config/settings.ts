@@ -435,10 +435,34 @@ export class LoadedSettings {
     try {
       const enforced = merged.security?.auth?.enforcedType;
       const selected = merged.security?.auth?.selectedType;
-      if (!selected && !enforced) {
-        const hasOrgUsername = Boolean(process.env['CODEY_GATEWAY_ORG']);
-        const hasGeminiKey = Boolean(process.env['GEMINI_API_KEY']);
+      const hasOrgUsername = Boolean(process.env['CODEY_GATEWAY_ORG']);
+      const hasGeminiKey = Boolean(process.env['GEMINI_API_KEY']);
 
+      if (
+        selected === AuthType.USE_SF_LLMG &&
+        !hasOrgUsername &&
+        hasGeminiKey
+      ) {
+        setNestedProperty(
+          merged as unknown as Record<string, unknown>,
+          'security.auth.selectedType',
+          AuthType.USE_GEMINI,
+        );
+      }
+
+      if (
+        selected !== AuthType.USE_SF_LLMG &&
+        !hasGeminiKey &&
+        hasOrgUsername
+      ) {
+        setNestedProperty(
+          merged as unknown as Record<string, unknown>,
+          'security.auth.selectedType',
+          AuthType.USE_SF_LLMG,
+        );
+      }
+
+      if (!selected && !enforced) {
         let autoType: AuthType | undefined;
         if (hasOrgUsername) {
           autoType = AuthType.USE_SF_LLMG;

@@ -24,6 +24,7 @@ import { ThemeDialog } from './ThemeDialog.js';
 import { SettingsDialog } from './SettingsDialog.js';
 import { AuthInProgress } from '../auth/AuthInProgress.js';
 import { CodeyAuthDialog } from '../auth/CodeyAuthDialog.js';
+import { SfProjectWarningDialog } from './SfProjectWarningDialog.js';
 import { EditorSettingsDialog } from './EditorSettingsDialog.js';
 import { PrivacyNotice } from '../privacy/PrivacyNotice.js';
 import { WorkspaceMigrationDialog } from './WorkspaceMigrationDialog.js';
@@ -53,6 +54,14 @@ export const DialogManager = () => {
           apply the changes.
         </Text>
       </Box>
+    );
+  }
+  if (uiState.isProjectWarningDialogOpen) {
+    return (
+      <SfProjectWarningDialog
+        onConfirm={uiActions.closeProjectWarningDialog}
+        onExit={uiActions.exitFromProjectWarningDialog}
+      />
     );
   }
   if (uiState.showWorkspaceMigrationDialog) {

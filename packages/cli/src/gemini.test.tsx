@@ -366,6 +366,7 @@ describe('startInteractiveUI', () => {
       themeError: null,
       shouldOpenAuthDialog: false,
       geminiMdFileCount: 0,
+      projectError: null,
     };
 
     await startInteractiveUI(
@@ -400,6 +401,7 @@ describe('startInteractiveUI', () => {
       themeError: null,
       shouldOpenAuthDialog: false,
       geminiMdFileCount: 0,
+      projectError: null,
     };
 
     await startInteractiveUI(
