@@ -126,13 +126,6 @@ sessions.post('/sessions/:id/messages', async (c: Context) => {
         sessionId,
       });
     }
-    const workspaceRoot = validateWorkspaceRoot(body);
-    if (!workspaceRoot) {
-      return createErrorResponse(c, 'workspaceRoot is required', 400, {
-        requestId,
-        sessionId,
-      });
-    }
 
     log.info(
       {
@@ -140,7 +133,6 @@ sessions.post('/sessions/:id/messages', async (c: Context) => {
         sessionId,
         messageLength: message.length,
         message,
-        workspaceRoot,
       },
       'Processing session message',
     );

@@ -48,7 +48,7 @@ export function createErrorResponse(
   message: string,
   status: ContentfulStatusCode = 500,
   context?: LogContext,
-) {
+): Response {
   if (context) {
     withContext(context).error({ error: message, ...context }, 'API Error');
   }
@@ -142,7 +142,7 @@ export function createSuccessResponse(
   data: Record<string, unknown>,
   status: ContentfulStatusCode = 200,
   headers?: Record<string, string>,
-) {
+): Response {
   const response = c.json(data, status);
   if (headers) {
     Object.entries(headers).forEach(([key, value]) => {

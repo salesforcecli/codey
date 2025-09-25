@@ -60,7 +60,6 @@ export class Client {
 
   async sendMessage(
     sessionId: string,
-    workspaceRoot: string,
     message: string,
   ): Promise<{ sessionId: string; response: string; timestamp: string }> {
     const url = `${this.baseUrl}/api/sessions/${encodeURIComponent(
@@ -69,7 +68,7 @@ export class Client {
     const res = await fetch(url, {
       method: 'POST',
       headers: this.headers(),
-      body: JSON.stringify({ workspaceRoot, message }),
+      body: JSON.stringify({ message }),
     });
 
     const data = await this.safeJson(res);
@@ -85,7 +84,6 @@ export class Client {
 
   async *sendMessageStream(
     sessionId: string,
-    workspaceRoot: string,
     message: string,
   ): AsyncGenerator<unknown, void, unknown> {
     const url = `${this.baseUrl}/api/sessions/${encodeURIComponent(
@@ -94,7 +92,7 @@ export class Client {
     const res = await fetch(url, {
       method: 'POST',
       headers: this.headers(),
-      body: JSON.stringify({ workspaceRoot, message }),
+      body: JSON.stringify({ message }),
     });
 
     if (!res.ok || !res.body) {
@@ -128,31 +126,6 @@ export class Client {
         }
       }
     }
-  }
-
-  async sendThreadHistoryMessage(
-    sessionId: string,
-    workspaceRoot: string,
-    message: string,
-  ): Promise<void> {
-    const url = `${this.baseUrl}/api/sessions/${encodeURIComponent(
-      sessionId,
-    )}/messages`;
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: this.headers(),
-      body: JSON.stringify({ workspaceRoot, message }),
-    });
-
-    if (!res.ok) {
-      const data = await this.safeJson(res);
-      throw new ClientError(
-        `Failed to send thread history message (status ${res.status})`,
-        res.status,
-        data,
-      );
-    }
-    // Intentionally ignore the response - we don't want to surface it to Slack
   }
 
   private async safeJson(res: Response): Promise<unknown> {

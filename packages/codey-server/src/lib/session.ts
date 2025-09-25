@@ -63,7 +63,7 @@ export async function createSession(
   const id = randomUUID();
   const { client, config } = await initClient(workspaceRoot, id, authType, {
     model,
-    org,
+    gatewayOrg: org,
   });
   const now = Date.now();
   sessions.set(id, { client, config, createdAt: now, lastUsed: now });

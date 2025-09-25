@@ -109,12 +109,10 @@ interface Client {
   createSession: (workspaceRoot: string) => Promise<{ sessionId: string }>;
   sendMessage: (
     sessionId: string,
-    workspaceRoot: string,
     message: string,
   ) => Promise<{ response: string }>;
   sendMessageStream: (
     sessionId: string,
-    workspaceRoot: string,
     message: string,
   ) => AsyncIterable<ServerGeminiStreamEvent>;
 }
@@ -1231,7 +1229,6 @@ async function handleMessageStreaming(
   // Process the stream
   for await (const event of deps.hosted.sendMessageStream(
     params.sessionId,
-    deps.defaultWorkspaceRoot,
     composedMessage,
   )) {
     const now = Date.now();
@@ -1381,7 +1378,6 @@ async function handleStreamingError(
 
     const result = await deps.hosted.sendMessage(
       recreatedSessionId,
-      deps.defaultWorkspaceRoot,
       composedMessage,
     );
 

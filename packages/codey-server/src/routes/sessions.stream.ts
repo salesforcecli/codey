@@ -18,11 +18,7 @@ import { Hono } from 'hono';
 import type { Context } from 'hono';
 import { streamText } from 'hono/streaming';
 import { hasSession, sendMessageToSessionStreaming } from '../lib/session.js';
-import {
-  createErrorResponse,
-  validateMessage,
-  validateWorkspaceRoot,
-} from '../lib/utils.js';
+import { createErrorResponse, validateMessage } from '../lib/utils.js';
 import { withContext } from '../lib/logger.js';
 import {
   GeminiEventType,
@@ -51,13 +47,6 @@ sessionsStream.post('/sessions/:id/messages/stream', async (c: Context) => {
   const message = validateMessage(body);
   if (!message) {
     return createErrorResponse(c, 'Message is required', 400, {
-      requestId,
-      sessionId,
-    });
-  }
-  const workspaceRoot = validateWorkspaceRoot(body);
-  if (!workspaceRoot) {
-    return createErrorResponse(c, 'workspaceRoot is required', 400, {
       requestId,
       sessionId,
     });

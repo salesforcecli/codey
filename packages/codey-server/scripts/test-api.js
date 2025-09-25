@@ -277,7 +277,6 @@ async function sendStreamingMessage(sessionId, config) {
 
   const requestBody = {
     message: config.message,
-    workspaceRoot: config.workspaceRoot,
   };
 
   log(`Message: "${config.message}"`, false, config);
