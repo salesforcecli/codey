@@ -80,11 +80,11 @@ export interface CliArgs {
   approvalMode: string | undefined;
   telemetry: boolean | undefined;
   checkpointing: boolean | undefined;
-  // telemetryTarget: string | undefined;
-  // telemetryOtlpEndpoint: string | undefined;
-  // telemetryOtlpProtocol: string | undefined;
-  // telemetryLogPrompts: boolean | undefined;
-  // telemetryOutfile: string | undefined;
+  telemetryTarget: string | undefined;
+  telemetryOtlpEndpoint: string | undefined;
+  telemetryOtlpProtocol: string | undefined;
+  telemetryLogPrompts: boolean | undefined;
+  telemetryOutfile: string | undefined;
   allowedMcpServerNames: string[] | undefined;
   allowedTools: string[] | undefined;
   experimentalAcp: boolean | undefined;
@@ -111,56 +111,60 @@ export async function parseArguments(settings: Settings): Promise<CliArgs> {
       description:
         'Enable or disable telemetry. Telemetry is enabled by default and helps improve the product. Use --no-telemetry to opt out.',
     })
-    // .option('telemetry-target', {
-    //   type: 'string',
-    //   choices: ['local', 'gcp'],
-    //   description:
-    //     'Set the telemetry target (local or gcp). Overrides settings files.',
-    // })
-    // .option('telemetry-otlp-endpoint', {
-    //   type: 'string',
-    //   description:
-    //     'Set the OTLP endpoint for telemetry. Overrides environment variables and settings files.',
-    // })
-    // .option('telemetry-otlp-protocol', {
-    //   type: 'string',
-    //   choices: ['grpc', 'http'],
-    //   description:
-    //     'Set the OTLP protocol for telemetry (grpc or http). Overrides settings files.',
-    // })
-    // .option('telemetry-log-prompts', {
-    //   type: 'boolean',
-    //   description:
-    //     'Enable or disable logging of user prompts for telemetry. Overrides settings files.',
-    // })
-    // .option('telemetry-outfile', {
-    //   type: 'string',
-    //   description: 'Redirect all telemetry output to the specified file.',
-    // })
-    // .deprecateOption(
-    //   'telemetry',
-    //   'Use the "telemetry.enabled" setting in settings.json instead. This flag will be removed in a future version.',
-    // )
-    // .deprecateOption(
-    //   'telemetry-target',
-    //   'Use the "telemetry.target" setting in settings.json instead. This flag will be removed in a future version.',
-    // )
-    // .deprecateOption(
-    //   'telemetry-otlp-endpoint',
-    //   'Use the "telemetry.otlpEndpoint" setting in settings.json instead. This flag will be removed in a future version.',
-    // )
-    // .deprecateOption(
-    //   'telemetry-otlp-protocol',
-    //   'Use the "telemetry.otlpProtocol" setting in settings.json instead. This flag will be removed in a future version.',
-    // )
-    // .deprecateOption(
-    //   'telemetry-log-prompts',
-    //   'Use the "telemetry.logPrompts" setting in settings.json instead. This flag will be removed in a future version.',
-    // )
-    // .deprecateOption(
-    //   'telemetry-outfile',
-    //   'Use the "telemetry.outfile" setting in settings.json instead. This flag will be removed in a future version.',
-    // )
+    .option('telemetry-target', {
+      type: 'string',
+      choices: ['local', 'gcp', 'salesforce'],
+      description:
+        'Set the telemetry target (local or gcp or salesforce). Overrides settings files.',
+    })
+    .option('telemetry-otlp-endpoint', {
+      type: 'string',
+      description:
+        'Set the OTLP endpoint for telemetry. Overrides environment variables and settings files.',
+      hidden: true,
+    })
+    .option('telemetry-otlp-protocol', {
+      type: 'string',
+      choices: ['grpc', 'http'],
+      description:
+        'Set the OTLP protocol for telemetry (grpc or http). Overrides settings files.',
+      hidden: true,
+    })
+    .option('telemetry-log-prompts', {
+      type: 'boolean',
+      description:
+        'Enable or disable logging of user prompts for telemetry. Overrides settings files.',
+      hidden: true,
+    })
+    .option('telemetry-outfile', {
+      type: 'string',
+      description: 'Redirect all telemetry output to the specified file.',
+      hidden: true,
+    })
+    .deprecateOption(
+      'telemetry',
+      'Use the "telemetry.enabled" setting in settings.json instead. This flag will be removed in a future version.',
+    )
+    .deprecateOption(
+      'telemetry-target',
+      'Use the "telemetry.target" setting in settings.json instead. This flag will be removed in a future version.',
+    )
+    .deprecateOption(
+      'telemetry-otlp-endpoint',
+      'Use the "telemetry.otlpEndpoint" setting in settings.json instead. This flag will be removed in a future version.',
+    )
+    .deprecateOption(
+      'telemetry-otlp-protocol',
+      'Use the "telemetry.otlpProtocol" setting in settings.json instead. This flag will be removed in a future version.',
+    )
+    .deprecateOption(
+      'telemetry-log-prompts',
+      'Use the "telemetry.logPrompts" setting in settings.json instead. This flag will be removed in a future version.',
+    )
+    .deprecateOption(
+      'telemetry-outfile',
+      'Use the "telemetry.outfile" setting in settings.json instead. This flag will be removed in a future version.',
+    )
     .option('debug', {
       alias: 'd',
       type: 'boolean',
@@ -202,15 +206,17 @@ export async function parseArguments(settings: Settings): Promise<CliArgs> {
           description:
             'Execute the provided prompt and continue in interactive mode',
         })
-        // .option('sandbox', {
-        //   alias: 's',
-        //   type: 'boolean',
-        //   description: 'Run in sandbox?',
-        // })
-        // .option('sandbox-image', {
-        //   type: 'string',
-        //   description: 'Sandbox image URI.',
-        // })
+        .option('sandbox', {
+          alias: 's',
+          type: 'boolean',
+          description: 'Run in sandbox?',
+          hidden: true,
+        })
+        .option('sandbox-image', {
+          type: 'string',
+          description: 'Sandbox image URI.',
+          hidden: true,
+        })
         .option('all-files', {
           alias: ['a'],
           type: 'boolean',
@@ -628,22 +634,21 @@ export async function loadCliConfig(
     },
     telemetry: {
       enabled: argv.telemetry ?? settings.telemetry?.enabled ?? true,
-      target:
-        process.env['GEMINI_CLI_INTEGRATION_TEST'] === 'true'
-          ? TelemetryTarget.GCP
-          : TelemetryTarget.SALESFORCE,
-      // otlpEndpoint:
-      //   argv.telemetryOtlpEndpoint ??
-      //   process.env['OTEL_EXPORTER_OTLP_ENDPOINT'] ??
-      //   settings.telemetry?.otlpEndpoint,
-      // otlpProtocol: (['grpc', 'http'] as const).find(
-      //   (p) =>
-      //     p ===
-      //     (argv.telemetryOtlpProtocol ?? settings.telemetry?.otlpProtocol),
-      // ),
-      // logPrompts: argv.telemetryLogPrompts ?? settings.telemetry?.logPrompts,
-      // outfile: argv.telemetryOutfile ?? settings.telemetry?.outfile,
-      // useCollector: settings.telemetry?.useCollector,
+      target: (argv.telemetryTarget ??
+        settings.telemetry?.enabled ??
+        TelemetryTarget.SALESFORCE) as TelemetryTarget,
+      otlpEndpoint:
+        argv.telemetryOtlpEndpoint ??
+        process.env['OTEL_EXPORTER_OTLP_ENDPOINT'] ??
+        settings.telemetry?.otlpEndpoint,
+      otlpProtocol: (['grpc', 'http'] as const).find(
+        (p) =>
+          p ===
+          (argv.telemetryOtlpProtocol ?? settings.telemetry?.otlpProtocol),
+      ),
+      logPrompts: argv.telemetryLogPrompts ?? settings.telemetry?.logPrompts,
+      outfile: argv.telemetryOutfile ?? settings.telemetry?.outfile,
+      useCollector: settings.telemetry?.useCollector,
     },
     usageStatisticsEnabled: settings.privacy?.usageStatisticsEnabled ?? true,
     fileFiltering: settings.context?.fileFiltering,
