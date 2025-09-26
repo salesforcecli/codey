@@ -170,13 +170,13 @@ export async function parseArguments(settings: Settings): Promise<CliArgs> {
     .option('proxy', {
       type: 'string',
       description:
-        'Proxy for gemini client, like schema://user:password@host:port',
+        'Proxy for codey client, like schema://user:password@host:port',
     })
     .deprecateOption(
       'proxy',
       'Use the "proxy" setting in settings.json instead. This flag will be removed in a future version.',
     )
-    .command('$0 [promptWords...]', 'Launch Gemini CLI', (yargsInstance) =>
+    .command('$0 [promptWords...]', 'Launch Codey CLI', (yargsInstance) =>
       yargsInstance
         // Current product direction is to prevent users from switching models
         // .option('model', {
@@ -202,15 +202,15 @@ export async function parseArguments(settings: Settings): Promise<CliArgs> {
           description:
             'Execute the provided prompt and continue in interactive mode',
         })
-        .option('sandbox', {
-          alias: 's',
-          type: 'boolean',
-          description: 'Run in sandbox?',
-        })
-        .option('sandbox-image', {
-          type: 'string',
-          description: 'Sandbox image URI.',
-        })
+        // .option('sandbox', {
+        //   alias: 's',
+        //   type: 'boolean',
+        //   description: 'Run in sandbox?',
+        // })
+        // .option('sandbox-image', {
+        //   type: 'string',
+        //   description: 'Sandbox image URI.',
+        // })
         .option('all-files', {
           alias: ['a'],
           type: 'boolean',
