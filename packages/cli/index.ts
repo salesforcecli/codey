@@ -20,6 +20,10 @@ import './src/gemini.js';
 import { main } from './src/gemini.js';
 import { FatalError } from '@salesforce/codey-core';
 
+// Pino Logger in @salesforce/core throws errors after being bundled using esbuild
+// This is a workaround to disable the logging from @salesforce/core.
+process.env['SF_DISABLE_LOG_FILE'] = 'true';
+
 // --- Global Entry Point ---
 main().catch((error) => {
   if (error instanceof FatalError) {

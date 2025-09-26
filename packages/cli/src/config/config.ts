@@ -628,7 +628,10 @@ export async function loadCliConfig(
     },
     telemetry: {
       enabled: argv.telemetry ?? settings.telemetry?.enabled ?? true,
-      target: TelemetryTarget.SALESFORCE,
+      target:
+        process.env['GEMINI_CLI_INTEGRATION_TEST'] === 'true'
+          ? TelemetryTarget.GCP
+          : TelemetryTarget.SALESFORCE,
       // otlpEndpoint:
       //   argv.telemetryOtlpEndpoint ??
       //   process.env['OTEL_EXPORTER_OTLP_ENDPOINT'] ??

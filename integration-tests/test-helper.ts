@@ -191,7 +191,13 @@ export class TestRig {
       | { prompt?: string; stdin?: string; stdinDoesNotEnd?: boolean },
     ...args: string[]
   ): Promise<string> {
-    const commandArgs = [this.bundlePath, '--yolo'];
+    const commandArgs = [
+      this.bundlePath,
+      '--yolo',
+      // TODO: we need a setup step for this
+      '--gateway-org',
+      'dreamhouse',
+    ];
     const execOptions: {
       cwd: string;
       encoding: 'utf-8';
