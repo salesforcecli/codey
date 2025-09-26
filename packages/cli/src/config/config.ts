@@ -116,6 +116,7 @@ export async function parseArguments(settings: Settings): Promise<CliArgs> {
       choices: ['local', 'gcp', 'salesforce'],
       description:
         'Set the telemetry target (local or gcp or salesforce). Overrides settings files.',
+      hidden: true,
     })
     .option('telemetry-otlp-endpoint', {
       type: 'string',
