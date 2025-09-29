@@ -110,81 +110,84 @@ export const Footer: React.FC = () => {
   const displayVimMode = vimEnabled ? vimMode : undefined;
 
   return (
-    <Box
-      justifyContent={justifyContent}
-      width="100%"
-      flexDirection={isNarrow ? 'column' : 'row'}
-      alignItems={isNarrow ? 'flex-start' : 'center'}
-    >
-      {(debugMode || displayVimMode || !hideCWD) && (
-        <Box>
-          {debugMode && <DebugProfiler />}
-          {displayVimMode && (
-            <Text color={theme.text.secondary}>[{displayVimMode}] </Text>
-          )}
-          {!hideCWD &&
-            (nightly ? (
-              <Gradient colors={theme.ui.gradient}>
-                <Text>
-                  {displayPath}
-                  {branchName && <Text> ({branchName}*)</Text>}
-                </Text>
-              </Gradient>
-            ) : (
-              <Text color={theme.text.link}>
-                {displayPath}
-                {branchName && (
-                  <Text color={theme.text.secondary}> ({branchName}*)</Text>
-                )}
-              </Text>
-            ))}
-          {debugMode && (
-            <Text color={theme.status.error}>
-              {' ' + (debugMessage || '--debug')}
-            </Text>
-          )}
-        </Box>
-      )}
-
-      {/* Right Section: Model Info and Console Summary */}
-      {(!hideModelInfo ||
-        showMemoryUsage ||
-        corgiMode ||
-        (!showErrorDetails && errorCount > 0)) && (
-        <Box alignItems="center">
-          {!hideModelInfo && (
-            <Box alignItems="center">
-              <Text color={theme.text.accent}>
-                {model}{' '}
-                <ContextUsageDisplay
-                  promptTokenCount={promptTokenCount}
-                  model={model}
-                />
-              </Text>
-              {showMemoryUsage && <MemoryUsageDisplay />}
-            </Box>
-          )}
-          <Box alignItems="center" paddingLeft={2}>
-            {corgiMode && (
-              <Text>
-                {!hideModelInfo && <Text color={theme.ui.comment}>| </Text>}
-                <Text color={theme.status.error}>▼</Text>
-                <Text color={theme.text.primary}>(´</Text>
-                <Text color={theme.status.error}>ᴥ</Text>
-                <Text color={theme.text.primary}>`)</Text>
-                <Text color={theme.status.error}>▼ </Text>
-              </Text>
+    <Box width="100%" flexDirection="column">
+      {/* First Row: CWD and Model Info */}
+      <Box
+        justifyContent={justifyContent}
+        width="100%"
+        flexDirection={isNarrow ? 'column' : 'row'}
+        alignItems={isNarrow ? 'flex-start' : 'center'}
+      >
+        {/* Left Section: CWD, Debug, Vim Mode */}
+        {(debugMode || displayVimMode || !hideCWD) && (
+          <Box>
+            {debugMode && <DebugProfiler />}
+            {displayVimMode && (
+              <Text color={theme.text.secondary}>[{displayVimMode}] </Text>
             )}
-            {!showErrorDetails && errorCount > 0 && (
-              <Box>
-                {!hideModelInfo && <Text color={theme.ui.comment}>| </Text>}
-                <ConsoleSummaryDisplay errorCount={errorCount} />
-              </Box>
+            {!hideCWD &&
+              (nightly ? (
+                <Gradient colors={theme.ui.gradient}>
+                  <Text>
+                    {displayPath}
+                    {branchName && <Text> ({branchName}*)</Text>}
+                  </Text>
+                </Gradient>
+              ) : (
+                <Text color={theme.text.link}>
+                  {displayPath}
+                  {branchName && (
+                    <Text color={theme.text.secondary}> ({branchName}*)</Text>
+                  )}
+                </Text>
+              ))}
+            {debugMode && (
+              <Text color={theme.status.error}>
+                {' ' + (debugMessage || '--debug')}
+              </Text>
             )}
           </Box>
-        </Box>
-      )}
+        )}
 
+        {/* Right Section: Model Info and Console Summary */}
+        {(!hideModelInfo ||
+          showMemoryUsage ||
+          corgiMode ||
+          (!showErrorDetails && errorCount > 0)) && (
+          <Box alignItems="center">
+            {!hideModelInfo && (
+              <Box alignItems="center">
+                <Text color={theme.text.accent}>
+                  {model}{' '}
+                  <ContextUsageDisplay
+                    promptTokenCount={promptTokenCount}
+                    model={model}
+                  />
+                </Text>
+                {showMemoryUsage && <MemoryUsageDisplay />}
+              </Box>
+            )}
+            <Box alignItems="center" paddingLeft={2}>
+              {corgiMode && (
+                <Text>
+                  {!hideModelInfo && <Text color={theme.ui.comment}>| </Text>}
+                  <Text color={theme.status.error}>▼</Text>
+                  <Text color={theme.text.primary}>(´</Text>
+                  <Text color={theme.status.error}>ᴥ</Text>
+                  <Text color={theme.text.primary}>`)</Text>
+                  <Text color={theme.status.error}>▼ </Text>
+                </Text>
+              )}
+              {!showErrorDetails && errorCount > 0 && (
+                <Box>
+                  {!hideModelInfo && <Text color={theme.ui.comment}>| </Text>}
+                  <ConsoleSummaryDisplay errorCount={errorCount} />
+                </Box>
+              )}
+            </Box>
+          </Box>
+        )}
+      </Box>
       {/* Second Row: Default Orgs - Only show if at least one org is configured */}
       {(defaultTargetOrg || defaultTargetDevhub) && (
         <Box

@@ -179,6 +179,7 @@ describe('gemini.tsx main function', () => {
       },
       setValue: vi.fn(),
       forScope: () => ({ settings: {}, originalSettings: {}, path: '' }),
+      refresh: vi.fn(),
     } as never);
     try {
       await main();

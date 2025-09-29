@@ -1,6 +1,9 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`<Footer /> > footer configuration filtering (golden snapshots) > renders complete footer in narrow terminal (baseline narrow) > complete-footer-narrow 1`] = `"long (main*)                                                        gemini-pro (100% context left)"`;
+exports[`<Footer /> > footer configuration filtering (golden snapshots) > renders complete footer in narrow terminal (baseline narrow) > complete-footer-narrow 1`] = `
+"long (main*)
+gemini-pro (100% context left)"
+`;
 
 exports[`<Footer /> > footer configuration filtering (golden snapshots) > renders complete footer with all sections visible (baseline) > complete-footer-wide 1`] = `"...bar/and/some/more/directories/to/make/it/long (main*)            gemini-pro (100% context left)"`;
 

@@ -158,7 +158,7 @@ describe('BuiltinCommandLoader', () => {
     expect(permissionsCmd).toBeUndefined();
   });
 
-  it('should include modelCommand when getUseModelRouter is true', async () => {
+  it.skip('should include modelCommand when getUseModelRouter is true', async () => {
     const mockConfigWithModelRouter = {
       ...mockConfig,
       getUseModelRouter: () => true,

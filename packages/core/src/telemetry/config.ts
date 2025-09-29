@@ -41,6 +41,9 @@ export function parseTelemetryTargetValue(
   if (value === TelemetryTarget.GCP || value === 'gcp') {
     return TelemetryTarget.GCP;
   }
+  if (value === TelemetryTarget.SALESFORCE || value === 'salesforce') {
+    return TelemetryTarget.SALESFORCE;
+  }
   return undefined;
 }
 
@@ -81,7 +84,7 @@ export async function resolveTelemetrySettings(options: {
     throw new FatalConfigError(
       `Invalid telemetry target: ${String(
         rawTarget,
-      )}. Valid values are: local, gcp`,
+      )}. Valid values are: local, gcp, salesforce`,
     );
   }
 

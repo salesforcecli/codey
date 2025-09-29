@@ -26,9 +26,21 @@ vi.mock('./config/settings.js', () => ({
   loadSettings: vi.fn(),
 }));
 
-vi.mock('./config/extension.js', () => ({
-  loadExtensions: vi.fn(),
+const { mockGetUserExtensionsDir, mockLoadExtensions } = vi.hoisted(() => ({
+  mockGetUserExtensionsDir: vi.fn(),
+  mockLoadExtensions: vi.fn(),
 }));
+
+vi.mock('./config/extension.js', () => {
+  class MockExtensionStorage {
+    static getUserExtensionsDir = mockGetUserExtensionsDir;
+  }
+
+  return {
+    loadExtensions: mockLoadExtensions,
+    ExtensionStorage: MockExtensionStorage,
+  };
+});
 
 vi.mock('./config/config.js', () => ({
   loadCliConfig: vi.fn(),
@@ -49,7 +61,7 @@ vi.mock('@salesforce/codey-core', () => ({
 }));
 
 import { loadSettings, type LoadedSettings } from './config/settings.js';
-import { loadExtensions, type Extension } from './config/extension.js';
+import { type Extension } from './config/extension.js';
 import { loadCliConfig } from './config/config.js';
 import {
   executeToolCall,
@@ -70,7 +82,7 @@ import {
 // Mock implementations
 const mockExecSync = vi.mocked(child_process.execSync);
 const mockLoadSettings = vi.mocked(loadSettings);
-const mockLoadExtensions = vi.mocked(loadExtensions);
+// const mockLoadExtensions = vi.mocked(loadExtensions);
 const mockLoadCliConfig = vi.mocked(loadCliConfig);
 const mockExecuteToolCall = vi.mocked(executeToolCall);
 
@@ -92,6 +104,8 @@ describe('headless-chat', () => {
 
   beforeEach(() => {
     vi.resetAllMocks();
+
+    mockGetUserExtensionsDir.mockReturnValue('/mock/extensions');
 
     // Setup default mock implementations
     mockExecSync.mockImplementation(() => Buffer.from('')); // Default success behavior for git commands
@@ -252,10 +266,15 @@ describe('headless-chat', () => {
         await initClient(testWorkspaceRoot, testSessionId, testAuth);
 
         expect(mockLoadSettings).toHaveBeenCalledWith(testWorkspaceRoot);
-        expect(mockLoadExtensions).toHaveBeenCalledWith(testWorkspaceRoot);
+        expect(mockLoadExtensions).toHaveBeenCalledTimes(1);
+        const extensionManagerArg = mockLoadExtensions.mock.calls[0][0];
+        expect(extensionManagerArg).toMatchObject({
+          configDir: '/mock/extensions',
+        });
         expect(mockLoadCliConfig).toHaveBeenCalledWith(
           testSettings.merged,
           testExtensions,
+          extensionManagerArg,
           testSessionId,
           expect.objectContaining({
             model: undefined,
@@ -308,9 +327,13 @@ describe('headless-chat', () => {
           customOpts,
         );
 
+        expect(mockLoadExtensions).toHaveBeenCalledTimes(1);
+        const extensionManagerArg = mockLoadExtensions.mock.calls[0][0];
+
         expect(mockLoadCliConfig).toHaveBeenCalledWith(
           expect.any(Object),
           expect.any(Array),
+          extensionManagerArg,
           testSessionId,
           expect.objectContaining({
             model: 'custom-model',
