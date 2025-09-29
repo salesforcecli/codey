@@ -1,8 +1,8 @@
-# Gemini CLI for the Enterprise
+# Vibe Codey CLI for the Enterprise
 
-This document outlines configuration patterns and best practices for deploying and managing Gemini CLI in an enterprise environment. By leveraging system-level settings, administrators can enforce security policies, manage tool access, and ensure a consistent experience for all users.
+This document outlines configuration patterns and best practices for deploying and managing Vibe Codey CLI in an enterprise environment. By leveraging system-level settings, administrators can enforce security policies, manage tool access, and ensure a consistent experience for all users.
 
-> **A Note on Security:** The patterns described in this document are intended to help administrators create a more controlled and secure environment for using Gemini CLI. However, they should not be considered a foolproof security boundary. A determined user with sufficient privileges on their local machine may still be able to circumvent these configurations. These measures are designed to prevent accidental misuse and enforce corporate policy in a managed environment, not to defend against a malicious actor with local administrative rights.
+> **A Note on Security:** The patterns described in this document are intended to help administrators create a more controlled and secure environment for using Vibe Codey CLI. However, they should not be considered a foolproof security boundary. A determined user with sufficient privileges on their local machine may still be able to circumvent these configurations. These measures are designed to prevent accidental misuse and enforce corporate policy in a managed environment, not to defend against a malicious actor with local administrative rights.
 
 ## Centralized Configuration: The System Settings File
 
@@ -11,8 +11,8 @@ The most powerful tools for enterprise administration are the system-wide settin
 Settings are merged from four files. The precedence order for single-value settings (like `theme`) is:
 
 1. System Defaults (`system-defaults.json`)
-2. User Settings (`~/.gemini/settings.json`)
-3. Workspace Settings (`<project>/.gemini/settings.json`)
+2. User Settings (`~/.codey/settings.json`)
+3. Workspace Settings (`<project>/.codey/settings.json`)
 4. System Overrides (`settings.json`)
 
 This means the System Overrides file has the final say. For settings that are arrays (`includeDirectories`) or objects (`mcpServers`), the values are merged.
@@ -29,12 +29,12 @@ Here is how settings from different levels are combined.
       "theme": "default-corporate-theme"
     },
     "context": {
-      "includeDirectories": ["/etc/gemini-cli/common-context"]
+      "includeDirectories": ["/etc/codey-cli/common-context"]
     }
   }
   ```
 
-- **User `settings.json` (`~/.gemini/settings.json`):**
+- **User `settings.json` (`~/.codey/settings.json`):**
 
   ```json
   {
@@ -50,12 +50,12 @@ Here is how settings from different levels are combined.
       }
     },
     "context": {
-      "includeDirectories": ["~/gemini-context"]
+      "includeDirectories": ["~/codey-context"]
     }
   }
   ```
 
-- **Workspace `settings.json` (`<project>/.gemini/settings.json`):**
+- **Workspace `settings.json` (`<project>/.codey/settings.json`):**
 
   ```json
   {
@@ -85,7 +85,7 @@ Here is how settings from different levels are combined.
       }
     },
     "context": {
-      "includeDirectories": ["/etc/gemini-cli/global-context"]
+      "includeDirectories": ["/etc/codey-cli/global-context"]
     }
   }
   ```
@@ -111,10 +111,10 @@ This results in the following merged configuration:
     },
     "context": {
       "includeDirectories": [
-        "/etc/gemini-cli/common-context",
-        "~/gemini-context",
+        "/etc/codey-cli/common-context",
+        "~/codey-context",
         "./project-context",
-        "/etc/gemini-cli/global-context"
+        "/etc/codey-cli/global-context"
       ]
     }
   }
@@ -127,17 +127,17 @@ This results in the following merged configuration:
 - **`includeDirectories`**: The arrays are concatenated in the order of System Defaults, User, Workspace, and then System Overrides.
 
 - **Location**:
-  - **Linux**: `/etc/gemini-cli/settings.json`
-  - **Windows**: `C:\ProgramData\gemini-cli\settings.json`
-  - **macOS**: `/Library/Application Support/GeminiCli/settings.json`
-  - The path can be overridden using the `GEMINI_CLI_SYSTEM_SETTINGS_PATH` environment variable.
+  - **Linux**: `/etc/codey-cli/settings.json`
+  - **Windows**: `C:\\ProgramData\\codey-cli\\settings.json`
+  - **macOS**: `/Library/Application Support/CodeyCli/settings.json`
+  - The path can be overridden using the `CODEY_CLI_SYSTEM_SETTINGS_PATH` environment variable.
 - **Control**: This file should be managed by system administrators and protected with appropriate file permissions to prevent unauthorized modification by users.
 
 By using the system settings file, you can enforce the security and configuration patterns described below.
 
 ## Restricting Tool Access
 
-You can significantly enhance security by controlling which tools the Gemini model can use. This is achieved through the `tools.core` and `tools.exclude` settings. For a list of available tools, see the [Tools documentation](../tools/index.md).
+You can significantly enhance security by controlling which tools the Salesforce LLM Gateway can use. This is achieved through the `tools.core` and `tools.exclude` settings. For a list of available tools, see the [Tools documentation](../tools/index.md).
 
 ### Allowlisting with `coreTools`
 
@@ -175,7 +175,7 @@ If your organization uses custom tools via [Model-Context Protocol (MCP) servers
 
 ### How MCP Server Configurations are Merged
 
-Gemini CLI loads `settings.json` files from three levels: System, Workspace, and User. When it comes to the `mcpServers` object, these configurations are **merged**:
+Vibe Codey CLI loads `settings.json` files from three levels: System, Workspace, and User. When it comes to the `mcpServers` object, these configurations are **merged**:
 
 1.  **Merging:** The lists of servers from all three levels are combined into a single list.
 2.  **Precedence:** If a server with the **same name** is defined at multiple levels (e.g., a server named `corp-api` exists in both system and user settings), the definition from the highest-precedence level is used. The order of precedence is: **System > Workspace > User**.
@@ -280,7 +280,7 @@ You can also specify a custom, hardened Docker image for the sandbox using the `
 
 ## Controlling Network Access via Proxy
 
-In corporate environments with strict network policies, you can configure Gemini CLI to route all outbound traffic through a corporate proxy. This can be set via an environment variable, but it can also be enforced for custom tools via the `mcpServers` configuration.
+In corporate environments with strict network policies, you can configure Vibe Codey CLI to route all outbound traffic through a corporate proxy. This can be set via an environment variable, but it can also be enforced for custom tools via the `mcpServers` configuration.
 
 **Example (for an MCP Server):**
 
@@ -299,41 +299,9 @@ In corporate environments with strict network policies, you can configure Gemini
 }
 ```
 
-## Telemetry and Auditing
-
-For auditing and monitoring purposes, you can configure Gemini CLI to send telemetry data to a central location. This allows you to track tool usage and other events. For more information, see the [telemetry documentation](../telemetry.md).
-
-**Example:** Enable telemetry and send it to a local OTLP collector. If `otlpEndpoint` is not specified, it defaults to `http://localhost:4317`.
-
-```json
-{
-  "telemetry": {
-    "enabled": true,
-    "target": "gcp",
-    "logPrompts": false
-  }
-}
-```
-
-**Note:** Ensure that `logPrompts` is set to `false` in an enterprise setting to avoid collecting potentially sensitive information from user prompts.
-
-## Authentication
-
-You can enforce a specific authentication method for all users by setting the `enforcedAuthType` in the system-level `settings.json` file. This prevents users from choosing a different authentication method. See the [Authentication docs](./authentication.md) for more details.
-
-**Example:** Enforce the use of Google login for all users.
-
-```json
-{
-  "enforcedAuthType": "oauth-personal"
-}
-```
-
-If a user has a different authentication method configured, they will be prompted to switch to the enforced method. In non-interactive mode, the CLI will exit with an error if the configured authentication method does not match the enforced one.
-
 ## Putting It All Together: Example System `settings.json`
 
-Here is an example of a system `settings.json` file that combines several of the patterns discussed above to create a secure, controlled environment for Gemini CLI.
+Here is an example of a system `settings.json` file that combines several of the patterns discussed above to create a secure, controlled environment for Vibe Codey CLI.
 
 ```json
 {
@@ -352,23 +320,17 @@ Here is an example of a system `settings.json` file that combines several of the
   },
   "mcpServers": {
     "corp-tools": {
-      "command": "/opt/gemini-tools/start.sh",
+      "command": "/opt/codey-tools/start.sh",
       "timeout": 5000
     }
   },
   "telemetry": {
-    "enabled": true,
-    "target": "gcp",
-    "otlpEndpoint": "https://telemetry-prod.example.com:4317",
-    "logPrompts": false
+    "enabled": false
   },
   "advanced": {
     "bugCommand": {
       "urlTemplate": "https://servicedesk.example.com/new-ticket?title={title}&details={info}"
     }
-  },
-  "privacy": {
-    "usageStatisticsEnabled": false
   }
 }
 ```

@@ -4,7 +4,7 @@ This document provides information about the integration testing framework used 
 
 ## Overview
 
-The integration tests are designed to validate the end-to-end functionality of the Gemini CLI. They execute the built binary in a controlled environment and verify that it behaves as expected when interacting with the file system.
+The integration tests are designed to validate the end-to-end functionality of the Vibe Codey CLI. They execute the built binary in a controlled environment and verify that it behaves as expected when interacting with the file system.
 
 These tests are located in the `integration-tests` directory and are run using a custom test runner.
 
@@ -129,9 +129,3 @@ This structure makes it easy to locate the artifacts for a specific test run, fi
 ## Continuous integration
 
 To ensure the integration tests are always run, a GitHub Actions workflow is defined in `.github/workflows/e2e.yml`. This workflow automatically runs the integrations tests for pull requests against the `main` branch, or when a pull request is added to a merge queue.
-
-The workflow runs the tests in different sandboxing environments to ensure Gemini CLI is tested across each:
-
-- `sandbox:none`: Runs the tests without any sandboxing.
-- `sandbox:docker`: Runs the tests in a Docker container.
-- `sandbox:podman`: Runs the tests in a Podman container.

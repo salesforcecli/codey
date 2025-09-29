@@ -4,13 +4,13 @@ This monorepo contains two main packages: `@salesforce/codey` and `@salesforce/c
 
 ## `@salesforce/codey`
 
-This is the main package for the Gemini CLI. It is responsible for the user interface, command parsing, and all other user-facing functionality.
+This is the main package for the Vibe Codey CLI. It is responsible for the user interface, command parsing, and all other user-facing functionality.
 
 When this package is published, it is bundled into a single executable file. This bundle includes all of the package's dependencies, including `@salesforce/codey-core`. This means that whether a user installs the package with `npm install -g @salesforce/codey` or runs it directly with `npx @salesforce/codey`, they are using this single, self-contained executable.
 
 ## `@salesforce/codey-core`
 
-This package contains the core logic for interacting with the Gemini API. It is responsible for making API requests, handling authentication, and managing the local cache.
+This package contains the core logic for interacting with the Salesforce LLM Gateway. It is responsible for making API requests, handling authentication, and managing the local cache.
 
 This package is not bundled. When it is published, it is published as a standard Node.js package with its own dependencies. This allows it to be used as a standalone package in other projects, if needed. All transpiled js code in the `dist` folder is included in the package.
 

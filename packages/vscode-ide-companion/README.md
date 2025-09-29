@@ -18,7 +18,3 @@ To use this extension, you'll need:
 
 - VS Code version 1.99.0 or newer
 - Gemini CLI (installed separately) running within the integrated terminal
-
-# Terms of Service and Privacy Notice
-
-By installing this extension, you agree to the [Terms of Service](https://github.com/google-gemini/gemini-cli/blob/main/docs/tos-privacy.md).

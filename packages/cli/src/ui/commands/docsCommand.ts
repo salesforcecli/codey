@@ -28,7 +28,9 @@ export const docsCommand: SlashCommand = {
   description: 'open full Codey documentation in your browser',
   kind: CommandKind.BUILT_IN,
   action: async (context: CommandContext): Promise<void> => {
-    const docsUrl = 'https://goo.gle/gemini-cli-docs';
+    // TODO: update this to https://github.com/salesforcecli/codey/blob/main/docs/index.md
+    const docsUrl =
+      'https://github.com/salesforcecli/codey-private/blob/main/docs/index.md';
 
     if (process.env['SANDBOX'] && process.env['SANDBOX'] !== 'sandbox-exec') {
       context.ui.addItem(

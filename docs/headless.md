@@ -318,6 +318,5 @@ tail -5 usage.log
 ## Resources
 
 - [CLI Configuration](./cli/configuration.md) - Complete configuration guide
-- [Authentication](./cli/authentication.md) - Setup authentication
 - [Commands](./cli/commands.md) - Interactive commands reference
 - [Tutorials](./cli/tutorials.md) - Step-by-step automation guides
