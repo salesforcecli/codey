@@ -16,7 +16,7 @@
 
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import open from 'open';
-import { docsCommand } from './docsCommand.js';
+import { docsCommand, docsUrl } from './docsCommand.js';
 import { type CommandContext } from './types.js';
 import { createMockCommandContext } from '../../test-utils/mockCommandContext.js';
 import { MessageType } from '../types.js';
@@ -45,8 +45,6 @@ describe('docsCommand', () => {
       throw new Error('docsCommand must have an action.');
     }
 
-    const docsUrl = 'https://goo.gle/gemini-cli-docs';
-
     await docsCommand.action(mockContext, '');
 
     expect(mockContext.ui.addItem).toHaveBeenCalledWith(
@@ -67,7 +65,6 @@ describe('docsCommand', () => {
 
     // Simulate a sandbox environment
     vi.stubEnv('SANDBOX', 'gemini-sandbox');
-    const docsUrl = 'https://goo.gle/gemini-cli-docs';
 
     await docsCommand.action(mockContext, '');
 
@@ -90,7 +87,6 @@ describe('docsCommand', () => {
 
     // Simulate the specific 'sandbox-exec' environment
     vi.stubEnv('SANDBOX', 'sandbox-exec');
-    const docsUrl = 'https://goo.gle/gemini-cli-docs';
 
     await docsCommand.action(mockContext, '');
 

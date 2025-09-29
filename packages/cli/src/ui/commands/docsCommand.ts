@@ -23,15 +23,15 @@ import {
 } from './types.js';
 import { MessageType } from '../types.js';
 
+// TODO: update this to https://github.com/salesforcecli/codey/blob/main/docs/index.md
+export const docsUrl =
+  'https://github.com/salesforcecli/codey-private/blob/main/docs/index.md';
+
 export const docsCommand: SlashCommand = {
   name: 'docs',
   description: 'open full Codey documentation in your browser',
   kind: CommandKind.BUILT_IN,
   action: async (context: CommandContext): Promise<void> => {
-    // TODO: update this to https://github.com/salesforcecli/codey/blob/main/docs/index.md
-    const docsUrl =
-      'https://github.com/salesforcecli/codey-private/blob/main/docs/index.md';
-
     if (process.env['SANDBOX'] && process.env['SANDBOX'] !== 'sandbox-exec') {
       context.ui.addItem(
         {
