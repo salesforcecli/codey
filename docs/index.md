@@ -34,6 +34,5 @@ This documentation is organized into the following sections:
 - **[Contributing & Development Guide](../CONTRIBUTING.md):** Information for contributors and developers, including setup, building, testing, and coding conventions.
 - **[NPM](./npm.md):** Details on how the project's packages are structured
 - **[Troubleshooting Guide](./troubleshooting.md):** Find solutions to common problems and FAQs.
-- **[Releases](./releases.md):** Information on the project's releases and deployment cadence.
 
 We hope this documentation helps you make the most of the Vibe Codey CLI!
