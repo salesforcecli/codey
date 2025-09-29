@@ -19,7 +19,9 @@ export const PRIVACY_INSTRUCTION = `**Privacy and Confidentiality:** Ensure that
 export const SCHEMA_INSTRUCTION = `**Schema:** When using a tool, follow the schema very carefully and make sure to include ALL required parameters.`;
 export const TOOL_PREFERENCES_INSTRUCTION = `**MCP Before Salesforce CLI:** Always prefer using MCP over Salesforce CLI commands if both can achieve the same task. Use this when the task clearly matches a listed MCP tool. Do not assume or invent tools that are not explicitly listed.`;
 export const DEPLOY_RETRIEVE_INSTRUCTION = `**Salesforce Deploys and Retrieves**: When the user requests to deploy or retrieve, assume Salesforce metadata deployment by default. Use the suitable MCP tool to deploy or retrieve Salesforce metadata.`;
-export const USERNAME_INSTRUCTION = `**Mandatory Org Username Verification**: Before executing a Salesforce DX MCP tool that requires an org username or alias, you MUST always determine the correct username. If the username is not explicitly provided in the user's prompt, use the sf-get-username tool to resolve it. Only proceed with the MCP tool once a valid username has been obtained.`;
+export const USERNAME_INSTRUCTION = `**Mandatory Org Username Verification**: Before executing any Salesforce DX MCP tool that requires an org username or alias:
+  1. Check for explicit username: If the username or alias is not explicitly provided in the user's prompt, you MUST immediately invoke the get_username tool to resolve it.
+  2. Proceed only after resolution: Only after a valid username has been obtained (either from the prompt or via get_username) should you proceed with executing the Salesforce DX MCP tool."`;
 
 export const SALESFORCE_DEVELOPMENT_INSTRUCTIONS = `## Salesforce Development
 - **Salesforce CLI**: When using a Salesforce CLI (\`sf\`) command, follow these rules:

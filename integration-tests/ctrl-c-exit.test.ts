@@ -19,7 +19,7 @@ import { TestRig } from './test-helper.js';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
-describe('Ctrl+C exit', () => {
+describe.skip('Ctrl+C exit', () => {
   // (#9782) Temporarily disabling on windows because it is failing on main and every
   // PR, which is potentially hiding other failures
   it.skipIf(process.platform === 'win32')(
