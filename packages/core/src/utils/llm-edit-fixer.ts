@@ -151,6 +151,7 @@ export async function FixLLMEditWithInstruction(
     model: getModel('generateJson'),
     systemInstruction: EDIT_SYS_PROMPT,
     promptId,
+    maxAttempts: 1,
   })) as unknown as SearchReplaceEdit;
 
   editCorrectionWithInstructionCache.set(cacheKey, result);

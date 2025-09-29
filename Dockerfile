@@ -39,12 +39,12 @@ ENV PATH=$PATH:/usr/local/share/npm-global/bin
 # switch to non-root user node
 USER node
 
-# install gemini-cli and clean up
-COPY packages/cli/dist/salesforce-codey-*.tgz /usr/local/share/npm-global/codey.tgz
-COPY packages/core/dist/salesforce-codey-core-*.tgz /usr/local/share/npm-global/codey-core.tgz
-RUN npm install -g /usr/local/share/npm-global/codey-cli.tgz /usr/local/share/npm-global/codey-core.tgz \
+# install codey-cli and clean up
+COPY packages/cli/dist/salesforce-codey-*.tgz /tmp/codey-cli.tgz
+COPY packages/core/dist/salesforce-codey-core-*.tgz /tmp/codey-core.tgz
+RUN npm install -g /tmp/codey-cli.tgz /tmp/codey-core.tgz \
   && npm cache clean --force \
-  && rm -f /usr/local/share/npm-global/codey-{cli,core}.tgz
+  && rm -f /tmp/codey-{cli,core}.tgz
 
 # default entrypoint when none specified
 CMD ["codey"]

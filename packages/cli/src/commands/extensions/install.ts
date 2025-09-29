@@ -15,7 +15,10 @@
  */
 
 import type { CommandModule } from 'yargs';
-import { installExtension } from '../../config/extension.js';
+import {
+  installExtension,
+  requestConsentNonInteractive,
+} from '../../config/extension.js';
 import type { ExtensionInstallMetadata } from '@salesforce/codey-core';
 
 import { getErrorMessage } from '../../utils/errors.js';
@@ -58,7 +61,10 @@ export async function handleInstall(args: InstallArgs) {
       throw new Error('Either --source or --path must be provided.');
     }
 
-    const name = await installExtension(installMetadata, true);
+    const name = await installExtension(
+      installMetadata,
+      requestConsentNonInteractive,
+    );
     console.log(`Extension "${name}" installed successfully and enabled.`);
   } catch (error) {
     console.error(getErrorMessage(error));
@@ -67,7 +73,7 @@ export async function handleInstall(args: InstallArgs) {
 }
 
 export const installCommand: CommandModule = {
-  command: 'install [source]',
+  command: 'install [<source>] [--path] [--ref] [--auto-update]',
   describe: 'Installs an extension from a git repository URL or a local path.',
   builder: (yargs) =>
     yargs

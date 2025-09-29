@@ -19,9 +19,11 @@ import { handleInstall, installCommand } from './install.js';
 import yargs from 'yargs';
 
 const mockInstallExtension = vi.hoisted(() => vi.fn());
+const mockRequestConsentNonInteractive = vi.hoisted(() => vi.fn());
 
 vi.mock('../../config/extension.js', () => ({
   installExtension: mockInstallExtension,
+  requestConsentNonInteractive: mockRequestConsentNonInteractive,
 }));
 
 vi.mock('../../utils/errors.js', () => ({
@@ -74,6 +76,7 @@ describe('handleInstall', () => {
 
   afterEach(() => {
     mockInstallExtension.mockClear();
+    mockRequestConsentNonInteractive.mockClear();
     vi.resetAllMocks();
   });
 

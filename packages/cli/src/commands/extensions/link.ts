@@ -15,7 +15,10 @@
  */
 
 import type { CommandModule } from 'yargs';
-import { installExtension } from '../../config/extension.js';
+import {
+  installExtension,
+  requestConsentNonInteractive,
+} from '../../config/extension.js';
 import type { ExtensionInstallMetadata } from '@salesforce/codey-core';
 
 import { getErrorMessage } from '../../utils/errors.js';
@@ -30,7 +33,10 @@ export async function handleLink(args: InstallArgs) {
       source: args.path,
       type: 'link',
     };
-    const extensionName = await installExtension(installMetadata);
+    const extensionName = await installExtension(
+      installMetadata,
+      requestConsentNonInteractive,
+    );
     console.log(
       `Extension "${extensionName}" linked successfully and enabled.`,
     );

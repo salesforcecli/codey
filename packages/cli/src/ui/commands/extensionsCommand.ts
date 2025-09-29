@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import { requestConsentInteractive } from '../../config/extension.js';
 import {
   updateAllUpdatableExtensions,
   type ExtensionUpdateInfo,
@@ -61,6 +62,9 @@ async function updateAction(context: CommandContext, args: string) {
     if (all) {
       updateInfos = await updateAllUpdatableExtensions(
         context.services.config!.getWorkingDir(),
+        // We don't have the ability to prompt for consent yet in this flow.
+        (description) =>
+          requestConsentInteractive(description, context.ui.addItem),
         context.services.config!.getExtensions(),
         context.ui.extensionsUpdateState,
         context.ui.setExtensionsUpdateState,
@@ -85,6 +89,8 @@ async function updateAction(context: CommandContext, args: string) {
         const updateInfo = await updateExtension(
           extension,
           workingDir,
+          (description) =>
+            requestConsentInteractive(description, context.ui.addItem),
           context.ui.extensionsUpdateState.get(extension.name) ??
             ExtensionUpdateState.UNKNOWN,
           (updateState) => {

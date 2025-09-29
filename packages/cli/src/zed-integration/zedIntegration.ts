@@ -35,6 +35,9 @@ import {
   MCPServerConfig,
   DiscoveredMCPTool,
   StreamEventType,
+  DEFAULT_GEMINI_MODEL,
+  DEFAULT_GEMINI_MODEL_AUTO,
+  DEFAULT_GEMINI_FLASH_MODEL,
 } from '@salesforce/codey-core';
 import * as acp from './acp.js';
 import { AcpFileSystemService } from './fileSystemService.js';
@@ -47,9 +50,23 @@ import * as path from 'node:path';
 import { z } from 'zod';
 
 import { randomUUID } from 'node:crypto';
-import type { Extension } from '../config/extension.js';
+import { ExtensionStorage, type Extension } from '../config/extension.js';
 import type { CliArgs } from '../config/config.js';
 import { loadCliConfig } from '../config/config.js';
+import { ExtensionEnablementManager } from '../config/extensions/extensionEnablement.js';
+
+/**
+ * Resolves the model to use based on the current configuration.
+ *
+ * If the model is set to "auto", it will use the flash model if in fallback
+ * mode, otherwise it will use the default model.
+ */
+export function resolveModel(model: string, isInFallbackMode: boolean): string {
+  if (model === DEFAULT_GEMINI_MODEL_AUTO) {
+    return isInFallbackMode ? DEFAULT_GEMINI_FLASH_MODEL : DEFAULT_GEMINI_MODEL;
+  }
+  return model;
+}
 
 export async function runZedIntegration(
   config: Config,
@@ -198,6 +215,10 @@ class GeminiAgent {
     const config = await loadCliConfig(
       settings,
       this.extensions,
+      new ExtensionEnablementManager(
+        ExtensionStorage.getUserExtensionsDir(),
+        this.argv.extensions,
+      ),
       sessionId,
       this.argv,
       cwd,
@@ -265,7 +286,7 @@ class Session {
 
       try {
         const responseStream = await chat.sendMessageStream(
-          this.config.getModel(),
+          resolveModel(this.config.getModel(), this.config.isInFallbackMode()),
           {
             message: nextMessage?.parts ?? [],
             config: {

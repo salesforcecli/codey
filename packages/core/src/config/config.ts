@@ -145,19 +145,16 @@ export interface ExtensionInstallMetadata {
   autoUpdate?: boolean;
 }
 
-export interface FileFilteringOptions {
-  respectGitIgnore: boolean;
-  respectGeminiIgnore: boolean;
-}
-// For memory files
-export const DEFAULT_MEMORY_FILE_FILTERING_OPTIONS: FileFilteringOptions = {
-  respectGitIgnore: false,
-  respectGeminiIgnore: true,
-};
-// For all other files
-export const DEFAULT_FILE_FILTERING_OPTIONS: FileFilteringOptions = {
-  respectGitIgnore: true,
-  respectGeminiIgnore: true,
+import type { FileFilteringOptions } from './constants.js';
+import {
+  DEFAULT_MEMORY_FILE_FILTERING_OPTIONS,
+  DEFAULT_FILE_FILTERING_OPTIONS,
+} from './constants.js';
+
+export type { FileFilteringOptions };
+export {
+  DEFAULT_MEMORY_FILE_FILTERING_OPTIONS,
+  DEFAULT_FILE_FILTERING_OPTIONS,
 };
 
 export const DEFAULT_TRUNCATE_TOOL_OUTPUT_THRESHOLD = 4_000_000;
@@ -188,12 +185,18 @@ export class MCPServerConfig {
     // OAuth configuration
     readonly oauth?: MCPOAuthConfig,
     readonly authProviderType?: AuthProviderType,
+    // Service Account Configuration
+    /* targetAudience format: CLIENT_ID.apps.googleusercontent.com */
+    readonly targetAudience?: string,
+    /* targetServiceAccount format: <service-account-name>@<project-num>.iam.gserviceaccount.com */
+    readonly targetServiceAccount?: string,
   ) {}
 }
 
 export enum AuthProviderType {
   DYNAMIC_DISCOVERY = 'dynamic_discovery',
   GOOGLE_CREDENTIALS = 'google_credentials',
+  SERVICE_ACCOUNT_IMPERSONATION = 'service_account_impersonation',
 }
 
 export interface SandboxConfig {
@@ -267,6 +270,7 @@ export interface ConfigParameters {
   policyEngineConfig?: PolicyEngineConfig;
   output?: OutputSettings;
   useModelRouter?: boolean;
+  enableMessageBusIntegration?: boolean;
 }
 
 export class Config {
@@ -356,6 +360,7 @@ export class Config {
   private readonly policyEngine: PolicyEngine;
   private readonly outputSettings: OutputSettings;
   private readonly useModelRouter: boolean;
+  private readonly enableMessageBusIntegration: boolean;
 
   constructor(params: ConfigParameters) {
     this.sessionId = params.sessionId;
@@ -442,6 +447,8 @@ export class Config {
     this.useSmartEdit = params.useSmartEdit ?? true;
     this.useWriteTodos = params.useWriteTodos ?? false;
     this.useModelRouter = params.useModelRouter ?? false;
+    this.enableMessageBusIntegration =
+      params.enableMessageBusIntegration ?? false;
     this.extensionManagement = params.extensionManagement ?? true;
     this.storage = new Storage(this.targetDir);
     this.enablePromptCompletion = params.enablePromptCompletion ?? false;
@@ -1003,6 +1010,10 @@ export class Config {
     return this.policyEngine;
   }
 
+  getEnableMessageBusIntegration(): boolean {
+    return this.enableMessageBusIntegration;
+  }
+
   async createToolRegistry(): Promise<ToolRegistry> {
     const registry = new ToolRegistry(this, this.eventEmitter);
 
@@ -1036,7 +1047,24 @@ export class Config {
       }
 
       if (isEnabled) {
-        registry.registerTool(new ToolClass(...args));
+        // Pass message bus to tools when feature flag is enabled
+        // This first implementation is only focused on the general case of
+        // the tool registry.
+        const messageBusEnabled = this.getEnableMessageBusIntegration();
+        if (this.debugMode && messageBusEnabled) {
+          console.log(
+            `[DEBUG] enableMessageBusIntegration setting: ${messageBusEnabled}`,
+          );
+        }
+        const toolArgs = messageBusEnabled
+          ? [...args, this.getMessageBus()]
+          : args;
+        if (this.debugMode && messageBusEnabled) {
+          console.log(
+            `[DEBUG] Registering ${className} with messageBus: ${messageBusEnabled ? 'YES' : 'NO'}`,
+          );
+        }
+        registry.registerTool(new ToolClass(...toolArgs));
       }
     };
 

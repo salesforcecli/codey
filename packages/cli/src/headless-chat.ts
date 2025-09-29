@@ -16,7 +16,7 @@
 
 import { execSync } from 'node:child_process';
 import { loadSettings } from './config/settings.js';
-import { loadExtensions } from './config/extension.js';
+import { ExtensionStorage, loadExtensions } from './config/extension.js';
 import { type CliArgs, loadCliConfig } from './config/config.js';
 import {
   type AuthType,
@@ -30,6 +30,7 @@ import {
 } from '@salesforce/codey-core';
 import { type Content, type FunctionCall, type Part } from '@google/genai';
 import { handleOrgFlag } from './utils/handleOrgFlag.js';
+import { ExtensionEnablementManager } from './config/extensions/extensionEnablement.js';
 
 export async function initClient(
   workspaceRoot: string,
@@ -80,10 +81,15 @@ export async function initClient(
     handleOrgFlag(opts.gatewayOrg, settings);
   }
 
-  const extensions = loadExtensions(workspaceRoot);
+  const extensionEnablementManager = new ExtensionEnablementManager(
+    ExtensionStorage.getUserExtensionsDir(),
+    opts?.extensions,
+  );
+  const extensions = loadExtensions(extensionEnablementManager);
   const config = await loadCliConfig(
     settings.merged,
     extensions,
+    extensionEnablementManager,
     sessionId,
     {
       // org and model are provided by the spread operator below

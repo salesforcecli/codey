@@ -120,6 +120,7 @@ describe('AuthDialog', () => {
     expect(items).toContainEqual({
       label: 'Use Cloud Shell user credentials',
       value: AuthType.CLOUD_SHELL,
+      key: AuthType.CLOUD_SHELL,
     });
   });
 

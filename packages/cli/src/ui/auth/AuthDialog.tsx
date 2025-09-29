@@ -50,23 +50,26 @@ export function AuthDialog({
     {
       label: 'Login with Google',
       value: AuthType.LOGIN_WITH_GOOGLE,
+      key: AuthType.LOGIN_WITH_GOOGLE,
     },
     ...(process.env['CLOUD_SHELL'] === 'true'
       ? [
           {
             label: 'Use Cloud Shell user credentials',
             value: AuthType.CLOUD_SHELL,
+            key: AuthType.CLOUD_SHELL,
           },
         ]
       : []),
     {
       label: 'Use Gemini API Key',
       value: AuthType.USE_GEMINI,
+      key: AuthType.USE_GEMINI,
     },
-    { label: 'Vertex AI', value: AuthType.USE_VERTEX_AI },
     {
-      label: 'Salesforce LLM Gateway (JWT via org)',
-      value: AuthType.USE_SF_LLMG,
+      label: 'Vertex AI',
+      value: AuthType.USE_VERTEX_AI,
+      key: AuthType.USE_VERTEX_AI,
     },
   ];
 

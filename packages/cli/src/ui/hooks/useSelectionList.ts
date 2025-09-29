@@ -18,6 +18,7 @@ import { useReducer, useRef, useEffect } from 'react';
 import { useKeypress } from './useKeypress.js';
 
 export interface SelectionListItem<T> {
+  key: string;
   value: T;
   disabled?: boolean;
 }
@@ -36,10 +37,12 @@ export interface UseSelectionListResult {
   setActiveIndex: (index: number) => void;
 }
 
-interface SelectionListState {
+interface SelectionListState<T> {
   activeIndex: number;
+  initialIndex: number;
   pendingHighlight: boolean;
   pendingSelect: boolean;
+  items: Array<SelectionListItem<T>>;
 }
 
 type SelectionListAction<T> =
@@ -106,10 +109,41 @@ const findNextValidIndex = <T>(
   return currentIndex;
 };
 
+const computeInitialIndex = <T>(
+  initialIndex: number,
+  items: Array<SelectionListItem<T>>,
+  initialKey?: string,
+): number => {
+  if (items.length === 0) {
+    return 0;
+  }
+
+  if (initialKey !== undefined) {
+    for (let i = 0; i < items.length; i++) {
+      if (items[i]!.key === initialKey && !items[i]!.disabled) {
+        return i;
+      }
+    }
+  }
+
+  let targetIndex = initialIndex;
+
+  if (targetIndex < 0 || targetIndex >= items.length) {
+    targetIndex = 0;
+  }
+
+  if (items[targetIndex]?.disabled) {
+    const nextValid = findNextValidIndex(targetIndex, 'down', items);
+    targetIndex = nextValid;
+  }
+
+  return targetIndex;
+};
+
 function selectionListReducer<T>(
-  state: SelectionListState,
+  state: SelectionListState<T>,
   action: SelectionListAction<T>,
-): SelectionListState {
+): SelectionListState<T> {
   switch (action.type) {
     case 'SET_ACTIVE_INDEX': {
       const { index, items } = action.payload;
@@ -149,30 +183,24 @@ function selectionListReducer<T>(
 
     case 'INITIALIZE': {
       const { initialIndex, items } = action.payload;
+      const activeKey =
+        initialIndex === state.initialIndex &&
+        state.activeIndex !== state.initialIndex
+          ? state.items[state.activeIndex]?.key
+          : undefined;
 
-      if (items.length === 0) {
-        const newIndex = 0;
-        return newIndex === state.activeIndex
-          ? state
-          : { ...state, activeIndex: newIndex };
+      if (items === state.items && initialIndex === state.initialIndex) {
+        return state;
       }
 
-      let targetIndex = initialIndex;
+      const targetIndex = computeInitialIndex(initialIndex, items, activeKey);
 
-      if (targetIndex < 0 || targetIndex >= items.length) {
-        targetIndex = 0;
-      }
-
-      if (items[targetIndex]?.disabled) {
-        const nextValid = findNextValidIndex(targetIndex, 'down', items);
-        targetIndex = nextValid;
-      }
-
-      // Only return new state if activeIndex actually changed
-      // Don't set pendingHighlight on initialization
-      return targetIndex === state.activeIndex
-        ? state
-        : { ...state, activeIndex: targetIndex, pendingHighlight: false };
+      return {
+        ...state,
+        items,
+        activeIndex: targetIndex,
+        pendingHighlight: false,
+      };
     }
 
     case 'CLEAR_PENDING_FLAGS': {
@@ -211,9 +239,11 @@ export function useSelectionList<T>({
   showNumbers = false,
 }: UseSelectionListOptions<T>): UseSelectionListResult {
   const [state, dispatch] = useReducer(selectionListReducer<T>, {
-    activeIndex: initialIndex,
+    activeIndex: computeInitialIndex(initialIndex, items),
+    initialIndex,
     pendingHighlight: false,
     pendingSelect: false,
+    items,
   });
   const numberInputRef = useRef('');
   const numberInputTimer = useRef<NodeJS.Timeout | null>(null);

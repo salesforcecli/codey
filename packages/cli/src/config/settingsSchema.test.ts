@@ -338,7 +338,7 @@ describe('SettingsSchema', () => {
       ).toBe('Experimental');
       expect(
         getSettingsSchema().experimental.properties.useModelRouter.default,
-      ).toBe(false);
+      ).toBe(true);
     });
   });
 });

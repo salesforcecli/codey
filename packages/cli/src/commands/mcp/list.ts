@@ -20,7 +20,8 @@ import { loadSettings } from '../../config/settings.js';
 import type { MCPServerConfig } from '@salesforce/codey-core';
 import { MCPServerStatus, createTransport } from '@salesforce/codey-core';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { loadExtensions } from '../../config/extension.js';
+import { ExtensionStorage, loadExtensions } from '../../config/extension.js';
+import { ExtensionEnablementManager } from '../../config/extensions/extensionEnablement.js';
 
 const COLOR_GREEN = '\u001b[32m';
 const COLOR_YELLOW = '\u001b[33m';
@@ -31,7 +32,9 @@ async function getMcpServersFromConfig(): Promise<
   Record<string, MCPServerConfig>
 > {
   const settings = loadSettings();
-  const extensions = loadExtensions();
+  const extensions = loadExtensions(
+    new ExtensionEnablementManager(ExtensionStorage.getUserExtensionsDir()),
+  );
   const mcpServers = { ...(settings.merged.mcpServers || {}) };
   for (const extension of extensions) {
     Object.entries(extension.config.mcpServers || {}).forEach(

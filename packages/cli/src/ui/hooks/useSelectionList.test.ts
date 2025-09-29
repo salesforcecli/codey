@@ -35,10 +35,10 @@ describe('useSelectionList', () => {
   const mockOnHighlight = vi.fn();
 
   const items: Array<SelectionListItem<string>> = [
-    { value: 'A' },
-    { value: 'B', disabled: true },
-    { value: 'C' },
-    { value: 'D' },
+    { value: 'A', key: 'A' },
+    { value: 'B', disabled: true, key: 'B' },
+    { value: 'C', key: 'C' },
+    { value: 'D', key: 'D' },
   ];
 
   beforeEach(() => {
@@ -115,9 +115,9 @@ describe('useSelectionList', () => {
 
     it('should wrap around to find the next enabled item if initialIndex is disabled', () => {
       const wrappingItems = [
-        { value: 'A' },
-        { value: 'B', disabled: true },
-        { value: 'C', disabled: true },
+        { value: 'A', key: 'A' },
+        { value: 'B', disabled: true, key: 'B' },
+        { value: 'C', disabled: true, key: 'C' },
       ];
       const { result } = renderHook(() =>
         useSelectionList({
@@ -151,8 +151,8 @@ describe('useSelectionList', () => {
 
     it('should stick to the initial index if all items are disabled', () => {
       const allDisabled = [
-        { value: 'A', disabled: true },
-        { value: 'B', disabled: true },
+        { value: 'A', disabled: true, key: 'A' },
+        { value: 'B', disabled: true, key: 'B' },
       ];
       const { result } = renderHook(() =>
         useSelectionList({
@@ -218,7 +218,7 @@ describe('useSelectionList', () => {
     });
 
     it('should not move or call onHighlight if navigation results in the same index (e.g., single item)', () => {
-      const singleItem = [{ value: 'A' }];
+      const singleItem = [{ value: 'A', key: 'A' }];
       const { result } = renderHook(() =>
         useSelectionList({
           items: singleItem,
@@ -233,8 +233,8 @@ describe('useSelectionList', () => {
 
     it('should not move or call onHighlight if all items are disabled', () => {
       const allDisabled = [
-        { value: 'A', disabled: true },
-        { value: 'B', disabled: true },
+        { value: 'A', disabled: true, key: 'A' },
+        { value: 'B', disabled: true, key: 'B' },
       ];
       const { result } = renderHook(() =>
         useSelectionList({
@@ -433,7 +433,7 @@ describe('useSelectionList', () => {
     const shortList = items;
     const longList: Array<SelectionListItem<string>> = Array.from(
       { length: 15 },
-      (_, i) => ({ value: `Item ${i + 1}` }),
+      (_, i) => ({ value: `Item ${i + 1}`, key: `Item ${i + 1}` }),
     );
 
     const pressNumber = (num: string) => pressKey(num, num);
@@ -595,7 +595,7 @@ describe('useSelectionList', () => {
     it('should highlight but not select a disabled item (timeout case)', () => {
       // Create a list where the ambiguous prefix points to a disabled item
       const disabledAmbiguousList = [
-        { value: 'Item 1 Disabled', disabled: true },
+        { value: 'Item 1 Disabled', disabled: true, key: 'Item 1 Disabled' },
         ...longList.slice(1),
       ];
 
@@ -680,6 +680,28 @@ describe('useSelectionList', () => {
       expect(result.current.activeIndex).toBe(2);
     });
 
+    it('should respect a new initialIndex even after user interaction', () => {
+      const { result, rerender } = renderHook(
+        ({ initialIndex }: { initialIndex: number }) =>
+          useSelectionList({
+            items,
+            onSelect: mockOnSelect,
+            initialIndex,
+          }),
+        { initialProps: { initialIndex: 0 } },
+      );
+
+      // User navigates, changing the active index
+      pressKey('down');
+      expect(result.current.activeIndex).toBe(2);
+
+      // The component re-renders with a new initial index
+      rerender({ initialIndex: 3 });
+
+      // The hook should now respect the new initial index
+      expect(result.current.activeIndex).toBe(3);
+    });
+
     it('should validate index when initialIndex prop changes to a disabled item', () => {
       const { result, rerender } = renderHook(
         ({ initialIndex }: { initialIndex: number }) =>
@@ -709,7 +731,10 @@ describe('useSelectionList', () => {
 
       expect(result.current.activeIndex).toBe(3);
 
-      const shorterItems = [{ value: 'X' }, { value: 'Y' }];
+      const shorterItems = [
+        { value: 'X', key: 'X' },
+        { value: 'Y', key: 'Y' },
+      ];
       rerender({ items: shorterItems }); // Length 2
 
       // The useEffect syncs based on the initialIndex (3) which is now out of bounds. It defaults to 0.
@@ -717,7 +742,11 @@ describe('useSelectionList', () => {
     });
 
     it('should adjust activeIndex if items change and the initialIndex becomes disabled', () => {
-      const initialItems = [{ value: 'A' }, { value: 'B' }, { value: 'C' }];
+      const initialItems = [
+        { value: 'A', key: 'A' },
+        { value: 'B', key: 'B' },
+        { value: 'C', key: 'C' },
+      ];
       const { result, rerender } = renderHook(
         ({ items: testItems }: { items: Array<SelectionListItem<string>> }) =>
           useSelectionList({
@@ -731,9 +760,9 @@ describe('useSelectionList', () => {
       expect(result.current.activeIndex).toBe(1);
 
       const newItems = [
-        { value: 'A' },
-        { value: 'B', disabled: true },
-        { value: 'C' },
+        { value: 'A', key: 'A' },
+        { value: 'B', disabled: true, key: 'B' },
+        { value: 'C', key: 'C' },
       ];
       rerender({ items: newItems });
 
@@ -753,6 +782,148 @@ describe('useSelectionList', () => {
 
       rerender({ items: [] });
       expect(result.current.activeIndex).toBe(0);
+    });
+
+    it('should not reset activeIndex when items are deeply equal', () => {
+      const initialItems = [
+        { value: 'A', key: 'A' },
+        { value: 'B', disabled: true, key: 'B' },
+        { value: 'C', key: 'C' },
+        { value: 'D', key: 'D' },
+      ];
+
+      const { result, rerender } = renderHook(
+        ({ items: testItems }: { items: Array<SelectionListItem<string>> }) =>
+          useSelectionList({
+            onSelect: mockOnSelect,
+            onHighlight: mockOnHighlight,
+            initialIndex: 2,
+            items: testItems,
+          }),
+        { initialProps: { items: initialItems } },
+      );
+
+      expect(result.current.activeIndex).toBe(2);
+
+      act(() => {
+        result.current.setActiveIndex(3);
+      });
+      expect(result.current.activeIndex).toBe(3);
+
+      mockOnHighlight.mockClear();
+
+      // Create new array with same content (deeply equal but not identical)
+      const newItems = [
+        { value: 'A', key: 'A' },
+        { value: 'B', disabled: true, key: 'B' },
+        { value: 'C', key: 'C' },
+        { value: 'D', key: 'D' },
+      ];
+
+      rerender({ items: newItems });
+
+      // Active index should remain the same since items are deeply equal
+      expect(result.current.activeIndex).toBe(3);
+      // onHighlight should NOT be called since the index didn't change
+      expect(mockOnHighlight).not.toHaveBeenCalled();
+    });
+
+    it('should update activeIndex when items change structurally', () => {
+      const initialItems = [
+        { value: 'A', key: 'A' },
+        { value: 'B', disabled: true, key: 'B' },
+        { value: 'C', key: 'C' },
+        { value: 'D', key: 'D' },
+      ];
+
+      const { result, rerender } = renderHook(
+        ({ items: testItems }: { items: Array<SelectionListItem<string>> }) =>
+          useSelectionList({
+            onSelect: mockOnSelect,
+            onHighlight: mockOnHighlight,
+            initialIndex: 3,
+            items: testItems,
+          }),
+        { initialProps: { items: initialItems } },
+      );
+
+      expect(result.current.activeIndex).toBe(3);
+      mockOnHighlight.mockClear();
+
+      // Change item values (not deeply equal)
+      const newItems = [
+        { value: 'X', key: 'X' },
+        { value: 'Y', key: 'Y' },
+        { value: 'Z', key: 'Z' },
+      ];
+
+      rerender({ items: newItems });
+
+      // Active index should update based on initialIndex and new items
+      expect(result.current.activeIndex).toBe(0);
+    });
+
+    it('should handle partial changes in items array', () => {
+      const initialItems = [
+        { value: 'A', key: 'A' },
+        { value: 'B', key: 'B' },
+        { value: 'C', key: 'C' },
+      ];
+
+      const { result, rerender } = renderHook(
+        ({ items: testItems }: { items: Array<SelectionListItem<string>> }) =>
+          useSelectionList({
+            onSelect: mockOnSelect,
+            initialIndex: 1,
+            items: testItems,
+          }),
+        { initialProps: { items: initialItems } },
+      );
+
+      expect(result.current.activeIndex).toBe(1);
+
+      // Change only one item's disabled status
+      const newItems = [
+        { value: 'A', key: 'A' },
+        { value: 'B', disabled: true, key: 'B' },
+        { value: 'C', key: 'C' },
+      ];
+
+      rerender({ items: newItems });
+
+      // Should find next valid index since current became disabled
+      expect(result.current.activeIndex).toBe(2);
+    });
+
+    it('should update selection when a new item is added to the start of the list', () => {
+      const initialItems = [
+        { value: 'A', key: 'A' },
+        { value: 'B', key: 'B' },
+        { value: 'C', key: 'C' },
+      ];
+
+      const { result, rerender } = renderHook(
+        ({ items: testItems }: { items: Array<SelectionListItem<string>> }) =>
+          useSelectionList({
+            onSelect: mockOnSelect,
+            items: testItems,
+          }),
+        { initialProps: { items: initialItems } },
+      );
+
+      pressKey('down');
+      expect(result.current.activeIndex).toBe(1);
+
+      const newItems = [
+        { value: 'D', key: 'D' },
+        { value: 'A', key: 'A' },
+        { value: 'B', key: 'B' },
+        { value: 'C', key: 'C' },
+      ];
+
+      rerender({ items: newItems });
+
+      expect(result.current.activeIndex).toBe(2);
     });
   });
 
@@ -786,7 +957,7 @@ describe('useSelectionList', () => {
     it('should clear timeout on unmount when timer is active', () => {
       const longList: Array<SelectionListItem<string>> = Array.from(
         { length: 15 },
-        (_, i) => ({ value: `Item ${i + 1}` }),
+        (_, i) => ({ value: `Item ${i + 1}`, key: `Item ${i + 1}` }),
       );
 
       const { unmount } = renderHook(() =>
