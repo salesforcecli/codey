@@ -116,7 +116,7 @@ describe('run_shell_command', () => {
     const fileName = `test-file-${Math.random().toString(36).substring(7)}.txt`;
     rig.createFile(fileName, 'test content');
 
-    const prompt = `Run a shell command to list the files in the current directory and tell me what they are.`;
+    const prompt = `Run a shell command to list the files in the current directory and tell me what they are. You must use a shell command not the list_directory tool.`;
     const result = await rig.run(prompt);
 
     const foundToolCall = await rig.waitForToolCall('run_shell_command');
