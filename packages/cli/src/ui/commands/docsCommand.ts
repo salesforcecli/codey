@@ -23,9 +23,8 @@ import {
 } from './types.js';
 import { MessageType } from '../types.js';
 
-// TODO: update this to https://github.com/salesforcecli/codey/blob/main/docs/index.md
 export const docsUrl =
-  'https://github.com/salesforcecli/codey-private/blob/main/docs/index.md';
+  'https://github.com/salesforcecli/codey/blob/main/docs/index.md';
 
 export const docsCommand: SlashCommand = {
   name: 'docs',

@@ -96,8 +96,8 @@ codey --gateway-org your_username_or_alias > Write me an LWC component that disp
 #### Analyze existing code
 
 ```bash
-git clone https://github.com/salesforcecli/codey-private
-cd codey-private
+git clone https://github.com/salesforcecli/codey
+cd codey
 codey --gateway-org your_username_or_alias > Give me a summary of all of the changes that went in yesterday
 ```
 
@@ -191,8 +191,8 @@ See our [Contributing Guide](./CONTRIBUTING.md) for development setup, coding st
 ### Run Locally
 
 ```
-git clone https://github.com/salesforcecli/codey-private.git
-cd codey-private
+git clone https://github.com/salesforcecli/codey.git
+cd codey
 npm install
 npm run build
 ```
@@ -211,9 +211,9 @@ node ./scripts/start.js
 
 ## 📖 Resources
 
-- [**NPM Package**](https://www.npmjs.com/package/@salesforce/codey-cli) - Package registry (Note: This is a placeholder link)
-- [**GitHub Issues**](https://github.com/salesforcecli/codey-private/issues) - Report bugs or request features
-- [**Security Advisories**](https://github.com/salesforcecli/codey-private/security/advisories) - Security updates
+- [**NPM Package**](https://www.npmjs.com/package/@salesforce/code) - Package registry
+- [**GitHub Issues**](https://github.com/salesforcecli/codey/issues) - Report bugs or request features
+- [**Security Advisories**](https://github.com/salesforcecli/codey/security/advisories) - Security updates
 
 ### Uninstall
 

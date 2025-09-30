@@ -30,8 +30,8 @@ We love pull requests! If you're ready to contribute code, please follow the ste
 1.  **Fork the repository** on GitHub.
 2.  **Clone your fork** locally:
     ```bash
-    git clone https://github.com/YOUR_USERNAME/codey-private.git
-    cd codey-private
+    git clone https://github.com/YOUR_USERNAME/codey.git
+    cd codey
     ```
 3.  **Install dependencies**:
     ```bash
@@ -70,7 +70,7 @@ We love pull requests! If you're ready to contribute code, please follow the ste
     ```bash
     git push origin my-feature-branch
     ```
-7.  Open a pull request from your fork to the `main` branch of the `salesforcecli/codey-private` repository.
+7.  Open a pull request from your fork to the `main` branch of the `salesforcecli/codey` repository.
 8.  In the pull request description, please explain the changes you made and link to any relevant issues.
 
 ## Contributor License Agreement (CLA)
