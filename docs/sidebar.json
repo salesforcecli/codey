@@ -41,8 +41,7 @@
       { "label": "Web Fetch", "slug": "docs/tools/web-fetch" },
       { "label": "Web Search", "slug": "docs/tools/web-search" },
       { "label": "Memory", "slug": "docs/tools/memory" },
-      { "label": "MCP Servers", "slug": "docs/tools/mcp-server" },
-      { "label": "Sandboxing", "slug": "docs/sandbox" }
+      { "label": "MCP Servers", "slug": "docs/tools/mcp-server" }
     ]
   },
   {
@@ -51,6 +50,9 @@
   },
   {
     "label": "Support",
-    "items": [{ "label": "Troubleshooting", "slug": "docs/troubleshooting" }]
+    "items": [
+      { "label": "Troubleshooting", "slug": "docs/troubleshooting" },
+      { "label": "Logging", "slug": "docs/logging" }
+    ]
   }
 ]

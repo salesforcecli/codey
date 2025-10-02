@@ -7,6 +7,8 @@ This guide provides solutions to common issues and debugging tips, including top
 - Debugging tips
 - Existing GitHub Issues similar to yours or creating new Issues
 
+For information on where logs are written and how to increase verbosity, see [Logging](./logging.md).
+
 ## Frequently asked questions (FAQs)
 
 - **Q: How do I update Vibe Codey CLI to the latest version?**
@@ -64,7 +66,7 @@ The Vibe Codey CLI uses specific exit codes to indicate the reason for terminati
 
 - **CLI debugging:**
   - Use the `--verbose` flag (if available) with CLI commands for more detailed output.
-  - Check the CLI logs, often found in a user-specific configuration or cache directory.
+  - Check the CLI logs. See [Logging](./logging.md) for where to find logs and how to increase verbosity.
 
 - **Core debugging:**
   - Check the server console output for error messages or stack traces.
