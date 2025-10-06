@@ -11,15 +11,15 @@ For information on where logs are written and how to increase verbosity, see [Lo
 
 ## Frequently asked questions (FAQs)
 
-- **Q: How do I update Vibe Codey CLI to the latest version?**
-  - A: If you installed it globally via `npm`, update it using the command `npm install -g @salesforce/codey@latest`. If you compiled it from source, pull the latest changes from the repository, and then rebuild using the command `npm run build`.
+- **Q: How do I update Agentforce Vibes CLI to the latest version?**
+  - A: If you installed it globally via `npm`, update it using the command `npm install -g @salesforce/sfcode@latest`. If you compiled it from source, pull the latest changes from the repository, and then rebuild using the command `npm run build`.
 
-- **Q: Where are the Vibe Codey CLI configuration or settings files stored?**
-  - A: The Vibe Codey CLI configuration is stored in two `settings.json` files:
-    1. In your home directory: `~/.codey/settings.json`.
-    2. In your project's root directory: `./.codey/settings.json`.
+- **Q: Where are the Agentforce Vibes CLI configuration or settings files stored?**
+  - A: The Agentforce Vibes CLI configuration is stored in two `settings.json` files:
+    1. In your home directory: `~/.sfcode/settings.json`.
+    2. In your project's root directory: `./.sfcode/settings.json`.
 
-    Refer to [Vibe Codey CLI Configuration](./cli/configuration.md) for more details.
+    Refer to [Agentforce Vibes CLI Configuration](./cli/configuration.md) for more details.
 
 ## Common error messages and solutions
 
@@ -28,12 +28,12 @@ For information on where logs are written and how to increase verbosity, see [Lo
   - **Solution:**
     Either stop the other process that is using the port or configure the MCP server to use a different port.
 
-- **Error: Command not found (when attempting to run Vibe Codey CLI with `codey`).**
-  - **Cause:** Vibe Codey CLI is not correctly installed or it is not in your system's `PATH`.
+- **Error: Command not found (when attempting to run Agentforce Vibes CLI with `sfcode`).**
+  - **Cause:** Agentforce Vibes CLI is not correctly installed or it is not in your system's `PATH`.
   - **Solution:**
-    The update depends on how you installed Vibe Codey CLI:
-    - If you installed `codey` globally, check that your `npm` global binary directory is in your `PATH`. You can update Vibe Codey CLI using the command `npm install -g @salesforce/codey@latest`.
-    - If you are running `gemini` from source, ensure you are using the correct command to invoke it (e.g., `node packages/cli/dist/index.js ...`). To update Vibe Codey CLI, pull the latest changes from the repository, and then rebuild using the command `npm run build`.
+    The update depends on how you installed Agentforce Vibes CLI:
+    - If you installed `sfcode` globally, check that your `npm` global binary directory is in your `PATH`. You can update Agentforce Vibes CLI using the command `npm install -g @salesforce/sfcode@latest`.
+    - If you are running `sfcode` from source, ensure you are using the correct command to invoke it (e.g., `node packages/cli/dist/index.js ...`). To update Agentforce Vibes CLI, pull the latest changes from the repository, and then rebuild using the command `npm run build`.
 
 - **Error: `MODULE_NOT_FOUND` or import errors.**
   - **Cause:** Dependencies are not installed correctly, or the project hasn't been built.
@@ -42,19 +42,19 @@ For information on where logs are written and how to increase verbosity, see [Lo
     2.  Run `npm run build` to compile the project.
     3.  Verify that the build completed successfully with `npm run start`.
 
-- **Vibe Codey CLI is not running in interactive mode in "CI" environments**
-  - **Issue:** The Vibe Codey CLI does not enter interactive mode (no prompt appears) if an environment variable starting with `CI_` (e.g., `CI_TOKEN`) is set. This is because the `is-in-ci` package, used by the underlying UI framework, detects these variables and assumes a non-interactive CI environment.
-  - **Cause:** The `is-in-ci` package checks for the presence of `CI`, `CONTINUOUS_INTEGRATION`, or any environment variable with a `CI_` prefix. When any of these are found, it signals that the environment is non-interactive, which prevents the Vibe Codey CLI from starting in its interactive mode.
-  - **Solution:** If the `CI_` prefixed variable is not needed for the CLI to function, you can temporarily unset it for the command. e.g., `env -u CI_TOKEN codey`
+- **Agentforce Vibes CLI is not running in interactive mode in "CI" environments**
+  - **Issue:** The Agentforce Vibes CLI does not enter interactive mode (no prompt appears) if an environment variable starting with `CI_` (e.g., `CI_TOKEN`) is set. This is because the `is-in-ci` package, used by the underlying UI framework, detects these variables and assumes a non-interactive CI environment.
+  - **Cause:** The `is-in-ci` package checks for the presence of `CI`, `CONTINUOUS_INTEGRATION`, or any environment variable with a `CI_` prefix. When any of these are found, it signals that the environment is non-interactive, which prevents the Agentforce Vibes CLI from starting in its interactive mode.
+  - **Solution:** If the `CI_` prefixed variable is not needed for the CLI to function, you can temporarily unset it for the command. e.g., `env -u CI_TOKEN sfcode`
 
 - **DEBUG mode not working from project .env file**
-  - **Issue:** Setting `DEBUG=true` in a project's `.env` file doesn't enable debug mode for codey-cli.
-  - **Cause:** The `DEBUG` and `DEBUG_MODE` variables are automatically excluded from project `.env` files to prevent interference with codey-cli behavior.
-  - **Solution:** Use a `.codey/.env` file instead, or configure the `advanced.excludedEnvVars` setting in your `settings.json` to exclude fewer variables.
+  - **Issue:** Setting `DEBUG=true` in a project's `.env` file doesn't enable debug mode for sfcode.
+  - **Cause:** The `DEBUG` and `DEBUG_MODE` variables are automatically excluded from project `.env` files to prevent interference with sfcode behavior.
+  - **Solution:** Use a `.sfcode/.env` file instead, or configure the `advanced.excludedEnvVars` setting in your `settings.json` to exclude fewer variables.
 
 ## Exit Codes
 
-The Vibe Codey CLI uses specific exit codes to indicate the reason for termination. This is especially useful for scripting and automation.
+The Agentforce Vibes CLI uses specific exit codes to indicate the reason for termination. This is especially useful for scripting and automation.
 
 | Exit Code | Error Type              | Description                                                                                         |
 | --------- | ----------------------- | --------------------------------------------------------------------------------------------------- |
@@ -83,4 +83,4 @@ The Vibe Codey CLI uses specific exit codes to indicate the reason for terminati
 
 ## Existing GitHub Issues similar to yours or creating new Issues
 
-If you encounter an issue that was not covered here in this _Troubleshooting guide_, consider searching the Vibe Codey CLI [Issue tracker on GitHub](https://github.com/salesforceli/codey/issues). If you can't find an issue similar to yours, consider creating a new GitHub Issue with a detailed description. Pull requests are also welcome!
+If you encounter an issue that was not covered here in this _Troubleshooting guide_, consider searching the Agentforce Vibes CLI [Issue tracker on GitHub](https://github.com/salesforceli/sfcode/issues). If you can't find an issue similar to yours, consider creating a new GitHub Issue with a detailed description. Pull requests are also welcome!

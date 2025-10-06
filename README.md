@@ -1,17 +1,16 @@
+# Agentforce Vibes CLI
 
-# Vibe Codey CLI
+![Agentforce Vibes CLI Screenshot](./docs/assets/codey.png)
 
-![Codey Screenshot](./docs/assets/codey.png)
+This is an issue-only repository for the Agentforce Vibes CLI (`sfcode`). We monitor this repo for feedback from the community.
 
-This is an issue-only repository for the Vibe Codey CLI (`codey`). We monitor this repo for feedback from the community.
+If you have a feature or enhancement request, first review the [existing discussions](https://github.com/salesforcecli/sfcode/discussions) to see if someone has already requested it. If you don't see your feature or enhancement, click the **New discussion** button to create a new request.
 
-If you have a feature or enhancement request, first review the [existing discussions](https://github.com/salesforcecli/codey/discussions) to see if someone has already requested it. If you don't see your feature or enhancement, click the **New discussion** button to create a new request.
-
-Similarly, if you've encountered a bug with the Codey, check out the [existing issues](https://github.com/salesforcecli/codey/issues) to see if it's already been reported. If you don’t see your bug listed, click the **New issue** button to create one.
+Similarly, if you've encountered a bug with the Agentforce Vibes CLI, check out the [existing issues](https://github.com/salesforcecli/sfcode/issues) to see if it's already been reported. If you don’t see your bug listed, click the **New issue** button to create one.
 
 NOTICE: GitHub is not a mechanism for receiving support under any agreement or SLA. If you require immediate assistance, use official Salesforce customer support channels.
 
-## 🚀 Why Vibe Codey CLI?
+## 🚀 Why Agentforce Vibes CLI?
 
 - **🧠 Powered by Salesforce LLM Gateway**: Access trusted and powerful generative Salesforce Fluent Reasoning models.
 - **🔧 Built-in tools**: File operations, shell commands, web fetching, and more.
@@ -20,33 +19,32 @@ NOTICE: GitHub is not a mechanism for receiving support under any agreement or S
 - **💻 Terminal-first**: Designed for developers who live in the command line.
 - **🛡️ Open source**: Apache 2.0 licensed.
 
-
 ## 🔐 Authentication
 
-Vibe Codey CLI uses your Salesforce Developer Edition org credentials to connect to the Salesforce LLM Gateway.
+Agentforce Vibes CLI uses your Salesforce Developer Edition org credentials to connect to the Salesforce LLM Gateway.
 
 You can provide your org's username or alias in two ways:
 
 ### Option 1: Command-line flag (Recommended)
 
-Pass the `--gateway-org` flag when you run `codey`:
+Pass the `--gateway-org` flag when you run `sfcode`:
 
 ```bash
-codey --gateway-org your_username_or_alias
+sfcode --gateway-org your_username_or_alias
 ```
 
 ### Option 2: Environment variable
 
-Set the `CODEY_GATEWAY_ORG` environment variable in your shell configuration file (e.g., `.zshrc`, `.bashrc`):
+Set the `SFCODE_GATEWAY_ORG` environment variable in your shell configuration file (e.g., `.zshrc`, `.bashrc`):
 
 ```bash
-export CODEY_GATEWAY_ORG="your_username_or_alias"
+export SFCODE_GATEWAY_ORG="your_username_or_alias"
 ```
 
-Then you can run `codey` from any directory:
+Then you can run `sfcode` from any directory:
 
 ```bash
-codey
+sfcode
 ```
 
 ## 🚀 Getting Started
@@ -56,13 +54,13 @@ codey
 #### Start in current directory
 
 ```bash
-codey --gateway-org your_username_or_alias
+sfcode --gateway-org your_username_or_alias
 ```
 
 #### Include multiple directories
 
 ```bash
-codey --gateway-org your_username_or_alias --include-directories ../lib,../docs
+sfcode --gateway-org your_username_or_alias --include-directories ../lib,../docs
 ```
 
 #### Non-interactive mode for scripts
@@ -70,13 +68,13 @@ codey --gateway-org your_username_or_alias --include-directories ../lib,../docs
 Get a simple text response:
 
 ```bash
-codey -p "Explain the architecture of this codebase" --gateway-org your_username_or_alias
+sfcode -p "Explain the architecture of this codebase" --gateway-org your_username_or_alias
 ```
 
 For more advanced scripting, including how to parse JSON and handle errors, use the `--output-format json` flag to get structured output:
 
 ```bash
-codey -p "Explain the architecture of this codebase" --output-format json --gateway-org your_username_or_alias
+sfcode -p "Explain the architecture of this codebase" --output-format json --gateway-org your_username_or_alias
 ```
 
 ### Quick Examples
@@ -85,20 +83,20 @@ codey -p "Explain the architecture of this codebase" --output-format json --gate
 
 ```bash
 cd new-project/
-codey --gateway-org your_username_or_alias > Write me an LWC component that displays a list of accounts.
+sfcode --gateway-org your_username_or_alias > Write me an LWC component that displays a list of accounts.
 ```
 
 #### Analyze existing code
 
 ```bash
-git clone https://github.com/salesforcecli/codey
-cd codey
-codey --gateway-org your_username_or_alias > Give me a summary of all of the changes that went in yesterday
+git clone https://github.com/salesforcecli/sfcode
+cd sfcode
+sfcode --gateway-org your_username_or_alias > Give me a summary of all of the changes that went in yesterday
 ```
 
 ## Included Tools: Salesforce DX MCP Server
 
-Vibe Codey CLI comes bundled with the Salesforce DX MCP Server, providing a powerful suite of tools tailored for Salesforce development right out of the box. These tools can help you with a variety of tasks, from modernizing old codebases to building new components with best practices.
+Agentforce Vibes CLI comes bundled with the Salesforce DX MCP Server, providing a powerful suite of tools tailored for Salesforce development right out of the box. These tools can help you with a variety of tasks, from modernizing old codebases to building new components with best practices.
 
 You can start using these tools by invoking them with `@mcp`. For example:
 
@@ -130,7 +128,7 @@ To see all available tools, you can run:
 
 - [**Commands Reference**](./docs/cli/commands.md) - All slash commands (`/help`, `/chat`, `/mcp`, etc.)
 - [**Checkpointing**](./docs/checkpointing.md) - Save and resume conversations
-- [**Memory Management**](./docs/tools/memory.md) - Using CODEY.md context files
+- [**Memory Management**](./docs/tools/memory.md) - Using SFCODE.md context files
 
 ### Tools & Extensions
 
@@ -143,7 +141,7 @@ To see all available tools, you can run:
 
 ### Advanced Topics
 
-- [**Architecture Overview**](./docs/architecture.md) - How Vibe Codey CLI works
+- [**Architecture Overview**](./docs/architecture.md) - How Agentforce Vibes CLI works
 - [**Enterprise Deployment**](./docs/deployment.md) - Docker, system-wide config
 - [**Telemetry & Monitoring**](./docs/telemetry.md) - Usage tracking
 - [**Tools API Development**](./docs/core/tools-api.md) - Create custom tools
@@ -152,7 +150,7 @@ To see all available tools, you can run:
 
 - [**Settings Reference**](./docs/cli/configuration.md) - All configuration options
 - [**Theme Customization**](./docs/cli/themes.md) - Visual customization
-- [**.codey Directory**](./docs/codey-ignore.md) - Project-specific settings
+- [**.sfcode Directory**](./docs/sfcode-ignore.md) - Project-specific settings
 - [**Environment Variables**](./docs/cli/configuration.md#environment-variables)
 
 ### Troubleshooting & Support
@@ -162,7 +160,7 @@ To see all available tools, you can run:
 
 ### Using MCP Servers
 
-Configure MCP servers in `~/.codey/settings.json` to extend Codey CLI with custom tools:
+Configure MCP servers in `~/.sfcode/settings.json` to extend Agentforce Vibes CLI with custom tools:
 
 ```text
 > @github List my open pull requests
@@ -174,7 +172,7 @@ See the [MCP Server Integration guide](./docs/tools/mcp-server.md) for setup ins
 
 ## 🤝 Contributing
 
-We welcome contributions! Vibe Codey CLI is fully open source (Apache 2.0), and we encourage the community to:
+We welcome contributions! Agentforce Vibes CLI is fully open source (Apache 2.0), and we encourage the community to:
 
 - Report bugs and suggest features
 - Improve documentation
@@ -186,19 +184,19 @@ See our [Contributing Guide](./CONTRIBUTING.md) for development setup, coding st
 ### Run Locally
 
 ```
-git clone https://github.com/salesforcecli/codey.git
-cd codey
+git clone https://github.com/salesforcecli/sfcode.git
+cd sfcode
 npm install
 npm run build
 ```
 
-Set the `CODEY_GATEWAY_ORG` in your environment:
+Set the `SFCODE_GATEWAY_ORG` in your environment:
 
 ```
-export CODEY_GATEWAY_ORG="your_username_here"
+export SFCODE_GATEWAY_ORG="your_username_here"
 ```
 
-Finally, run Codey from the project root:
+Finally, run Agentforce Vibes CLI from the project root:
 
 ```
 node ./scripts/start.js
@@ -206,9 +204,9 @@ node ./scripts/start.js
 
 ## 📖 Resources
 
-- [**NPM Package**](https://www.npmjs.com/package/@salesforce/code) - Package registry
-- [**GitHub Issues**](https://github.com/salesforcecli/codey/issues) - Report bugs or request features
-- [**Security Advisories**](https://github.com/salesforcecli/codey/security/advisories) - Security updates
+- [**NPM Package**](https://www.npmjs.com/package/@salesforce/sfcode) - Package registry
+- [**GitHub Issues**](https://github.com/salesforcecli/sfcode/issues) - Report bugs or request features
+- [**Security Advisories**](https://github.com/salesforcecli/sfcode/security/advisories) - Security updates
 
 ### Uninstall
 
@@ -222,3 +220,5 @@ See the [Uninstall Guide](docs/Uninstall.md) for removal instructions.
 ---
 
 Built with ❤️ by Salesforce and the open source community
+
+---

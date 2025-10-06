@@ -1,17 +1,17 @@
-# Welcome to Vibe Codey CLI documentation
+# Welcome to Agentforce Vibes CLI documentation
 
-This documentation provides a comprehensive guide to installing, using, and developing Vibe Codey CLI. This tool lets you interact with the Salesforce LLM Gateway through a command-line interface.
+This documentation provides a comprehensive guide to installing, using, and developing Agentforce Vibes CLI. This tool lets you interact with the Salesforce LLM Gateway through a command-line interface.
 
 ## Overview
 
-Vibe Codey CLI brings the capabilities of the Salesforce LLM Gateway to your terminal in an interactive Read-Eval-Print Loop (REPL) environment. Vibe Codey CLI consists of a client-side application (`packages/cli`) that communicates with a local server (`packages/core`), which in turn manages requests to the Salesforce LLM Gateway and its AI models. Vibe Codey CLI also contains a variety of tools for tasks such as performing file system operations, running shells, and web fetching, which are managed by `packages/core`.
+Agentforce Vibes CLI brings the capabilities of the Salesforce LLM Gateway to your terminal in an interactive Read-Eval-Print Loop (REPL) environment. Agentforce Vibes CLI consists of a client-side application (`packages/cli`) that communicates with a local server (`packages/core`), which in turn manages requests to the Salesforce LLM Gateway and its AI models. Agentforce Vibes CLI also contains a variety of tools for tasks such as performing file system operations, running shells, and web fetching, which are managed by `packages/core`.
 
 ## Navigating the documentation
 
 This documentation is organized into the following sections:
 
-- **[Execution and Deployment](./deployment.md):** Information for running Vibe Codey CLI.
-- **[Architecture Overview](./architecture.md):** Understand the high-level design of Vibe Codey CLI, including its components and how they interact.
+- **[Execution and Deployment](./deployment.md):** Information for running Agentforce Vibes CLI.
+- **[Architecture Overview](./architecture.md):** Understand the high-level design of Agentforce Vibes CLI, including its components and how they interact.
 - **CLI Usage:** Documentation for `packages/cli`.
   - **[CLI Introduction](./cli/index.md):** Overview of the command-line interface.
   - **[Commands](./cli/commands.md):** Description of available CLI commands.
@@ -36,4 +36,4 @@ This documentation is organized into the following sections:
 - **[Troubleshooting Guide](./troubleshooting.md):** Find solutions to common problems and FAQs.
 - **[Logging](./logging.md):** Learn where logs are stored and how to increase verbosity.
 
-We hope this documentation helps you make the most of the Vibe Codey CLI!
+We hope this documentation helps you make the most of the Agentforce Vibes CLI!

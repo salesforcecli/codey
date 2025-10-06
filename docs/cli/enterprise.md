@@ -1,8 +1,8 @@
-# Vibe Codey CLI for the Enterprise
+# Agentforce Vibes CLI for the Enterprise
 
-This document outlines configuration patterns and best practices for deploying and managing Vibe Codey CLI in an enterprise environment. By leveraging system-level settings, administrators can enforce security policies, manage tool access, and ensure a consistent experience for all users.
+This document outlines configuration patterns and best practices for deploying and managing Agentforce Vibes CLI in an enterprise environment. By leveraging system-level settings, administrators can enforce security policies, manage tool access, and ensure a consistent experience for all users.
 
-> **A Note on Security:** The patterns described in this document are intended to help administrators create a more controlled and secure environment for using Vibe Codey CLI. However, they should not be considered a foolproof security boundary. A determined user with sufficient privileges on their local machine may still be able to circumvent these configurations. These measures are designed to prevent accidental misuse and enforce corporate policy in a managed environment, not to defend against a malicious actor with local administrative rights.
+> **A Note on Security:** The patterns described in this document are intended to help administrators create a more controlled and secure environment for using Agentforce Vibes CLI. However, they should not be considered a foolproof security boundary. A determined user with sufficient privileges on their local machine may still be able to circumvent these configurations. These measures are designed to prevent accidental misuse and enforce corporate policy in a managed environment, not to defend against a malicious actor with local administrative rights.
 
 ## Centralized Configuration: The System Settings File
 
@@ -11,8 +11,8 @@ The most powerful tools for enterprise administration are the system-wide settin
 Settings are merged from four files. The precedence order for single-value settings (like `theme`) is:
 
 1. System Defaults (`system-defaults.json`)
-2. User Settings (`~/.codey/settings.json`)
-3. Workspace Settings (`<project>/.codey/settings.json`)
+2. User Settings (`~/.sfcode/settings.json`)
+3. Workspace Settings (`<project>/.sfcode/settings.json`)
 4. System Overrides (`settings.json`)
 
 This means the System Overrides file has the final say. For settings that are arrays (`includeDirectories`) or objects (`mcpServers`), the values are merged.
@@ -29,12 +29,12 @@ Here is how settings from different levels are combined.
       "theme": "default-corporate-theme"
     },
     "context": {
-      "includeDirectories": ["/etc/codey-cli/common-context"]
+      "includeDirectories": ["/etc/sfcode/common-context"]
     }
   }
   ```
 
-- **User `settings.json` (`~/.codey/settings.json`):**
+- **User `settings.json` (`~/.sfcode/settings.json`):**
 
   ```json
   {
@@ -50,12 +50,12 @@ Here is how settings from different levels are combined.
       }
     },
     "context": {
-      "includeDirectories": ["~/codey-context"]
+      "includeDirectories": ["~/sfcode-context"]
     }
   }
   ```
 
-- **Workspace `settings.json` (`<project>/.codey/settings.json`):**
+- **Workspace `settings.json` (`<project>/.sfcode/settings.json`):**
 
   ```json
   {
@@ -85,7 +85,7 @@ Here is how settings from different levels are combined.
       }
     },
     "context": {
-      "includeDirectories": ["/etc/codey-cli/global-context"]
+      "includeDirectories": ["/etc/sfcode/global-context"]
     }
   }
   ```
@@ -111,10 +111,10 @@ This results in the following merged configuration:
     },
     "context": {
       "includeDirectories": [
-        "/etc/codey-cli/common-context",
-        "~/codey-context",
+        "/etc/sfcode/common-context",
+        "~/sfcode-context",
         "./project-context",
-        "/etc/codey-cli/global-context"
+        "/etc/sfcode/global-context"
       ]
     }
   }
@@ -127,10 +127,10 @@ This results in the following merged configuration:
 - **`includeDirectories`**: The arrays are concatenated in the order of System Defaults, User, Workspace, and then System Overrides.
 
 - **Location**:
-  - **Linux**: `/etc/codey-cli/settings.json`
-  - **Windows**: `C:\\ProgramData\\codey-cli\\settings.json`
-  - **macOS**: `/Library/Application Support/CodeyCli/settings.json`
-  - The path can be overridden using the `CODEY_CLI_SYSTEM_SETTINGS_PATH` environment variable.
+  - **Linux**: `/etc/sfcode/settings.json`
+  - **Windows**: `C:\\ProgramData\\sfcode\\settings.json`
+  - **macOS**: `/Library/Application Support/sfcide/settings.json`
+  - The path can be overridden using the `SFCODE_SYSTEM_SETTINGS_PATH` environment variable.
 - **Control**: This file should be managed by system administrators and protected with appropriate file permissions to prevent unauthorized modification by users.
 
 By using the system settings file, you can enforce the security and configuration patterns described below.
@@ -175,7 +175,7 @@ If your organization uses custom tools via [Model-Context Protocol (MCP) servers
 
 ### How MCP Server Configurations are Merged
 
-Vibe Codey CLI loads `settings.json` files from three levels: System, Workspace, and User. When it comes to the `mcpServers` object, these configurations are **merged**:
+Agentforce Vibes CLI loads `settings.json` files from three levels: System, Workspace, and User. When it comes to the `mcpServers` object, these configurations are **merged**:
 
 1.  **Merging:** The lists of servers from all three levels are combined into a single list.
 2.  **Precedence:** If a server with the **same name** is defined at multiple levels (e.g., a server named `corp-api` exists in both system and user settings), the definition from the highest-precedence level is used. The order of precedence is: **System > Workspace > User**.
@@ -280,7 +280,7 @@ You can also specify a custom, hardened Docker image for the sandbox using the `
 
 ## Controlling Network Access via Proxy
 
-In corporate environments with strict network policies, you can configure Vibe Codey CLI to route all outbound traffic through a corporate proxy. This can be set via an environment variable, but it can also be enforced for custom tools via the `mcpServers` configuration.
+In corporate environments with strict network policies, you can configure Agentforce Vibes CLI to route all outbound traffic through a corporate proxy. This can be set via an environment variable, but it can also be enforced for custom tools via the `mcpServers` configuration.
 
 **Example (for an MCP Server):**
 
@@ -301,7 +301,7 @@ In corporate environments with strict network policies, you can configure Vibe C
 
 ## Putting It All Together: Example System `settings.json`
 
-Here is an example of a system `settings.json` file that combines several of the patterns discussed above to create a secure, controlled environment for Vibe Codey CLI.
+Here is an example of a system `settings.json` file that combines several of the patterns discussed above to create a secure, controlled environment for Agentforce Vibes CLI.
 
 ```json
 {
@@ -320,7 +320,7 @@ Here is an example of a system `settings.json` file that combines several of the
   },
   "mcpServers": {
     "corp-tools": {
-      "command": "/opt/codey-tools/start.sh",
+      "command": "/opt/sfcode/start.sh",
       "timeout": 5000
     }
   },

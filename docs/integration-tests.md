@@ -4,7 +4,7 @@ This document provides information about the integration testing framework used 
 
 ## Overview
 
-The integration tests are designed to validate the end-to-end functionality of the Vibe Codey CLI. They execute the built binary in a controlled environment and verify that it behaves as expected when interacting with the file system.
+The integration tests are designed to validate the end-to-end functionality of the Agentforce Vibes CLI. They execute the built binary in a controlled environment and verify that it behaves as expected when interacting with the file system.
 
 These tests are located in the `integration-tests` directory and are run using a custom test runner.
 

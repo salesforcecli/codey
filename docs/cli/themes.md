@@ -1,10 +1,10 @@
 # Themes
 
-Vibe Codey CLI supports a variety of themes to customize its color scheme and appearance. You can change the theme to suit your preferences via the `/theme` command or `"theme":` configuration setting.
+Agentforce Vibes CLI supports a variety of themes to customize its color scheme and appearance. You can change the theme to suit your preferences via the `/theme` command or `"theme":` configuration setting.
 
 ## Available Themes
 
-Vibe Codey CLI comes with a selection of pre-defined themes, which you can list using the `/theme` command within Vibe Codey CLI:
+Agentforce Vibes CLI comes with a selection of pre-defined themes, which you can list using the `/theme` command within Agentforce Vibes CLI:
 
 - **Dark Themes:**
   - `ANSI`
@@ -25,7 +25,7 @@ Vibe Codey CLI comes with a selection of pre-defined themes, which you can list 
 
 ### Changing Themes
 
-1.  Enter `/theme` into Vibe Codey CLI.
+1.  Enter `/theme` into Agentforce Vibes CLI.
 2.  A dialog or selection prompt appears, listing the available themes.
 3.  Using the arrow keys, select a theme. Some interfaces might offer a live preview or highlight as you select.
 4.  Confirm your selection to apply the theme.
@@ -34,13 +34,13 @@ Vibe Codey CLI comes with a selection of pre-defined themes, which you can list 
 
 ### Theme Persistence
 
-Selected themes are saved in Vibe Codey CLI's [configuration](./configuration.md) so your preference is remembered across sessions.
+Selected themes are saved in Agentforce Vibes CLI's [configuration](./configuration.md) so your preference is remembered across sessions.
 
 ---
 
 ## Custom Color Themes
 
-Vibe Codey CLI allows you to create your own custom color themes by specifying them in your `settings.json` file. This gives you full control over the color palette used in the CLI.
+Agentforce Vibes CLI allows you to create your own custom color themes by specifying them in your `settings.json` file. This gives you full control over the color palette used in the CLI.
 
 ### How to Define a Custom Theme
 
@@ -138,7 +138,7 @@ The theme file must be a valid JSON file that follows the same structure as a cu
 }
 ```
 
-**Security Note:** For your safety, Vibe Codey CLI will only load theme files that are located within your home directory. If you attempt to load a theme from outside your home directory, a warning will be displayed and the theme will not be loaded. This is to prevent loading potentially malicious theme files from untrusted sources.
+**Security Note:** For your safety, Agentforce Vibes CLI will only load theme files that are located within your home directory. If you attempt to load a theme from outside your home directory, a warning will be displayed and the theme will not be loaded. This is to prevent loading potentially malicious theme files from untrusted sources.
 
 ### Example Custom Theme
 
@@ -146,7 +146,7 @@ The theme file must be a valid JSON file that follows the same structure as a cu
 
 ### Using Your Custom Theme
 
-- Select your custom theme using the `/theme` command in Vibe Codey CLI. Your custom theme will appear in the theme selection dialog.
+- Select your custom theme using the `/theme` command in Agentforce Vibes CLI. Your custom theme will appear in the theme selection dialog.
 - Or, set it as the default by adding `"theme": "MyCustomTheme"` to the `ui` object in your `settings.json`.
 - Custom themes can be set at the user, project, or system level, and follow the same [configuration precedence](./configuration.md) as other settings.
 

@@ -1,18 +1,18 @@
-# Vibe Codey CLI Core
+# Agentforce Vibes CLI Core
 
-Vibe Codey CLI's core package (`packages/core`) is the backend portion of Vibe Codey CLI, handling communication with the Salesforce LLM Gateway, managing tools, and processing requests sent from `packages/cli`. For a general overview of Vibe Codey CLI, see the [main documentation page](../index.md).
+Agentforce Vibes CLI's core package (`packages/core`) is the backend portion of Agentforce Vibes CLI, handling communication with the Salesforce LLM Gateway, managing tools, and processing requests sent from `packages/cli`. For a general overview of Agentforce Vibes CLI, see the [main documentation page](../index.md).
 
 ## Navigating this section
 
 - **[Core tools API](./tools-api.md):** Information on how tools are defined, registered, and used by the core.
-- **[Memory Import Processor](./memport.md):** Documentation for the modular CODEY.md import feature using @file.md syntax.
+- **[Memory Import Processor](./memport.md):** Documentation for the modular SFCODE.md import feature using @file.md syntax.
 
 ## Role of the core
 
-While the `packages/cli` portion of Vibe Codey CLI provides the user interface, `packages/core` is responsible for:
+While the `packages/cli` portion of Agentforce Vibes CLI provides the user interface, `packages/core` is responsible for:
 
 - **Salesforce LLM Gateway interaction:** Securely communicating with the Salesforce LLM Gateway, sending user prompts, and receiving model responses.
-- **Prompt engineering:** Constructing effective prompts for the Salesforce LLM Gateway, potentially incorporating conversation history, tool definitions, and instructional context from `CODEY.md` files.
+- **Prompt engineering:** Constructing effective prompts for the Salesforce LLM Gateway, potentially incorporating conversation history, tool definitions, and instructional context from `SFCODE.md` files.
 - **Tool management & orchestration:**
   - Registering available tools (e.g., file system tools, shell command execution).
   - Interpreting tool use requests from the Salesforce LLM Gateway.
@@ -37,7 +37,7 @@ You can find the token limits for each model in the [Google AI documentation](ht
 
 ## Model fallback
 
-Vibe Codey CLI includes a model fallback mechanism to ensure that you can continue to use the CLI even if the default model is rate-limited.
+Agentforce Vibes CLI includes a model fallback mechanism to ensure that you can continue to use the CLI even if the default model is rate-limited.
 
 If you are using the default model and the CLI detects that you are being rate-limited, it automatically switches to the fallback model for the current session. This allows you to continue working without interruption.
 
@@ -47,8 +47,8 @@ The file discovery service is responsible for finding files in the project that 
 
 ## Memory discovery service
 
-The memory discovery service is responsible for finding and loading the `CODEY.md` files that provide context to the model. It searches for these files in a hierarchical manner, starting from the current working directory and moving up to the project root and the user's home directory. It also searches in subdirectories.
+The memory discovery service is responsible for finding and loading the `SFCODE.md` files that provide context to the model. It searches for these files in a hierarchical manner, starting from the current working directory and moving up to the project root and the user's home directory. It also searches in subdirectories.
 
 This allows you to have global, project-level, and component-level context files, which are all combined to provide the model with the most relevant information.
 
-You can use the [`/memory` command](../cli/commands.md) to `show`, `add`, and `refresh` the content of loaded `CODEY.md` files.
+You can use the [`/memory` command](../cli/commands.md) to `show`, `add`, and `refresh` the content of loaded `SFCODE.md` files.

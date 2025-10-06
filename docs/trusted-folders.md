@@ -1,6 +1,6 @@
 # Trusted Folders
 
-The Trusted Folders feature is a security setting that gives you control over which projects can use the full capabilities of the Vibe Codey CLI. It prevents potentially malicious code from running by asking you to approve a folder before the CLI loads any project-specific configurations from it.
+The Trusted Folders feature is a security setting that gives you control over which projects can use the full capabilities of the Agentforce Vibes CLI. It prevents potentially malicious code from running by asking you to approve a folder before the CLI loads any project-specific configurations from it.
 
 ## Enabling the Feature
 
@@ -20,19 +20,19 @@ Add the following to your user `settings.json` file:
 
 ## How It Works: The Trust Dialog
 
-Once the feature is enabled, the first time you run the Vibe Codey CLI from a folder, a dialog will automatically appear, prompting you to make a choice:
+Once the feature is enabled, the first time you run the Agentforce Vibes CLI from a folder, a dialog will automatically appear, prompting you to make a choice:
 
 - **Trust folder**: Grants full trust to the current folder (e.g., `my-project`).
 - **Trust parent folder**: Grants trust to the parent directory (e.g., `safe-projects`), which automatically trusts all of its subdirectories as well. This is useful if you keep all your safe projects in one place.
 - **Don't trust**: Marks the folder as untrusted. The CLI will operate in a restricted "safe mode."
 
-Your choice is saved in a central file (`~/.codey/trustedFolders.json`), so you will only be asked once per folder.
+Your choice is saved in a central file (`~/.sfcode/trustedFolders.json`), so you will only be asked once per folder.
 
 ## Why Trust Matters: The Impact of an Untrusted Workspace
 
-When a folder is **untrusted**, the Vibe Codey CLI runs in a restricted "safe mode" to protect you. In this mode, the following features are disabled:
+When a folder is **untrusted**, the Agentforce Vibes CLI runs in a restricted "safe mode" to protect you. In this mode, the following features are disabled:
 
-1.  **Workspace Settings are Ignored**: The CLI will **not** load the `.codey/settings.json` file from the project. This prevents the loading of custom tools and other potentially dangerous configurations.
+1.  **Workspace Settings are Ignored**: The CLI will **not** load the `.sfcode/settings.json` file from the project. This prevents the loading of custom tools and other potentially dangerous configurations.
 
 2.  **Environment Variables are Ignored**: The CLI will **not** load any `.env` files from the project.
 
@@ -42,7 +42,7 @@ When a folder is **untrusted**, the Vibe Codey CLI runs in a restricted "safe mo
 
 5.  **Automatic Memory Loading is Disabled**: The CLI will not automatically load files into context from directories specified in local settings.
 
-Granting trust to a folder unlocks the full functionality of the Vibe Codey CLI for that workspace.
+Granting trust to a folder unlocks the full functionality of the Agentforce Vibes CLI for that workspace.
 
 ## Managing Your Trust Settings
 
@@ -50,4 +50,4 @@ If you need to change a decision or see all your settings, you have a couple of 
 
 - **Change the Current Folder's Trust**: Run the `/permissions` command from within the CLI. This will bring up the same interactive dialog, allowing you to change the trust level for the current folder.
 
-- **View All Trust Rules**: To see a complete list of all your trusted and untrusted folder rules, you can inspect the contents of the `~/.codey/trustedFolders.json` file in your home directory.
+- **View All Trust Rules**: To see a complete list of all your trusted and untrusted folder rules, you can inspect the contents of the `~/.sfcode/trustedFolders.json` file in your home directory.

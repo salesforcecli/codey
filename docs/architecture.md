@@ -1,13 +1,13 @@
-# Vibe Codey CLI Architecture Overview
+# Agentforce Vibes CLI Architecture Overview
 
-This document provides a high-level overview of the Vibe Codey CLI's architecture.
+This document provides a high-level overview of the Agentforce Vibes CLI's architecture.
 
 ## Core components
 
-The Vibe Codey CLI is primarily composed of two main packages, along with a suite of tools that can be used by the system in the course of handling command-line input:
+The Agentforce Vibes CLI is primarily composed of two main packages, along with a suite of tools that can be used by the system in the course of handling command-line input:
 
 1.  **CLI package (`packages/cli`):**
-    - **Purpose:** This contains the user-facing portion of the Vibe Codey CLI, such as handling the initial user input, presenting the final output, and managing the overall user experience.
+    - **Purpose:** This contains the user-facing portion of the Agentforce Vibes CLI, such as handling the initial user input, presenting the final output, and managing the overall user experience.
     - **Key functions contained in the package:**
       - [Input processing](./cli/commands.md)
       - History management
@@ -16,7 +16,7 @@ The Vibe Codey CLI is primarily composed of two main packages, along with a suit
       - [CLI configuration settings](./cli/configuration.md)
 
 2.  **Core package (`packages/core`):**
-    - **Purpose:** This acts as the backend for the Vibe Codey CLI. It receives requests sent from `packages/cli`, orchestrates interactions with the Salesforce LLM Gateway, and manages the execution of available tools.
+    - **Purpose:** This acts as the backend for the Agentforce Vibes CLI. It receives requests sent from `packages/cli`, orchestrates interactions with the Salesforce LLM Gateway, and manages the execution of available tools.
     - **Key functions contained in the package:**
       - API client for communicating with the Salesforce LLM Gateway
       - Prompt construction and management
@@ -30,7 +30,7 @@ The Vibe Codey CLI is primarily composed of two main packages, along with a suit
 
 ## Interaction Flow
 
-A typical interaction with the Vibe Codey CLI follows this flow:
+A typical interaction with the Agentforce Vibes CLI follows this flow:
 
 1.  **User input:** The user types a prompt or command into the terminal, which is managed by `packages/cli`.
 2.  **Request to core:** `packages/cli` sends the user's input to `packages/core`.

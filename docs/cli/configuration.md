@@ -1,4 +1,4 @@
-# Vibe Codey CLI Configuration
+# Agentforce Vibes CLI Configuration
 
 **Note on New Configuration Format**
 
@@ -7,7 +7,7 @@ The format of the `settings.json` file has been updated to a new, more organized
 - The new format will be supported in the stable release starting **[09/10/25]**.
 - Automatic migration from the old format to the new format will begin on **[09/17/25]**.
 
-Vibe Codey CLI offers several ways to configure its behavior, including environment variables, command-line arguments, and settings files. This document outlines the different configuration methods and available settings.
+Agentforce Vibes CLI offers several ways to configure its behavior, including environment variables, command-line arguments, and settings files. This document outlines the different configuration methods and available settings.
 
 ## Configuration layers
 
@@ -23,24 +23,24 @@ Configuration is applied in the following order of precedence (lower numbers are
 
 ## Settings files
 
-Vibe Codey CLI uses JSON settings files for persistent configuration. There are four locations for these files:
+Agentforce Vibes CLI uses JSON settings files for persistent configuration. There are four locations for these files:
 
 - **System defaults file:**
-  - **Location:** `/etc/codey-cli/system-defaults.json` (Linux), `C:\\ProgramData\\codey-cli\\system-defaults.json` (Windows) or `/Library/Application Support/CodeyCli/system-defaults.json` (macOS). The path can be overridden using the `CODEY_CLI_SYSTEM_DEFAULTS_PATH` environment variable.
+  - **Location:** `/etc/sfcode/system-defaults.json` (Linux), `C:\\ProgramData\\sfcode\\system-defaults.json` (Windows) or `/Library/Application Support/sfcode/system-defaults.json` (macOS). The path can be overridden using the `SFCODE_SYSTEM_DEFAULTS_PATH` environment variable.
   - **Scope:** Provides a base layer of system-wide default settings. These settings have the lowest precedence and are intended to be overridden by user, project, or system override settings.
 - **User settings file:**
-  - **Location:** `~/.codey/settings.json` (where `~` is your home directory).
-  - **Scope:** Applies to all Vibe Codey CLI sessions for the current user. User settings override system defaults.
+  - **Location:** `~/.sfcode/settings.json` (where `~` is your home directory).
+  - **Scope:** Applies to all Agentforce Vibes CLI sessions for the current user. User settings override system defaults.
 - **Project settings file:**
-  - **Location:** `.codey/settings.json` within your project's root directory.
-  - **Scope:** Applies only when running Vibe Codey CLI from that specific project. Project settings override user settings and system defaults.
+  - **Location:** `.sfcode/settings.json` within your project's root directory.
+  - **Scope:** Applies only when running Agentforce Vibes CLI from that specific project. Project settings override user settings and system defaults.
 - **System settings file:**
-  - **Location:** `/etc/codey-cli/settings.json` (Linux), `C:\\ProgramData\\codey-cli\\settings.json` (Windows) or `/Library/Application Support/CodeyCli/settings.json` (macOS). The path can be overridden using the `CODEY_CLI_SYSTEM_SETTINGS_PATH` environment variable.
-  - **Scope:** Applies to all Vibe Codey CLI sessions on the system, for all users. System settings act as overrides, taking precedence over all other settings files. May be useful for system administrators at enterprises to have controls over users' Vibe Codey CLI setups.
+  - **Location:** `/etc/sfcode/settings.json` (Linux), `C:\\ProgramData\\sfcode\\settings.json` (Windows) or `/Library/Application Support/sfcode/settings.json` (macOS). The path can be overridden using the `SFCODE_SYSTEM_SETTINGS_PATH` environment variable.
+  - **Scope:** Applies to all Agentforce Vibes CLI sessions on the system, for all users. System settings act as overrides, taking precedence over all other settings files. May be useful for system administrators at enterprises to have controls over users' Agentforce Vibes CLI setups.
 
 **Note on environment variables in settings:** String values within your `settings.json` files can reference environment variables using either `$VAR_NAME` or `${VAR_NAME}` syntax. These variables will be automatically resolved when the settings are loaded. For example, if you have an environment variable `MY_API_TOKEN`, you could use it in `settings.json` like this: `"apiKey": "$MY_API_TOKEN"`.
 
-> **Note for Enterprise Users:** For guidance on deploying and managing Vibe Codey CLI in a corporate environment, please see the [Enterprise Configuration](./enterprise.md) documentation.
+> **Note for Enterprise Users:** For guidance on deploying and managing Agentforce Vibes CLI in a corporate environment, please see the [Enterprise Configuration](./enterprise.md) documentation.
 
 ### Available settings in `settings.json`
 
@@ -156,15 +156,15 @@ Settings are organized into categories. All settings should be placed within the
   - **Default:** `[]`
 
 - **`context.loadFromIncludeDirectories`** (boolean):
-  - **Description:** Controls the behavior of the `/memory refresh` command. If set to `true`, `CODEY.md` files should be loaded from all directories that are added. If set to `false`, `CODEY.md` should only be loaded from the current directory.
+  - **Description:** Controls the behavior of the `/memory refresh` command. If set to `true`, `SFCODE.md` files should be loaded from all directories that are added. If set to `false`, `SFCODE.md` should only be loaded from the current directory.
   - **Default:** `false`
 
 - **`context.fileFiltering.respectGitIgnore`** (boolean):
   - **Description:** Respect .gitignore files when searching.
   - **Default:** `true`
 
-- **`context.fileFiltering.respectCodeyIgnore`** (boolean):
-  - **Description:** Respect .codeyignore files when searching.
+- **`context.fileFiltering.respectSfcodeIgnore`** (boolean):
+  - **Description:** Respect .sfcodeignore files when searching.
   - **Default:** `true`
 
 - **`context.fileFiltering.enableRecursiveFileSearch`** (boolean):
@@ -256,7 +256,7 @@ Settings are organized into categories. All settings should be placed within the
 
 #### `mcpServers`
 
-Configures connections to one or more Model-Context Protocol (MCP) servers for discovering and using custom tools. Vibe Codey CLI attempts to connect to each configured MCP server to discover available tools. If multiple MCP servers expose a tool with the same name, the tool names will be prefixed with the server alias you defined in the configuration (e.g., `serverAlias__actualToolName`) to avoid conflicts. Note that the system might strip certain schema properties from MCP tool definitions for compatibility. At least one of `command`, `url`, or `httpUrl` must be provided. If multiple are specified, the order of precedence is `httpUrl`, then `url`, then `command`.
+Configures connections to one or more Model-Context Protocol (MCP) servers for discovering and using custom tools. Agentforce Vibes CLI attempts to connect to each configured MCP server to discover available tools. If multiple MCP servers expose a tool with the same name, the tool names will be prefixed with the server alias you defined in the configuration (e.g., `serverAlias__actualToolName`) to avoid conflicts. Note that the system might strip certain schema properties from MCP tool definitions for compatibility. At least one of `command`, `url`, or `httpUrl` must be provided. If multiple are specified, the order of precedence is `httpUrl`, then `url`, then `command`.
 
 - **`mcpServers.<SERVER_NAME>`** (object): The server parameters for the named server.
   - `command` (string, optional): The command to execute to start the MCP server via standard I/O.
@@ -274,7 +274,7 @@ Configures connections to one or more Model-Context Protocol (MCP) servers for d
 
 #### `telemetry`
 
-Configures logging and metrics collection for Vibe Codey CLI. For more information, see [Telemetry](../telemetry.md).
+Configures logging and metrics collection for Agentforce Vibes CLI. For more information, see [Telemetry](../telemetry.md).
 
 - **Properties:**
   - **`enabled`** (boolean): Whether or not telemetry is enabled.
@@ -338,7 +338,7 @@ Here is an example of a `settings.json` file with the nested structure, new as o
     }
   },
   "context": {
-    "fileName": ["CONTEXT.md", "CODEY.md"],
+    "fileName": ["CONTEXT.md", "SFCODE.md"],
     "includeDirectories": ["path/to/dir1", "~/path/to/dir2", "../path/to/dir3"],
     "loadFromIncludeDirectories": true,
     "fileFiltering": {
@@ -355,7 +355,7 @@ Here is an example of a `settings.json` file with the nested structure, new as o
 
 The CLI keeps a history of shell commands you run. To avoid conflicts between different projects, this history is stored in a project-specific directory within your user's home folder.
 
-- **Location:** `~/.codey/tmp/<project_hash>/shell_history`
+- **Location:** `~/.sfcode/tmp/<project_hash>/shell_history`
   - `<project_hash>` is a unique identifier generated from your project's root path.
   - The history is stored in a file named `shell_history`.
 
@@ -369,13 +369,13 @@ The CLI automatically loads environment variables from an `.env` file. The loadi
 2.  If not found, it searches upwards in parent directories until it finds an `.env` file or reaches the project root (identified by a `.git` folder) or the home directory.
 3.  If still not found, it looks for `~/.env` (in the user's home directory).
 
-**Environment Variable Exclusion:** Some environment variables (like `DEBUG` and `DEBUG_MODE`) are automatically excluded from being loaded from project `.env` files to prevent interference with codey-cli behavior. Variables from `.codey/.env` files are never excluded. You can customize this behavior using the `advanced.excludedEnvVars` setting in your `settings.json` file.
+**Environment Variable Exclusion:** Some environment variables (like `DEBUG` and `DEBUG_MODE`) are automatically excluded from being loaded from project `.env` files to prevent interference with sfcode behavior. Variables from `.sfcode/.env` files are never excluded. You can customize this behavior using the `advanced.excludedEnvVars` setting in your `settings.json` file.
 
-- **`CODEY_GATEWAY_ORG`**:
+- **`SFCODE_GATEWAY_ORG`**:
   - Specifies the Salesforce org to use for authentication with the Salesforce LLM Gateway. Overrides the `--gateway-org` flag.
 - **`DEBUG` or `DEBUG_MODE`** (often used by underlying libraries or the CLI itself):
   - Set to `true` or `1` to enable verbose debug logging, which can be helpful for troubleshooting.
-  - **Note:** These variables are automatically excluded from project `.env` files by default to prevent interference with codey-cli behavior. Use `.codey/.env` files if you need to set these for codey-cli specifically.
+  - **Note:** These variables are automatically excluded from project `.env` files by default to prevent interference with sfcode behavior. Use `.sfcode/.env` files if you need to set these for sfcode specifically.
 - **`NO_COLOR`**:
   - Set to any value to disable all color output in the CLI.
 - **`CLI_TITLE`**:
@@ -391,13 +391,13 @@ Arguments passed directly when running the CLI can override other configurations
 - **`--gateway-org <org_name>`** (**`-o <org_name>`**):
   - Specifies the Salesforce org to use for authentication with the Salesforce LLM Gateway.
 - **`--prompt <your_prompt>`** (**`-p <your_prompt>`**):
-  - Used to pass a prompt directly to the command. This invokes Vibe Codey CLI in a non-interactive mode.
+  - Used to pass a prompt directly to the command. This invokes Agentforce Vibes CLI in a non-interactive mode.
   - For scripting examples, use the `--output-format json` flag to get structured output.
 - **`--prompt-interactive <your_prompt>`** (**`-i <your_prompt>`**):
   - Starts an interactive session with the provided prompt as the initial input.
   - The prompt is processed within the interactive session, not before it.
   - Cannot be used when piping input from stdin.
-  - Example: `codey -i "explain this code"`
+  - Example: `sfcode -i "explain this code"`
 - **`--output-format <format>`**:
   - **Description:** Specifies the format of the CLI output for non-interactive mode.
   - **Values:**
@@ -424,18 +424,18 @@ Arguments passed directly when running the CLI can override other configurations
     - `auto_edit`: Automatically approve edit tools (replace, write_file) while prompting for others
     - `yolo`: Automatically approve all tool calls (equivalent to `--yolo`)
   - Cannot be used together with `--yolo`. Use `--approval-mode=yolo` instead of `--yolo` for the new unified approach.
-  - Example: `codey --approval-mode auto_edit`
+  - Example: `sfcode --approval-mode auto_edit`
 - **`--allowed-tools <tool1,tool2,...>`**:
   - A comma-separated list of tool names that will bypass the confirmation dialog.
-  - Example: `codey --allowed-tools "ShellTool(git status)"`
+  - Example: `sfcode --allowed-tools "ShellTool(git status)"`
 - **`--no-telemetry`**:
   - Disables [telemetry](../telemetry.md).
 - **`--checkpointing`**:
   - Enables [checkpointing](../checkpointing.md).
 - **`--extensions <extension_name ...>`** (**`-e <extension_name ...>`**):
   - Specifies a list of extensions to use for the session. If not provided, all available extensions are used.
-  - Use the special term `codey -e none` to disable all extensions.
-  - Example: `codey -e my-extension -e my-other-extension`
+  - Use the special term `sfcode -e none` to disable all extensions.
+  - Example: `sfcode -e my-extension -e my-other-extension`
 - **`--list-extensions`** (**`-l`**):
   - Lists all available extensions and exits.
 - **`--proxy`**:
@@ -453,11 +453,11 @@ Arguments passed directly when running the CLI can override other configurations
 
 ## Context Files (Hierarchical Instructional Context)
 
-While not strictly configuration for the CLI's _behavior_, context files (defaulting to `CODEY.md` but configurable via the `context.fileName` setting) are crucial for configuring the _instructional context_ (also referred to as "memory") provided to the Salesforce LLM Gateway. This powerful feature allows you to give project-specific instructions, coding style guides, or any relevant background information to the AI, making its responses more tailored and accurate to your needs. The CLI includes UI elements, such as an indicator in the footer showing the number of loaded context files, to keep you informed about the active context.
+While not strictly configuration for the CLI's _behavior_, context files (defaulting to `SFCODE.md` but configurable via the `context.fileName` setting) are crucial for configuring the _instructional context_ (also referred to as "memory") provided to the Salesforce LLM Gateway. This powerful feature allows you to give project-specific instructions, coding style guides, or any relevant background information to the AI, making its responses more tailored and accurate to your needs. The CLI includes UI elements, such as an indicator in the footer showing the number of loaded context files, to keep you informed about the active context.
 
 - **Purpose:** These Markdown files contain instructions, guidelines, or context that you want the Salesforce LLM Gateway to be aware of during your interactions. The system is designed to manage this instructional context hierarchically.
 
-### Example Context File Content (e.g., `CODEY.md`)
+### Example Context File Content (e.g., `SFCODE.md`)
 
 Here's a conceptual example of what a context file at the root of a TypeScript project might contain:
 
@@ -492,9 +492,9 @@ Here's a conceptual example of what a context file at the root of a TypeScript p
 
 This example demonstrates how you can provide general project context, specific coding conventions, and even notes about particular files or components. The more relevant and precise your context files are, the better the AI can assist you. Project-specific context files are highly encouraged to establish conventions and context.
 
-- **Hierarchical Loading and Precedence:** The CLI implements a sophisticated hierarchical memory system by loading context files (e.g., `CODEY.md`) from several locations. Content from files lower in this list (more specific) typically overrides or supplements content from files higher up (more general). The exact concatenation order and final context can be inspected using the `/memory show` command. The typical loading order is:
+- **Hierarchical Loading and Precedence:** The CLI implements a sophisticated hierarchical memory system by loading context files (e.g., `SFCODE.md`) from several locations. Content from files lower in this list (more specific) typically overrides or supplements content from files higher up (more general). The exact concatenation order and final context can be inspected using the `/memory show` command. The typical loading order is:
   1.  **Global Context File:**
-      - Location: `~/.codey/<configured-context-filename>` (e.g., `~/.codey/CODEY.md` in your user home directory).
+      - Location: `~/.sfcode/<configured-context-filename>` (e.g., `~/.sfcode/SFCODE.md` in your user home directory).
       - Scope: Provides default instructions for all your projects.
   2.  **Project Root & Ancestors Context Files:**
       - Location: The CLI searches for the configured context file in the current working directory and then in each parent directory up to either the project root (identified by a `.git` folder) or your home directory.
@@ -509,11 +509,11 @@ This example demonstrates how you can provide general project context, specific 
   - Use `/memory show` to display the combined instructional context currently loaded, allowing you to verify the hierarchy and content being used by the AI.
   - See the [Commands documentation](./commands.md#memory) for full details on the `/memory` command and its sub-commands (`show` and `refresh`).
 
-By understanding and utilizing these configuration layers and the hierarchical nature of context files, you can effectively manage the AI's memory and tailor the Vibe Codey CLI's responses to your specific needs and projects.
+By understanding and utilizing these configuration layers and the hierarchical nature of context files, you can effectively manage the AI's memory and tailor the Agentforce Vibes CLI's responses to your specific needs and projects.
 
 ## Telemetry
 
-To help us improve the Vibe Codey CLI, we collect anonymized usage statistics. This data helps us understand how the CLI is used, identify common issues, and prioritize new features.
+To help us improve the Agentforce Vibes CLI, we collect anonymized usage statistics. This data helps us understand how the CLI is used, identify common issues, and prioritize new features.
 
 **What we collect:**
 

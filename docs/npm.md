@@ -1,14 +1,14 @@
 # Package Overview
 
-This monorepo contains two main packages: `@salesforce/codey` and `@salesforce/codey-core`.
+This monorepo contains two main packages: `@salesforce/sfcode` and `@salesforce/sfcode-core`.
 
-## `@salesforce/codey`
+## `@salesforce/sfcode`
 
-This is the main package for the Vibe Codey CLI. It is responsible for the user interface, command parsing, and all other user-facing functionality.
+This is the main package for the Agentforce Vibes CLI. It is responsible for the user interface, command parsing, and all other user-facing functionality.
 
-When this package is published, it is bundled into a single executable file. This bundle includes all of the package's dependencies, including `@salesforce/codey-core`. This means that whether a user installs the package with `npm install -g @salesforce/codey` or runs it directly with `npx @salesforce/codey`, they are using this single, self-contained executable.
+When this package is published, it is bundled into a single executable file. This bundle includes all of the package's dependencies, including `@salesforce/sfcode-core`. This means that whether a user installs the package with `npm install -g @salesforce/sfcode` or runs it directly with `npx @salesforce/sfcode`, they are using this single, self-contained executable.
 
-## `@salesforce/codey-core`
+## `@salesforce/sfcode-core`
 
 This package contains the core logic for interacting with the Salesforce LLM Gateway. It is responsible for making API requests, handling authentication, and managing the local cache.
 
@@ -34,4 +34,4 @@ This tells NPM that any folder inside the `packages` directory is a separate pac
 
 - **Simplified Dependency Management**: Running `npm install` from the root of the project will install all dependencies for all packages in the workspace and link them together. This means you don't need to run `npm install` in each package's directory.
 - **Automatic Linking**: Packages within the workspace can depend on each other. When you run `npm install`, NPM will automatically create symlinks between the packages. This means that when you make changes to one package, the changes are immediately available to other packages that depend on it.
-- **Simplified Script Execution**: You can run scripts in any package from the root of the project using the `--workspace` flag. For example, to run the `build` script in the `cli` package, you can run `npm run build --workspace @salesforce/codey`.
+- **Simplified Script Execution**: You can run scripts in any package from the root of the project using the `--workspace` flag. For example, to run the `build` script in the `cli` package, you can run `npm run build --workspace @salesforce/sfcode`.
